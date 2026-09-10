@@ -1,9 +1,10 @@
-# Modelo de datos — MVP-1A
+# Modelo de datos — MVP-1A y MVP-1B
 
-Fuente de verdad: `prisma/schema.prisma` y la migracion
-`prisma/migrations/20260910133815_init/migration.sql`. Este documento
-describe y explica ese esquema; en caso de discrepancia, el esquema real
-manda.
+Fuente de verdad: `prisma/schema.prisma` y las migraciones
+`prisma/migrations/20260910133815_init/migration.sql` (MVP-1A) y
+`prisma/migrations/20260910202939_add_kpi_configuration/migration.sql`
+(MVP-1B). Este documento describe y explica ese esquema; en caso de
+discrepancia, el esquema real manda.
 
 ## Diagrama entidad-relacion
 
@@ -12,6 +13,7 @@ erDiagram
     Person ||--o{ SplitParticipant : "participa como"
     Split ||--o{ SplitWeek : "tiene"
     Split ||--o{ SplitParticipant : "tiene"
+    Split ||--o{ SplitKpiConfig : "configura"
     SplitWeek ||--o{ SplitParticipant : "es semana inicial de"
 
     Person {
@@ -52,6 +54,20 @@ erDiagram
         enum level "N0, N1, N2"
         int startWeekSequenceNumber "FK compuesta a SplitWeek"
         int endWeekSequenceNumber "opcional, sin usar todavia"
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    SplitKpiConfig {
+        string id PK
+        string splitId FK
+        enum kpiCode "catalogo cerrado, ver KpiCode"
+        boolean isActive "por defecto false"
+        decimal baseMax "mayor que cero"
+        decimal multiplierN0 "opcional: null = nivel no aplicable"
+        decimal multiplierN1 "opcional: null = nivel no aplicable"
+        decimal multiplierN2 "opcional: null = nivel no aplicable"
+        json parameters "parametros propios del KPI, validados por esquema"
         datetime createdAt
         datetime updatedAt
     }
@@ -129,6 +145,40 @@ participacion.
   normalizado es unico dentro del split (el mismo alias si puede
   repetirse en splits distintos).
 
+### `SplitKpiConfig`
+
+Configuracion de un KPI del catalogo cerrado (enum `KpiCode`, ver
+`src/domain/kpis/catalog.ts` y `docs/KPI_CONFIGURATION.md`) para un split
+concreto. Cada split conserva su propia copia editable, independiente de
+los valores predeterminados del catalogo y de la configuracion de otros
+splits.
+
+- `id`: UUID, clave primaria.
+- `splitId`: referencia a `Split` (borrado en cascada si se borra el
+  split).
+- `kpiCode`: enum `KpiCode` con los diez codigos del catalogo cerrado. El
+  orden de declaracion del enum coincide con el orden de presentacion del
+  catalogo (PostgreSQL ordena los enums por orden de declaracion, no
+  alfabeticamente).
+- `isActive`: si el KPI esta activo en este split. `false` por defecto.
+- `baseMax`: `Decimal(12,4)` (nunca `Float`, para no perder precision en
+  comparaciones). Restriccion de base de datos que exige que sea mayor que
+  cero.
+- `multiplierN0` / `multiplierN1` / `multiplierN2`: `Decimal(12,4)`
+  opcionales. Restriccion de base de datos que exige, cuando existen, que
+  sean mayores o iguales que cero. Un valor `NULL` significa que ese nivel
+  **no es aplicable** a ese KPI, no que el multiplicador sea cero.
+- Restriccion de base de datos adicional: si `isActive` es `true`, al
+  menos uno de los tres multiplicadores debe estar informado.
+- `parameters`: `Json` (`jsonb`) con los parametros propios del tipo de
+  calculo de ese KPI (ver `docs/KPI_CONFIGURATION.md`). Nunca se acepta tal
+  cual desde el navegador: la accion de servidor construye este objeto a
+  partir de los campos que el catalogo declara para ese `kpiCode`, y el
+  esquema de validacion de ese KPI concreto lo valida antes de guardarse.
+- Indice unico `SplitKpiConfig_splitId_kpiCode_key`: un split tiene como
+  mucho una configuracion por cada KPI del catalogo (en la practica,
+  siempre las diez).
+
 ## Decisiones sobre fechas
 
 - Todas las fechas de negocio (`Split.startDate`, `SplitWeek.startDate`,
@@ -142,14 +192,25 @@ participacion.
 - La generacion de semanas (`generateSplitWeeks`) es una funcion pura que
   no depende de la hora actual ni de la zona horaria del servidor.
 
+## Backfill de splits existentes (`MVP-1B`)
+
+La migracion `add_kpi_configuration` crea, ademas del enum y la tabla, una
+sentencia `INSERT ... SELECT` que genera las diez `SplitKpiConfig` (una
+por `KpiCode`, inactivas, con los valores predeterminados de Split 8) para
+cada `Split` que ya existiera antes de aplicar la migracion. Sobre una
+base de datos vacia esa sentencia no inserta ninguna fila. No modifica
+`Person`, `SplitWeek` ni `SplitParticipant` existentes, ni cambia el
+`status` de ningun split: un split `ACTIVE` que ya existiera quedara con
+sus diez KPI inactivos hasta que el administrador los configure (ver
+`docs/DECISIONS.md`).
+
 ## Entidades pospuestas
 
 Estas entidades aparecen en el contexto funcional del producto pero
-**no** se han creado en esta entrega. Se documentan para que una futura
-entrega no tenga que redescubrirlas:
+**no** se han creado todavia. Se documentan para que una futura entrega no
+tenga que redescubrirlas:
 
-- KPI, su configuracion por split y sus resultados calculados
-  (`MVP-1B`, `MVP-1C`).
+- Resultados calculados de los KPI (`MVP-1C`).
 - Registros de carga de datos (Excel o manual) e importadores
   (`IMPORT-1`).
 - Clasificacion general y su calculo acumulado (`MVP-1C`).

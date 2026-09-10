@@ -7,6 +7,7 @@ import {
   listSplitWeeks,
 } from "@/server/services/split.service";
 import { addParticipant } from "@/server/services/participant.service";
+import { updateKpiConfig } from "@/server/services/kpi.service";
 import { DomainError } from "@/lib/errors";
 
 async function createDraftSplit(overrides?: Partial<{ name: string; numberOfWeeks: number }>) {
@@ -112,6 +113,14 @@ describe("Semana inicial del participante", () => {
       alias: "Fundador",
       level: "N0",
       startWeekSequenceNumber: 1,
+    });
+    await updateKpiConfig(testDb, split.id, "SOLUTION_HUNTER", {
+      isActive: true,
+      baseMax: 70,
+      multiplierN0: 2.5,
+      multiplierN1: 1,
+      multiplierN2: 1.85,
+      parameters: { pointsPerResolvedTicket: 1 },
     });
 
     const activated = await activateSplit(testDb, split.id);

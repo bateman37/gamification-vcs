@@ -14,8 +14,9 @@ Antes de proponer o realizar cualquier cambio, lee en este orden:
 5. `CHANGELOG.md`
 
 Ademas, revisa `docs/DECISIONS.md` para no contradecir decisiones ya
-tomadas sin justificarlo explicitamente, y `docs/DISCOVERY-1-SPLIT-8.md`
-si vas a trabajar en KPI, cargas de datos o motor de calculo.
+tomadas sin justificarlo explicitamente, y `docs/DISCOVERY-1-SPLIT-8.md` y
+`docs/KPI_CONFIGURATION.md` si vas a trabajar en KPI, cargas de datos o
+motor de calculo.
 
 ## Reglas de trabajo
 
