@@ -1,0 +1,102 @@
+// Esquema de datos de Gamification VCS - MVP-1A.
+// Consulta docs/DATA_MODEL.md para la documentacion completa del modelo.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum SplitStatus {
+  DRAFT
+  ACTIVE
+  CLOSED
+}
+
+enum ParticipantLevel {
+  N0
+  N1
+  N2
+}
+
+/// Persona: registro estable, reutilizable entre splits. No es lo mismo
+/// que un participante: una persona puede no participar en ningun split,
+/// o participar en varios con alias distintos en cada uno.
+model Person {
+  id        String   @id @default(uuid())
+  fullName  String
+  /// Correo normalizado (minusculas, sin espacios). Opcional pero unico.
+  email     String?  @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  participations SplitParticipant[]
+}
+
+/// Split: una edicion de la gamificacion periodica.
+model Split {
+  id            String      @id @default(uuid())
+  name          String
+  description   String?
+  /// Fecha de inicio del split. Siempre un lunes. Se guarda como fecha de
+  /// calendario (sin componente horario) para evitar desplazamientos de
+  /// zona horaria.
+  startDate     DateTime    @db.Date
+  numberOfWeeks Int
+  status        SplitStatus @default(DRAFT)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  weeks        SplitWeek[]
+  participants SplitParticipant[]
+}
+
+/// Semana de un split. La identidad funcional es splitId + sequenceNumber,
+/// nunca el numero de semana ISO del calendario.
+model SplitWeek {
+  id             String   @id @default(uuid())
+  splitId        String
+  /// Numero secuencial dentro del split: 1, 2, 3...
+  sequenceNumber Int
+  startDate      DateTime @db.Date
+  endDate        DateTime @db.Date
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  split                    Split              @relation(fields: [splitId], references: [id], onDelete: Cascade)
+  participantsStartingHere SplitParticipant[] @relation("ParticipantStartWeek")
+
+  @@unique([splitId, sequenceNumber])
+}
+
+/// Participante: relacion entre una persona y un split, con alias y nivel
+/// propios de ese split.
+model SplitParticipant {
+  id        String           @id @default(uuid())
+  splitId   String
+  personId  String
+  /// Alias tal como lo escribe el administrador.
+  alias     String
+  /// Alias normalizado (minusculas, sin espacios exteriores colapsados)
+  /// usado exclusivamente para garantizar unicidad dentro del split.
+  aliasNormalized String
+  level     ParticipantLevel
+  /// Numero de semana (dentro de este split) desde la que participa.
+  startWeekSequenceNumber Int
+  /// Preparado para el futuro cierre de participacion. No se usa todavia.
+  endWeekSequenceNumber   Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  split     Split     @relation(fields: [splitId], references: [id], onDelete: Cascade)
+  person    Person    @relation(fields: [personId], references: [id])
+  startWeek SplitWeek @relation("ParticipantStartWeek", fields: [splitId, startWeekSequenceNumber], references: [splitId, sequenceNumber])
+
+  // Una persona solo puede aparecer una vez en un mismo split.
+  @@unique([splitId, personId])
+  // El alias normalizado debe ser unico dentro del split (no entre splits).
+  @@unique([splitId, aliasNormalized])
+}
