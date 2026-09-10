@@ -23,8 +23,12 @@ export async function runAction(fn: () => Promise<void>): Promise<ActionState> {
     if (error instanceof ZodError) {
       const fieldErrors: Record<string, string> = {};
       for (const issue of error.issues) {
-        const key = issue.path[0];
-        if (typeof key === "string" && !(key in fieldErrors)) {
+        // Se usa la ruta completa (p.ej. "parameters.pointsPerHour") para
+        // poder asociar el error a un campo anidado concreto. Para rutas
+        // de un solo nivel (el caso habitual) el resultado es identico a
+        // usar solo el primer segmento.
+        const key = issue.path.join(".");
+        if (key && !(key in fieldErrors)) {
           fieldErrors[key] = issue.message;
         }
       }

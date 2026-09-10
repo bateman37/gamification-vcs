@@ -6,7 +6,11 @@ aceptacion.
 
 ## MVP-1A — Personas y creacion de splits
 
-**Estado: completado.**
+**Estado: completado y validado manualmente por el usuario.** Sus
+pruebas funcionales (creacion y edicion de personas, creacion de splits y
+semanas, incorporacion de participantes, alias por split, niveles,
+activacion del split y altas durante un split activo) han sido
+satisfactorias.
 
 - Base del proyecto web (Next.js + TypeScript + PostgreSQL + Prisma +
   Tailwind CSS).
@@ -23,15 +27,25 @@ aceptacion.
 
 ## MVP-1B — KPI activos y configuracion
 
-**Estado: pendiente.**
+**Estado: completado.**
 
 - Catalogo cerrado de los 10 KPI descritos en
-  `docs/DISCOVERY-1-SPLIT-8.md`.
-- Activar o desactivar KPI por split.
+  `docs/DISCOVERY-1-SPLIT-8.md` y documentado en
+  `docs/KPI_CONFIGURATION.md`.
+- Activar o desactivar KPI por split, con conservacion de sus parametros
+  al desactivar y reactivar.
 - Configurar los parametros de cada KPI activado (multiplicadores por
-  nivel, maximos base, parametros propios de su tipo de calculo).
+  nivel, maximos base, parametros propios de su tipo de calculo),
+  validados en servidor.
+- Creacion automatica de la configuracion inicial (diez KPI inactivos con
+  valores de Split 8) al crear un split nuevo, y migracion de backfill
+  para los splits ya existentes.
+- Activacion de un split ahora exige al menos un participante y al menos
+  un KPI activo.
 - Todavia no se permite crear KPI nuevos ni introducir formulas o codigo
-  libre: los tipos de calculo son fijos y conocidos por el sistema.
+  libre: los tipos de calculo son fijos y conocidos por el sistema. No
+  incluye todavia motor de calculo de resultados, carga de datos,
+  importacion de Excel ni clasificacion (ver `IMPORT-1` y `MVP-1C`).
 
 ## IMPORT-1 — Auditoria e implementacion de cargas
 

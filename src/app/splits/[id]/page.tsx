@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { getSplitById, listSplitWeeks } from "@/server/services/split.service";
 import { listParticipantsForSplit } from "@/server/services/participant.service";
 import { listAllPersons } from "@/server/services/person.service";
+import { listKpiConfigsForSplit } from "@/server/services/kpi.service";
+import { TOTAL_KPI_COUNT } from "@/domain/kpis/catalog";
 import { formatCalendarDate } from "@/lib/dates";
 import { Badge, EmptyState } from "@/components/ui";
 import { SPLIT_STATUS_LABELS } from "@/lib/labels";
@@ -10,6 +12,7 @@ import { EditSplitDraftForm } from "./EditSplitDraftForm";
 import { ActivateSplitButton } from "./ActivateSplitButton";
 import { AddParticipantForm } from "./AddParticipantForm";
 import { ParticipantEditRow } from "./ParticipantEditRow";
+import { KpiConfigSection } from "./KpiConfigSection";
 
 const STATUS_TONE: Record<string, "slate" | "green" | "gray"> = {
   DRAFT: "slate",
@@ -23,16 +26,18 @@ export default async function SplitDetailPage({ params }: { params: { id: string
     notFound();
   }
 
-  const [weeks, participants, people] = await Promise.all([
+  const [weeks, participants, people, kpiConfigs] = await Promise.all([
     listSplitWeeks(prisma, split.id),
     listParticipantsForSplit(prisma, split.id),
     listAllPersons(prisma),
+    listKpiConfigsForSplit(prisma, split.id),
   ]);
 
   const participatingPersonIds = new Set(participants.map((participant) => participant.personId));
   const availablePeople = people.filter((person) => !participatingPersonIds.has(person.id));
 
-  const canActivate = split.status === "DRAFT" && participants.length > 0;
+  const activeKpiCount = kpiConfigs.filter((config) => config.isActive).length;
+  const canActivate = split.status === "DRAFT" && participants.length > 0 && activeKpiCount > 0;
 
   return (
     <div className="space-y-8">
@@ -45,6 +50,18 @@ export default async function SplitDetailPage({ params }: { params: { id: string
         <p className="mt-1 text-sm text-slate-600">
           Inicio: {formatCalendarDate(split.startDate)} - {split.numberOfWeeks} semanas
         </p>
+        <p className="mt-2 text-sm text-slate-600">
+          KPI activos: {activeKpiCount} de {TOTAL_KPI_COUNT}.{" "}
+          <a href="#kpi-configuracion" className="underline hover:text-slate-900">
+            Ir a la configuracion de KPI
+          </a>
+        </p>
+        {activeKpiCount === 0 && (
+          <p className="mt-1 text-sm text-amber-700">
+            Este split no tiene ningun KPI activo. Configura al menos uno en la seccion &quot;KPI del
+            split&quot;.
+          </p>
+        )}
       </div>
 
       {split.status === "DRAFT" && (
@@ -53,7 +70,11 @@ export default async function SplitDetailPage({ params }: { params: { id: string
             <ActivateSplitButton splitId={split.id} />
           ) : (
             <p className="text-sm text-slate-500">
-              Anade al menos un participante para poder activar el split.
+              {participants.length === 0 && activeKpiCount === 0
+                ? "Anade al menos un participante y activa al menos un KPI para poder activar el split."
+                : participants.length === 0
+                  ? "Anade al menos un participante para poder activar el split."
+                  : "Activa al menos un KPI para poder activar el split."}
             </p>
           )}
         </div>
@@ -118,6 +139,8 @@ export default async function SplitDetailPage({ params }: { params: { id: string
           />
         )}
       </section>
+
+      <KpiConfigSection splitId={split.id} splitStatus={split.status} kpiConfigs={kpiConfigs} />
 
       {split.status === "DRAFT" && (
         <section className="space-y-3">

@@ -4,6 +4,60 @@ Formato inspirado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/)
 Este proyecto usa versionado `0.x` mientras se construye el nucleo
 funcional; la primera version publicada es `0.1.0`.
 
+## [0.2.0] - MVP-1B — KPI activos y configuracion
+
+### Anadido
+
+- Catalogo cerrado y tipado en codigo de los diez KPI de Split 8
+  (`src/domain/kpis/catalog.ts`), con nombre visible, descripcion, orden
+  de presentacion, explicacion legible de su calculo futuro, valores
+  predeterminados y esquema de validacion de sus parametros propios.
+- Nueva entidad `SplitKpiConfig` (una por `KpiCode` y split): activacion
+  individual, maximo base (`Decimal`, mayor que cero), multiplicadores
+  opcionales por nivel `N0`/`N1`/`N2` (`Decimal`, un valor vacio significa
+  "nivel no aplicable", no multiplicador cero) y parametros propios en
+  JSON validado por el esquema del KPI correspondiente.
+- Migracion `add_kpi_configuration`: crea el enum `KpiCode` y la tabla
+  `SplitKpiConfig`, con restricciones de base de datos para las reglas
+  criticas (maximo base positivo, multiplicadores no negativos, un KPI
+  activo necesita al menos un multiplicador aplicable), y hace backfill
+  de las diez configuraciones inactivas con valores de Split 8 para todos
+  los splits que ya existieran, sin modificar personas, semanas,
+  participantes ni el estado de ningun split.
+- Creacion de un split nuevo: ahora crea tambien sus diez
+  `SplitKpiConfig` iniciales (inactivas, valores de Split 8) dentro de la
+  misma transaccion que el split y sus semanas.
+- Activacion de un split: ahora exige, ademas de al menos un participante,
+  al menos un KPI activo. La regla se protege en el servicio de dominio.
+- Pantalla administrativa "KPI del split", integrada en el detalle
+  existente del split: resumen de KPI activos sobre diez con aviso si no
+  hay ninguno, y un formulario por KPI para activarlo/desactivarlo y
+  editar su maximo, multiplicadores y parametros, con validacion y
+  mensajes en castellano. En splits `CLOSED` se muestra en solo lectura;
+  en `DRAFT` y `ACTIVE` es editable (decision provisional, ver
+  `docs/DECISIONS.md`).
+- Documentacion: `docs/KPI_CONFIGURATION.md` (referencia principal del
+  catalogo y su configuracion), y actualizacion de `docs/DATA_MODEL.md`,
+  `docs/DECISIONS.md`, `docs/ROADMAP.md`, `docs/DISCOVERY-1-SPLIT-8.md`,
+  `README.md` y `CLAUDE.md`.
+- Pruebas de servicio (Vitest) sobre las reglas criticas de `MVP-1B`:
+  integridad del catalogo, creacion de las diez configuraciones al crear
+  un split, aislamiento entre splits, conservacion de parametros al
+  desactivar/reactivar un KPI, validacion de valores invalidos y de
+  multiplicador vacio como no aplicable, regla de activacion con
+  participante y KPI activo, y edicion de KPI segun el estado del split.
+
+### Fuera de alcance en esta entrega
+
+Motor de calculo de resultados, carga manual de valores, importacion o
+lectura de Excel, apertura/cierre/publicacion de semanas, resultados
+semanales, clasificacion, vista individual, autenticacion, facciones,
+profesiones, efectos que aumenten el maximo, localizaciones, objetos,
+cartas, mercado, creditos, renombre, misiones, conexion con Power BI,
+formulas libres, constructor generico de KPI, motor generico de reglas o
+plugins, API publica y actualizacion general de dependencias. Ver
+`docs/ROADMAP.md`.
+
 ## [0.1.0] - MVP-1A — Personas y creacion de splits
 
 ### Anadido

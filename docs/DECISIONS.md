@@ -71,13 +71,104 @@ semana inicial de un participante evita cambios silenciosos de sus datos.
 
 ## Catalogo cerrado de KPI para el siguiente incremento
 
-**Decision:** `MVP-1B` implementara un catalogo cerrado de 10 KPI con
+**Decision:** `MVP-1B` implementa un catalogo cerrado de 10 KPI con
 tipos de calculo conocidos y parametros configurables, sin permitir crear
 KPI nuevos ni introducir formulas libres.
 
 **Motivo:** limita el riesgo de un motor de calculo generico mal
 definido y se ajusta al comportamiento auditado del Split 8 (ver
 `docs/DISCOVERY-1-SPLIT-8.md`).
+
+## Catalogo tipado en codigo, sin tabla global editable
+
+**Decision:** el catalogo de los diez KPI (nombre, descripcion, orden,
+explicacion del calculo, valores predeterminados y esquema de validacion
+de parametros) vive como una unica fuente de verdad tipada en
+`src/domain/kpis/catalog.ts`, no en una tabla de base de datos editable
+desde la interfaz.
+
+**Motivo:** el catalogo es cerrado por decision de producto (ver
+decision anterior). Guardarlo en codigo evita construir una pantalla de
+administracion de KPI genericos que no se necesita todavia; anadir un KPI
+nuevo en el futuro sera un cambio de codigo y una migracion deliberados,
+no una operacion desde la interfaz.
+
+## Copia estable de configuracion de KPI por split
+
+**Decision:** cada split guarda su propia copia editable de la
+configuracion de cada KPI (`SplitKpiConfig`), creada a partir de los
+valores predeterminados del catalogo en el momento de crear el split.
+
+**Motivo:** un cambio futuro en los valores predeterminados del catalogo
+no debe modificar silenciosamente la configuracion de splits ya creados.
+Cada edicion de la gamificacion puede necesitar valores distintos (por
+ejemplo, mas puntos por ticket resuelto) sin afectar a las demas.
+
+## Parametros propios de cada KPI como JSON validado por esquema conocido
+
+**Decision:** los parametros propios del tipo de calculo de cada KPI
+(`SplitKpiConfig.parameters`) se guardan como JSON, pero nunca se aceptan
+tal cual desde el navegador: la accion de servidor construye el objeto
+leyendo unicamente los campos que el catalogo declara para ese `kpiCode`,
+y lo valida contra el esquema de ese KPI concreto antes de guardarlo.
+
+**Motivo:** los distintos KPI tienen distintos parametros (por ejemplo,
+Embajador de voz tiene cuatro parametros y Cazador de soluciones solo
+uno). Un JSON validado por esquema evita tanto una tabla con una columna
+por cada posible parametro de cualquier KPI como aceptar JSON arbitrario
+del cliente, que abriria la puerta a formulas o campos no previstos.
+
+## Multiplicador vacio como nivel no aplicable
+
+**Decision:** un multiplicador de nivel (`N0`, `N1`, `N2`) vacio
+(`NULL`) significa que ese nivel no es aplicable a ese KPI, no que el
+multiplicador valga cero.
+
+**Motivo:** es el comportamiento observado en Split 8 (por ejemplo,
+Guardian de la Estabilidad solo aplicaba a N2). Tratar "vacio" como
+"cero" habria sido incorrecto: un multiplicador cero anularia el
+resultado del KPI para ese nivel en lugar de indicar que ese nivel
+sencillamente no participa en el calculo.
+
+## Edicion de KPI en splits activos permitida provisionalmente
+
+**Decision:** en `MVP-1B` se permite editar la configuracion de KPI de un
+split en estado `ACTIVE`, ademas de `DRAFT`. Solo un split `CLOSED` es de
+solo lectura.
+
+**Motivo:** todavia no existen resultados calculados ni semanas
+publicadas, asi que no hay nada que una edicion de KPI pueda dejar
+inconsistente. Es una decision explicitamente provisional: `MVP-1C`
+debera definir el bloqueo, versionado o recalculo de KPI cuando ya
+existan resultados dependientes de esa configuracion.
+
+## Activacion de un split exige participante y KPI activo
+
+**Decision:** a partir de `MVP-1B`, un split solo puede activarse
+(`DRAFT` -> `ACTIVE`) cuando tiene al menos un participante **y** al
+menos un KPI activo. La regla se protege en el servicio de dominio
+(`activateSplit`), no solo en la interfaz.
+
+**Motivo:** un split activo sin ningun KPI activo no podria producir
+ningun resultado en `MVP-1C`. La regla anterior (solo participante) queda
+ampliada, no sustituida por otra distinta.
+
+**Nota de migracion:** esta regla no se aplica retroactivamente. Los
+splits que ya estuvieran `ACTIVE` antes de esta migracion no cambian de
+estado aunque queden con sus diez KPI inactivos; la interfaz les muestra
+un aviso para que el administrador los configure.
+
+## PostgreSQL local en Windows como entorno del usuario, Docker opcional
+
+**Decision:** el recorrido principal documentado en `README.md` es
+PostgreSQL instalado directamente en Windows, con `DATABASE_URL` apuntando
+a esa instancia. `docker-compose.yml` se conserva como alternativa
+opcional; nada en pruebas, migraciones o desarrollo depende
+obligatoriamente de Docker.
+
+**Motivo:** es el entorno que el usuario ha decidido usar realmente en su
+maquina. Mantener Docker como alternativa no le anade coste y evita
+romper el flujo de quien si lo prefiera.
 
 ## Autenticacion aplazada
 

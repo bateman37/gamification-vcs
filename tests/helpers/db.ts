@@ -10,6 +10,7 @@ export const testDb = new PrismaClient({
 
 export async function resetDatabase(): Promise<void> {
   await testDb.splitParticipant.deleteMany();
+  await testDb.splitKpiConfig.deleteMany();
   await testDb.splitWeek.deleteMany();
   await testDb.split.deleteMany();
   await testDb.person.deleteMany();

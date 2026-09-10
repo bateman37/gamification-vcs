@@ -32,12 +32,15 @@ Se distinguen explicitamente tres tipos de contenido:
   primera, lo que confirma la necesidad de una semana inicial de
   participacion por persona y split (`SplitParticipant.startWeekSequenceNumber`).
 
-## 2. Los diez KPI iniciales (alcance de `MVP-1B`)
+## 2. Los diez KPI iniciales (implementado en `MVP-1B`)
 
-El primer catalogo de KPI sera **cerrado**: en `MVP-1B` se podran activar
-o desactivar por split y configurar sus parametros, pero **no** se podran
-crear KPI nuevos ni introducir formulas o codigo libre. Cada KPI tendra un
-tipo de calculo conocido de antemano por el sistema.
+El primer catalogo de KPI es **cerrado**: desde `MVP-1B` se pueden activar
+o desactivar por split y configurar sus parametros, pero **no** se pueden
+crear KPI nuevos ni introducir formulas o codigo libre. Cada KPI tiene un
+tipo de calculo conocido de antemano por el sistema. La referencia
+completa de la configuracion implementada (catalogo, parametros, reglas
+de validacion y ejemplos) esta en `docs/KPI_CONFIGURATION.md`; esta
+seccion se conserva tal cual se audito, como contexto historico.
 
 | KPI | Calculo observado en Split 8 | Multiplicador N0 / N1 / N2 | Maximo base |
 |---|---|---:|---:|

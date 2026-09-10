@@ -22,6 +22,21 @@ enum ParticipantLevel {
   N2
 }
 
+/// Catalogo cerrado de KPI de Split 8 (ver src/domain/kpis/catalog.ts). El
+/// orden de declaracion coincide con el orden de presentacion del catalogo.
+enum KpiCode {
+  SOLUTION_HUNTER
+  DATA_EXPLORER
+  VOICE_AMBASSADOR
+  MASTER_CRAFTSMAN
+  ESCALATION_TAMER
+  STABILITY_GUARDIAN
+  WORK_CHRONOMANCY
+  STAR_WRITER
+  ENTHUSIASTIC_STUDENT
+  EXPERT_APPRENTICE
+}
+
 /// Persona: registro estable, reutilizable entre splits. No es lo mismo
 /// que un participante: una persona puede no participar en ningun split,
 /// o participar en varios con alias distintos en cada uno.
@@ -52,6 +67,7 @@ model Split {
 
   weeks        SplitWeek[]
   participants SplitParticipant[]
+  kpiConfigs   SplitKpiConfig[]
 }
 
 /// Semana de un split. La identidad funcional es splitId + sequenceNumber,
@@ -99,4 +115,35 @@ model SplitParticipant {
   @@unique([splitId, personId])
   // El alias normalizado debe ser unico dentro del split (no entre splits).
   @@unique([splitId, aliasNormalized])
+}
+
+/// Configuracion de un KPI del catalogo cerrado para un split concreto.
+/// Cada split conserva su propia copia: un cambio futuro en los valores
+/// predeterminados del catalogo no modifica silenciosamente la
+/// configuracion de splits ya creados.
+model SplitKpiConfig {
+  id       String  @id @default(uuid())
+  splitId  String
+  kpiCode  KpiCode
+  isActive Boolean @default(false)
+  /// Maximo base del KPI. Siempre mayor que cero.
+  baseMax  Decimal @db.Decimal(12, 4)
+  /// Multiplicador aplicado a participantes de nivel N0. `null` significa
+  /// que el nivel no es aplicable para este KPI, no que el multiplicador
+  /// sea cero.
+  multiplierN0 Decimal? @db.Decimal(12, 4)
+  multiplierN1 Decimal? @db.Decimal(12, 4)
+  multiplierN2 Decimal? @db.Decimal(12, 4)
+  /// Parametros propios del tipo de calculo de este KPI (ver
+  /// src/domain/kpis/catalog.ts). Nunca se acepta tal cual desde el
+  /// navegador: se construye a partir de campos conocidos y se valida
+  /// segun `kpiCode` antes de guardarse.
+  parameters Json
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  split Split @relation(fields: [splitId], references: [id], onDelete: Cascade)
+
+  // Un split tiene como mucho una configuracion por cada KPI del catalogo.
+  @@unique([splitId, kpiCode])
 }

@@ -2,6 +2,7 @@ import type { Prisma, PrismaClient, Split, SplitWeek } from "@prisma/client";
 import { DomainError } from "@/lib/errors";
 import { generateSplitWeeks, parseCalendarDate } from "@/lib/dates";
 import type { CreateSplitInput, UpdateSplitDraftInput } from "@/server/validation/split";
+import { countActiveKpiConfigs, createDefaultKpiConfigs } from "@/server/services/kpi.service";
 
 type Db = PrismaClient | Prisma.TransactionClient;
 
@@ -36,6 +37,8 @@ export async function createSplitWithWeeks(db: PrismaClient, input: CreateSplitI
         endDate: week.endDate,
       })),
     });
+
+    await createDefaultKpiConfigs(tx, split.id);
 
     return split;
   });
@@ -143,6 +146,10 @@ export async function activateSplit(db: PrismaClient, splitId: string): Promise<
   }
   if (split._count.participants < 1) {
     throw new DomainError("El split necesita al menos un participante para poder activarse.");
+  }
+  const activeKpiCount = await countActiveKpiConfigs(db, splitId);
+  if (activeKpiCount < 1) {
+    throw new DomainError("El split necesita al menos un KPI activo para poder activarse.");
   }
 
   return db.split.update({ where: { id: splitId }, data: { status: "ACTIVE" } });
