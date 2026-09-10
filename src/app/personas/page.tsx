@@ -1,0 +1,45 @@
+import { prisma } from "@/lib/prisma";
+import { listPersonsWithParticipationCount } from "@/server/services/person.service";
+import { EmptyState } from "@/components/ui";
+import { PersonCreateForm } from "./PersonCreateForm";
+import { PersonEditRow } from "./PersonEditRow";
+
+export default async function PersonasPage() {
+  const people = await listPersonsWithParticipationCount(prisma);
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-xl font-semibold">Personas</h1>
+        <p className="text-sm text-slate-600">
+          Registro global de personas. Una persona puede participar en cero, uno o varios splits.
+        </p>
+      </div>
+
+      <PersonCreateForm />
+
+      <div className="rounded-lg border border-slate-200 bg-white">
+        <table className="w-full text-left text-sm">
+          <thead className="border-b border-slate-200 bg-slate-50 text-slate-600">
+            <tr>
+              <th className="px-3 py-2 font-medium">Nombre</th>
+              <th className="px-3 py-2 font-medium">Correo</th>
+              <th className="px-3 py-2 text-center font-medium">Splits</th>
+              <th className="px-3 py-2" />
+            </tr>
+          </thead>
+          <tbody>
+            {people.map((person) => (
+              <PersonEditRow key={person.id} person={person} />
+            ))}
+          </tbody>
+        </table>
+        {people.length === 0 && (
+          <div className="p-4">
+            <EmptyState>Todavia no hay personas registradas.</EmptyState>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
