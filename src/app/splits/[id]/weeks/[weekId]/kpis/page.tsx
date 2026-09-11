@@ -7,6 +7,11 @@ import { getProductivityLoadStatus } from "@/server/services/productivity-import
 import { getEscalationLoadStatus } from "@/server/services/escalation-import.service";
 import { getQualityLoadStatus } from "@/server/services/quality-import.service";
 import { getVoiceLoadStatus } from "@/server/services/voice-import.service";
+import { getStabilityLoadStatus } from "@/server/services/stability-entry.service";
+import { getChronomancyLoadStatus } from "@/server/services/chronomancy-entry.service";
+import { getWriterLoadStatus } from "@/server/services/writer-entry.service";
+import { getStudentLoadStatus } from "@/server/services/student-entry.service";
+import { getApprenticeLoadStatus } from "@/server/services/apprentice-entry.service";
 import { KPI_CATALOG_LIST } from "@/domain/kpis/catalog";
 import { buildWeeklyLoadGroups, type LoadCoverageStatus, type LoadOrigin } from "@/domain/kpis/loadGroups";
 import { formatCalendarDate } from "@/lib/dates";
@@ -40,6 +45,21 @@ export default async function WeeklyKpisPage({
   }
   if (activeCodes.has("VOICE_AMBASSADOR")) {
     coverageByOrigin.VOICE_AMBASSADOR = await getVoiceLoadStatus(prisma, split.id, week.id, week.sequenceNumber);
+  }
+  if (activeCodes.has("STABILITY_GUARDIAN")) {
+    coverageByOrigin.STABILITY_GUARDIAN = await getStabilityLoadStatus(prisma, split.id, week.id, week.sequenceNumber);
+  }
+  if (activeCodes.has("WORK_CHRONOMANCY")) {
+    coverageByOrigin.WORK_CHRONOMANCY = await getChronomancyLoadStatus(prisma, split.id, week.id, week.sequenceNumber);
+  }
+  if (activeCodes.has("STAR_WRITER")) {
+    coverageByOrigin.STAR_WRITER = await getWriterLoadStatus(prisma, split.id, week.id, week.sequenceNumber);
+  }
+  if (activeCodes.has("ENTHUSIASTIC_STUDENT")) {
+    coverageByOrigin.ENTHUSIASTIC_STUDENT = await getStudentLoadStatus(prisma, split.id, week.id, week.sequenceNumber);
+  }
+  if (activeCodes.has("EXPERT_APPRENTICE")) {
+    coverageByOrigin.EXPERT_APPRENTICE = await getApprenticeLoadStatus(prisma, split.id, week.id, week.sequenceNumber);
   }
 
   // Domador de Escaladas depende de Productividad aunque Cazador de soluciones y
@@ -77,7 +97,9 @@ export default async function WeeklyKpisPage({
           {groups.map((group) => {
             const canLoad = group.implemented && split.status === "ACTIVE";
             const canCheck = group.implemented && group.status !== "PENDING";
-            const loadHref = group.routeSlug ? `/splits/${split.id}/weeks/${week.id}/kpis/${group.routeSlug}/cargar` : "#";
+            const loadAction = group.mode === "MANUAL" ? "introducir" : "cargar";
+            const loadLabel = group.mode === "MANUAL" ? "Introducir datos" : "Cargar";
+            const loadHref = group.routeSlug ? `/splits/${split.id}/weeks/${week.id}/kpis/${group.routeSlug}/${loadAction}` : "#";
             const checkHref = group.routeSlug ? `/splits/${split.id}/weeks/${week.id}/kpis/${group.routeSlug}/comprobar` : "#";
             return (
               <li key={group.key} className="rounded-lg border border-slate-200 bg-white p-4">
@@ -108,7 +130,7 @@ export default async function WeeklyKpisPage({
                           href={loadHref}
                           className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700"
                         >
-                          Cargar
+                          {loadLabel}
                         </Link>
                       ) : (
                         <button
@@ -116,7 +138,7 @@ export default async function WeeklyKpisPage({
                           disabled
                           className="rounded-md bg-slate-200 px-3 py-1.5 text-sm font-medium text-slate-400"
                         >
-                          Cargar
+                          {loadLabel}
                         </button>
                       )}
                       {canCheck ? (

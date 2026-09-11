@@ -100,7 +100,11 @@ export async function previewEscalationImport(
       updates,
       escalationTamer: config
         ? toEscalationTamerOutcomeView(
-            resolveEscalationTamerOutcome(config, match.participant.level, match.row.groupReassignments, updates),
+            resolveEscalationTamerOutcome(config, match.participant.level, {
+              hasEscalationImport: true,
+              groupReassignments: match.row.groupReassignments,
+              updates,
+            }),
           )
         : null,
     };
@@ -210,8 +214,11 @@ export async function confirmEscalationImport(
 /**
  * Estado del grupo Domador de Escaladas: `PENDING` sin ningun origen,
  * `PARTIAL` (ambar) con exactamente uno de los dos, `LOADED` (verde) con
- * ambos, con `n VAC` de participantes aplicables sin pareja completa de
- * filas. Nunca vuelve a amarillo por falta de participantes con ambos
+ * ambos, con `n VAC` de participantes aplicables sin fila ni en Escalados
+ * ni en Productividad (hotfix `MVP-1C.3 / INPUT-1C`: quien tiene fila en
+ * uno de los dos origenes ya no cuenta como VAC, porque su ausencia en el
+ * otro se resuelve como cero implicito o como "Falta Productividad", nunca
+ * como VAC). Nunca vuelve a amarillo por falta de participantes con ambos
  * origenes presentes.
  */
 export async function getEscalationLoadStatus(
@@ -235,7 +242,7 @@ export async function getEscalationLoadStatus(
   const escalationParticipantIds = new Set((escalationImport?.rows ?? []).map((row) => row.splitParticipantId));
   const productivityParticipantIds = new Set((productivityImport?.rows ?? []).map((row) => row.splitParticipantId));
   const vacCount = applicableParticipants.filter(
-    (participant) => !escalationParticipantIds.has(participant.id) || !productivityParticipantIds.has(participant.id),
+    (participant) => !escalationParticipantIds.has(participant.id) && !productivityParticipantIds.has(participant.id),
   ).length;
   return { status: "LOADED", vacCount };
 }
@@ -273,6 +280,7 @@ export async function getEscalationCheckView(db: PrismaClient, splitId: string, 
   const escalationRowByParticipant = new Map(escalationImport?.rows.map((row) => [row.splitParticipantId, row]) ?? []);
   const updatesByParticipant = new Map(productivityImport?.rows.map((row) => [row.splitParticipantId, row.updates]) ?? []);
 
+  const hasEscalationImport = escalationImport !== null;
   const rows: EscalationCheckRow[] = applicableParticipants.map((participant) => {
     const escalationRow = escalationRowByParticipant.get(participant.id);
     const updates = updatesByParticipant.get(participant.id);
@@ -285,7 +293,11 @@ export async function getEscalationCheckView(db: PrismaClient, splitId: string, 
       updates,
       escalationTamer: config
         ? toEscalationTamerOutcomeView(
-            resolveEscalationTamerOutcome(config, participant.level, escalationRow?.groupReassignments, updates),
+            resolveEscalationTamerOutcome(config, participant.level, {
+              hasEscalationImport,
+              groupReassignments: escalationRow?.groupReassignments,
+              updates,
+            }),
           )
         : null,
     };

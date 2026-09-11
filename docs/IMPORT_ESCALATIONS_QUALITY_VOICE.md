@@ -88,16 +88,31 @@ puntos finales = minimo(puntos sin limite, baseMax)
 Parametros existentes desde `MVP-1B`: `basePoints` (30), `ratioPenaltyFactor`
 (200). Sin suelo de cero: un resultado negativo es valido.
 
-Estados especiales, en este orden de prioridad:
+Estados especiales, en este orden de prioridad (actualizado por el hotfix
+`MVP-1C.3 / INPUT-1C`, ver `docs/MANUAL_KPI_ENTRY.md`):
 
 1. **No aplica**: el multiplicador del nivel esta vacio.
-2. **Sin dato de Escalados**: no hay fila de Escalados para ese
-   participante en esa semana.
-3. **Falta Productividad**: hay fila de Escalados pero no de
+2. **Sin dato de Escalados**: no existe ninguna carga de Escalados
+   confirmada para esa semana.
+3. **VAC**: existe la carga de Escalados, pero el participante no tiene
+   fila ni en Escalados ni en Productividad.
+4. **Falta Productividad**: hay fila **real** de Escalados pero no de
    Productividad (misma semana, mismo participante).
-4. **No calculable: Actualizaciones es 0**: existen ambas filas pero
-   `updates` es `0` (no se divide por cero, no se otorgan puntos).
-5. **Calculado**: existen ambas filas y `updates > 0`.
+5. **No calculable: Actualizaciones es 0**: se conocen las reasignaciones
+   (reales o inferidas) pero `updates` es `0` (no se divide por cero, no se
+   otorgan puntos).
+6. **Calculado**: se conocen ambos valores y `updates > 0`. Si la fila de
+   Escalados no existia y se infirio `groupReassignments = 0` porque la
+   carga de Escalados ya existe y hay Productividad, el resultado incluye
+   `inferred: true` y se muestra en Comprobar como `0 (inferido)`.
+
+**Cero implicito (hotfix):** si la carga de Escalados de la semana existe
+pero la persona no tiene fila en ella, y esa persona **si** tiene fila de
+Productividad, sus reasignaciones se interpretan como cero implicito (no se
+inserta ninguna fila artificial en `EscalationWeeklyRow`: la inferencia
+pertenece solo al resultado calculado). Si tampoco tiene Productividad, es
+`VAC`. Esta inferencia nunca se aplica si la carga de Escalados no existe
+todavia para la semana.
 
 Ejemplo verificado (sintetico, configuracion predeterminada de Split 8):
 `groupReassignments = 3`, `updates = 192`, `basePoints = 30`,
@@ -115,6 +130,13 @@ Ejemplo verificado (sintetico, configuracion predeterminada de Split 8):
 El amarillo nunca se debe a que falten participantes dentro de un origen
 ya presente: eso se expresa con `n VAC` en verde, igual que en
 Productividad, Calidad y Llamadas (ver `docs/DECISIONS.md`).
+
+**Correccion de `vacCount` (hotfix `MVP-1C.3 / INPUT-1C`):** con ambos
+origenes confirmados, `vacCount` cuenta unicamente a los participantes
+aplicables que no tienen fila **ni** en Escalados **ni** en Productividad.
+Quien tiene fila en uno de los dos origenes nunca cuenta como VAC: su
+ausencia en el otro se resuelve como cero implicito o como "Falta
+Productividad", nunca como VAC.
 
 ### Dependencia visible en pantalla
 
@@ -250,12 +272,14 @@ esta cobertura: se reserva para la dependencia de Domador (ver arriba).
 
 | Caso | Resultado |
 |---|---|
-| Participante no aparece en un fichero confirmado | `Sin dato` |
+| Participante no aparece en un fichero confirmado (Calidad, Llamadas) | `Sin dato` |
 | Participante con todos sus conteos a cero | `0` puntos si el KPI aplica |
 | Multiplicador del nivel vacio | `No aplica` |
-| Domador: Escalados sin Productividad | `Falta Productividad` |
-| Domador: Productividad sin Escalados | `Sin dato de Escalados` |
-| Domador: ambas filas con `updates = 0` | `No calculable: Actualizaciones es 0` |
+| Domador: no existe ninguna carga de Escalados para la semana | `Sin dato de Escalados` |
+| Domador: carga de Escalados existe, fila real de Escalados sin Productividad | `Falta Productividad` |
+| Domador: carga de Escalados existe, sin fila real de Escalados ni de Productividad | `VAC` |
+| Domador: carga de Escalados existe, sin fila real de Escalados, con Productividad `updates > 0` | Cero inferido, calculado (`0 (inferido)` en Comprobar) |
+| Domador: reasignaciones (reales o inferidas) conocidas con `updates = 0` | `No calculable: Actualizaciones es 0` |
 | Excel con una persona ajena al split | `Ignorado` en previsualizacion; no se persiste |
 | Nombre que coincide con mas de un participante aplicable | `Ambiguo`; bloquea confirmacion |
 

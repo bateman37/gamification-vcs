@@ -87,9 +87,9 @@ seccion se conserva tal cual se audito, como contexto historico.
 | Llamadas | Excel |
 | Estabilidad | Manual |
 | Cronomagia | Manual, proveniente de Power BI |
-| Articulos | Excel |
+| Articulos | Manual (confirmado en `MVP-1C.3 / INPUT-1C`; la hipotesis inicial de Excel no se confirmo) |
 | Dedicacion | Manual, proveniente de Power BI |
-| Formaciones | Excel |
+| Formaciones | Manual (confirmado en `MVP-1C.3 / INPUT-1C`; la hipotesis inicial de Excel no se confirmo) |
 
 `DATAPadawan` no se llego a utilizar y `DATADedicacionLeo` era una fuente
 historica ya discontinuada. Ninguna de las dos forma parte del catalogo
@@ -139,6 +139,31 @@ Ninguno de los tres presentaba vacios, duplicados, negativos ni decimales
 donde se exigia un entero en la muestra auditada, pero los tres lectores
 igualmente rechazan esos casos (ver contrato completo, formulas y reglas
 de validacion en `docs/IMPORT_ESCALATIONS_QUALITY_VOICE.md`).
+
+### Entrada manual confirmada: Estabilidad, Cronomagia, Articulos, Dedicacion y Formaciones (`MVP-1C.3 / INPUT-1C`)
+
+A diferencia de la hipotesis inicial de esta tabla, ninguno de los cinco
+origenes restantes se carga mediante Excel en esta entrega: los cinco se
+introducen a mano en la aplicacion, porque el administrador ya los
+consulta en otros Excel o en Power BI que no forman parte del alcance
+actual. Reglas confirmadas (sin datos personales reales):
+
+- Guardian de la Estabilidad solo pide datos de participantes N2; el resto
+  de KPI manuales piden datos de todos los participantes aplicables.
+- El cero es un dato real y completo en los cinco KPI; ninguno de ellos
+  usa `VAC` para expresar ausencia de datos, salvo Cronomagia laboral, que
+  trata `totalHours = 0` como vacaciones (`VAC`) con prioridad sobre el
+  calculo.
+- Redactor estrella separa "articulos entregados" y "articulos no
+  entregados" en dos conteos positivos independientes (en vez de un unico
+  valor con signo); el calculo aplica la resta.
+- Aprendiz experto exige que "formaciones completadas" no supere el
+  `targetValue` configurado, validado en servidor.
+- El guardado de cada formulario es atomico (todo o nada) y sustituye por
+  completo el conjunto anterior de esa semana; no se guarda historial de
+  versiones.
+
+Referencia completa: `docs/MANUAL_KPI_ENTRY.md`.
 
 ## 4. Flujo funcional completo (a construir por incrementos)
 

@@ -35,6 +35,7 @@ function formatOutcome(outcome: EscalationTamerOutcomeView | null): string {
   if (!outcome) return "-";
   if (outcome.status === "not_applicable") return "No aplica";
   if (outcome.status === "no_escalation_data") return "Sin dato de Escalados";
+  if (outcome.status === "vac") return "VAC";
   if (outcome.status === "no_productivity_data") return "Falta Productividad";
   if (outcome.status === "zero_updates") return "No calculable: Actualizaciones es 0";
   return formatPoints(outcome.finalPoints ?? 0);

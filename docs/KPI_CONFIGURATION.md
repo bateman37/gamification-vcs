@@ -30,10 +30,16 @@ estan implementados de verdad a partir de las cargas semanales de
 Escalados, Calidad y Llamadas respectivamente. Domador cruza, ademas, la
 Productividad ya persistida de la misma semana y participante
 (`ProductivityWeeklyRow.updates`). Documentado en
-`docs/IMPORT_ESCALATIONS_QUALITY_VOICE.md`. Los cinco KPI restantes
-(Guardian de la Estabilidad, Cronomagia laboral, Redactor estrella,
-Estudiante entusiasta, Aprendiz experto) siguen siendo solo
-configuracion: su calculo sigue pendiente de `IMPORT-1` y `MVP-1C`.
+`docs/IMPORT_ESCALATIONS_QUALITY_VOICE.md`.
+
+**Actualizacion (`MVP-1C.3 / INPUT-1C`):** los cinco KPI restantes,
+Guardian de la Estabilidad (`STABILITY_GUARDIAN`), Cronomagia laboral
+(`WORK_CHRONOMANCY`), Redactor estrella (`STAR_WRITER`), Estudiante
+entusiasta (`ENTHUSIASTIC_STUDENT`) y Aprendiz experto
+(`EXPERT_APPRENTICE`), tambien estan implementados de verdad, a partir de
+entrada manual (sin Excel). **Los diez calculos de Split 8 estan ahora
+operativos.** Documentado en `docs/MANUAL_KPI_ENTRY.md`, que tambien
+recoge el hotfix de cero implicito de Domador de Escaladas.
 
 ## El catalogo cerrado
 
@@ -62,9 +68,8 @@ puede modificarla sin afectar a los demas.
 
 ## Forma fija de cada calculo
 
-Cinco de los diez ya estan implementados de verdad (marcados abajo); los
-otros cinco describen la forma que tendra su futuro calculo, todavia sin
-implementar.
+Los diez estan implementados de verdad (ver `docs/IMPORT_PRODUCTIVITY.md`,
+`docs/IMPORT_ESCALATIONS_QUALITY_VOICE.md` y `docs/MANUAL_KPI_ENTRY.md`).
 
 ### Cazador de soluciones (`SOLUTION_HUNTER`) — implementado
 
@@ -102,40 +107,51 @@ Parametros: `positiveWeight` (`1`), `negativePenalty` (`4`), `scale`
 Parametros: `basePoints` (`30`), `ratioPenaltyFactor` (`200`). No existe
 suelo de cero: no formaba parte de la formula auditada en Split 8.
 
-### Guardian de la Estabilidad (`STABILITY_GUARDIAN`)
+### Guardian de la Estabilidad (`STABILITY_GUARDIAN`) — implementado
 
 `resultados x pointsPerResult x multiplicador del nivel`
 
 Parametro: `pointsPerResult` (`30`). Por defecto solo aplica a N2 (N0 y N1
 quedan como "no aplica"), pero la configuracion permite informar tambien
-N0 o N1 en otro split.
+N0 o N1 en otro split. Entrada manual (`docs/MANUAL_KPI_ENTRY.md`), solo
+para participantes N2.
 
-### Cronomagia laboral (`WORK_CHRONOMANCY`)
+### Cronomagia laboral (`WORK_CHRONOMANCY`) — implementado
 
-`occupancy (fraccion) x pointsAtFullOccupancy x multiplicador del nivel`
+`occupancy (fraccion, limitada al 100 %) x pointsAtFullOccupancy x multiplicador del nivel`
 
-Parametro: `pointsAtFullOccupancy` (`60`).
+Parametro: `pointsAtFullOccupancy` (`60`). Entrada manual con horas
+productivas y horas totales; `totalHours = 0` es `VAC` (ver
+`docs/MANUAL_KPI_ENTRY.md`).
 
-### Redactor estrella (`STAR_WRITER`)
+### Redactor estrella (`STAR_WRITER`) — implementado
 
-- Si articulos aprobados >= 0: `articulos x approvedArticlePoints x multiplicador del nivel + propuestas x proposalPoints`.
-- Si articulos aprobados < 0: `articulos x negativeArticlePoints + propuestas x proposalPoints`.
+**Actualizado en `MVP-1C.3 / INPUT-1C`:** la entrada manual separa
+articulos entregados, no entregados y propuestos en tres campos (en vez de
+un unico "articulos aprobados" con signo). Los no entregados se escriben
+como un conteo positivo; el calculo aplica la resta:
 
-El multiplicador nunca afecta a las propuestas ni a los articulos
-negativos.
+`entregados x approvedArticlePoints x multiplicador del nivel - no entregados x negativeArticlePoints + propuestos x proposalPoints`
 
-Parametros: `approvedArticlePoints` (`10`), `negativeArticlePoints`
-(`10`), `proposalPoints` (`5`).
+El multiplicador solo afecta a los articulos entregados; nunca a los no
+entregados ni a las propuestas. Sin suelo de cero.
 
-### Estudiante entusiasta (`ENTHUSIASTIC_STUDENT`)
+Parametros (sin cambios de nombre): `approvedArticlePoints` (`10`),
+`negativeArticlePoints` (`10`), `proposalPoints` (`5`).
+
+### Estudiante entusiasta (`ENTHUSIASTIC_STUDENT`) — implementado
 
 `horas de dedicacion x pointsPerHour x multiplicador del nivel`
 
-Parametro: `pointsPerHour` (`12,5`).
+Parametro: `pointsPerHour` (`12,5`). Entrada manual; el cero es un dato
+valido y completo.
 
-### Aprendiz experto (`EXPERT_APPRENTICE`)
+### Aprendiz experto (`EXPERT_APPRENTICE`) — implementado
 
 `valor de formacion / targetValue x pointsAtTarget x multiplicador del nivel`
+
+Entrada manual; `completedTrainings` no puede superar `targetValue`,
+validado en servidor (ver `docs/MANUAL_KPI_ENTRY.md`).
 
 Parametros: `targetValue` (`15`), `pointsAtTarget` (`50`).
 

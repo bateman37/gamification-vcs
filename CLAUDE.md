@@ -15,18 +15,20 @@ Antes de proponer o realizar cualquier cambio, lee en este orden:
 
 Ademas, revisa `docs/DECISIONS.md` para no contradecir decisiones ya
 tomadas sin justificarlo explicitamente, y `docs/DISCOVERY-1-SPLIT-8.md`,
-`docs/KPI_CONFIGURATION.md`, `docs/IMPORT_PRODUCTIVITY.md` y
-`docs/IMPORT_ESCALATIONS_QUALITY_VOICE.md` si vas a trabajar en KPI,
-cargas de datos o motor de calculo.
+`docs/KPI_CONFIGURATION.md`, `docs/IMPORT_PRODUCTIVITY.md`,
+`docs/IMPORT_ESCALATIONS_QUALITY_VOICE.md` y `docs/MANUAL_KPI_ENTRY.md` si
+vas a trabajar en KPI, cargas de datos o motor de calculo.
 
 ## Estado real de las cargas semanales (no romper sin justificarlo)
 
-A fecha de `MVP-1C.2 / IMPORT-1B`, cuatro origenes de carga semanal estan
-implementados: Productividad, Escalados, Calidad y Llamadas (ver
-`docs/IMPORT_PRODUCTIVITY.md` y
-`docs/IMPORT_ESCALATIONS_QUALITY_VOICE.md`). Reglas ya asentadas que una
-sesion futura no debe deshacer sin registrar el motivo en
-`docs/DECISIONS.md`:
+A fecha de `MVP-1C.3 / INPUT-1C`, los diez KPI de Split 8 tienen ya
+introduccion de datos funcional: cuatro origenes de carga por Excel
+(Productividad, Escalados, Calidad, Llamadas) y cinco entradas manuales
+(Guardian de la Estabilidad, Cronomagia laboral, Redactor estrella,
+Estudiante entusiasta, Aprendiz experto). Ver `docs/IMPORT_PRODUCTIVITY.md`,
+`docs/IMPORT_ESCALATIONS_QUALITY_VOICE.md` y `docs/MANUAL_KPI_ENTRY.md`.
+Reglas ya asentadas que una sesion futura no debe deshacer sin registrar el
+motivo en `docs/DECISIONS.md`:
 
 - Una carga confirmada de Productividad, Calidad o Llamadas es siempre
   verde (`Cargado`), aunque falten participantes aplicables; la ausencia
@@ -40,16 +42,41 @@ sesion futura no debe deshacer sin registrar el motivo en
   al consultar; nunca dupliques `updates` en `EscalationWeeklyRow`, y
   nunca hagas que analizar o confirmar Escalados cree o modifique
   Productividad.
-- Cada origen (Productividad, Escalados, Calidad, Llamadas) tiene su
-  propia ruta bajo `.../kpis/<origen>/{cargar,comprobar}` y su propia
-  cabecera de carga con sustitucion atomica e independiente de los demas.
-  No reutilices la ruta de un origen para el boton de otro.
+- **Cero implicito de Escalados (hotfix `MVP-1C.3 / INPUT-1C`):** la
+  ausencia de fila de Escalados para un participante se interpreta como
+  reasignaciones `0` solo cuando ya existe una carga de Escalados
+  confirmada para la semana **y** el participante tiene Productividad; si
+  no existe la carga, sigue siendo "Sin dato de Escalados". Nunca insertes
+  una fila artificial en `EscalationWeeklyRow`: la inferencia pertenece
+  solo al resultado calculado (`resolveEscalationTamerOutcome`). El
+  `vacCount` de Domador solo cuenta a quien falta en **ambos** origenes a
+  la vez (nunca uses una condicion "o").
+- Cada origen de Excel (Productividad, Escalados, Calidad, Llamadas) tiene
+  su propia ruta bajo `.../kpis/<origen>/{cargar,comprobar}`; cada KPI
+  manual (Guardian de la Estabilidad, Cronomagia laboral, Redactor
+  estrella, Estudiante entusiasta, Aprendiz experto) tiene su propia ruta
+  bajo `.../kpis/<origen>/{introducir,comprobar}`. No reutilices la ruta de
+  un origen para el boton de otro.
 - El recorrido de bajo nivel de lectura de Excel
   (`src/server/services/shared/xlsx.ts`) y de emparejamiento por nombre
   real (`src/server/services/shared/matching.ts`) es un helper compartido,
   no un motor generico: cada origen sigue declarando sus propios
   encabezados, mensajes y reglas de persistencia en su propio lector y
-  servicio.
+  servicio. Lo mismo aplica a los helpers de entrada manual
+  (`src/server/services/shared/manual-entries.ts`,
+  `src/server/validation/manual-entry.ts`): cada KPI manual sigue
+  declarando sus propios campos, validaciones y calculo.
+- Los cinco KPI manuales se guardan de forma atomica (sustituyen por
+  completo el conjunto anterior de esa semana dentro de una transaccion) y
+  usan solo los estados `Pendiente`/`Cargado` (nunca `Carga parcial`).
+  Ninguno muestra `VAC` de grupo; Cronomagia es la unica excepcion que
+  muestra `VAC` por fila (`totalHours = 0`), sin que eso afecte al estado
+  del grupo.
+- La columna `KPI cargados` del calendario de semanas
+  (`src/server/services/kpi-load-summary.service.ts`) se calcula siempre
+  al consultar, con un numero acotado de consultas para todo el
+  calendario. Nunca persistas un contador de KPI cargados en `SplitWeek`
+  ni en ninguna otra tabla.
 
 ## Reglas de trabajo
 

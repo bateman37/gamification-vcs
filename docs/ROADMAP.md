@@ -73,9 +73,9 @@ satisfactorias.
   Productividad; el resto de KPI activos aparecen pendientes y
   deshabilitados hasta su propia entrega.
 - Detalle completo en `docs/IMPORT_PRODUCTIVITY.md`.
-- Fuera de alcance: el resto de origenes de `IMPORT-1` (Escalados,
-  Calidad, Llamadas, Estabilidad, Cronomagia, Articulos, Dedicacion,
-  Formaciones), clasificacion general y vista individual (`MVP-1C`).
+- Fuera de alcance en esta entrega: el resto de origenes de datos
+  (implementados en `MVP-1C.2 / IMPORT-1B` y `MVP-1C.3 / INPUT-1C`),
+  clasificacion general y vista individual (`MVP-1C`).
 
 ## MVP-1C.2 / IMPORT-1B — Carga semanal de Escalados, Calidad y Llamadas
 
@@ -103,37 +103,37 @@ satisfactorias.
   El amarillo (`Carga parcial`) queda reservado para Domador de Escaladas,
   cuando falta uno de sus dos origenes.
 - Detalle completo en `docs/IMPORT_ESCALATIONS_QUALITY_VOICE.md`.
-- Fuera de alcance: el resto de origenes de `IMPORT-1` (Estabilidad,
-  Cronomagia, Articulos, Dedicacion, Formaciones), clasificacion general y
-  vista individual (`MVP-1C`).
+- Fuera de alcance en esta entrega: los cinco origenes manuales
+  (implementados en `MVP-1C.3 / INPUT-1C`), clasificacion general y vista
+  individual (`MVP-1C`).
 
-## IMPORT-1 — Auditoria e implementacion del resto de cargas
+## MVP-1C.3 / INPUT-1C — Cargas manuales y completitud semanal
 
-**Estado: pendiente de recibir los Excel originales de los origenes
-restantes.**
+**Estado: completado.**
 
-- El usuario proporcionara ejemplos reales de los Excel de entrada tal
-  como llegan hoy (Articulos, Formaciones) y de las entradas manuales
-  (Estabilidad, Cronomagia, Dedicacion). Productividad, Escalados, Calidad
-  y Llamadas ya se implementaron (ver `IMPORT-1A / MVP-1C.1` y
-  `MVP-1C.2 / IMPORT-1B`).
-- A partir de esos ejemplos se definiran columnas, encabezados,
-  variaciones de nombres, duplicados, vacios, ceros, correcciones y
-  previsualizacion antes de guardar.
-- No se disenara la importacion a partir de las hojas ya transformadas
-  del libro historico: debe partir de los ficheros originales.
+- Hotfix del cero implicito de Domador de Escaladas: la ausencia de fila
+  de Escalados se infiere como cero solo cuando ya existe una carga de
+  Escalados confirmada para la semana y el participante tiene
+  Productividad; si falta tambien Productividad, es `VAC`. Corrige ademas
+  el `vacCount` de Domador (solo cuenta a quien falta en ambos origenes).
+- Entrada manual de los cinco KPI restantes: Guardian de la Estabilidad,
+  Cronomagia laboral, Redactor estrella, Estudiante entusiasta y Aprendiz
+  experto, con formulario y comprobacion propios (sin Excel), guardado
+  atomico y estados `Pendiente`/`Cargado`.
+- **Los diez KPI de Split 8 tienen ya introduccion de datos funcional.**
+- Nueva columna `KPI cargados` en el calendario de semanas: `n/X` de los
+  KPI activos completos para cada semana, calculada al consultar.
+- Detalle completo en `docs/MANUAL_KPI_ENTRY.md`.
+- Fuera de alcance: cierre irreversible o publicacion de semana,
+  clasificacion general, vista individual, autenticacion, historial de
+  versiones de las entradas manuales (ver mas abajo).
 
-## MVP-1C — Resultados
+## MVP-1C — Resultados agregados, publicacion y clasificacion
 
 **Estado: pendiente.**
 
-- Apertura y cierre formal de una semana para carga de datos (mas alla de
-  las cargas ya implementadas de Productividad, Escalados, Calidad y
-  Llamadas, que no incluyen publicacion).
-- Calculo del resto de KPI activos (Guardian de la Estabilidad, Cronomagia
-  laboral, Redactor estrella, Estudiante entusiasta, Aprendiz experto)
-  segun sus parametros configurados, una vez auditados sus origenes en
-  `IMPORT-1`.
+- Apertura y cierre formal de una semana o split (mas alla de las cargas
+  ya implementadas de los diez KPI, que no incluyen publicacion).
 - Panel de administracion para revisar los resultados antes de
   publicarlos.
 - Vista individual del resultado de cada participante.
