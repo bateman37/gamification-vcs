@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
-import { publishWeekAction, initialSimpleActionState } from "@/server/actions/publish.actions";
+import { publishWeekAction } from "@/server/actions/publish.actions";
+import { initialSimpleActionState } from "@/server/actions/action-state";
 import { ErrorMessage } from "@/components/ui";
 
 function ConfirmedSubmitButton() {

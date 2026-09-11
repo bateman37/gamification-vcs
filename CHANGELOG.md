@@ -4,6 +4,26 @@ Formato inspirado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/)
 Este proyecto usa versionado `0.x` mientras se construye el nucleo
 funcional; la primera version publicada es `0.1.0`.
 
+## [0.6.1] - Hotfix — Cambio de contrasena
+
+### Corregido
+
+- **Cambio de contrasena en el primer acceso:** `src/server/actions/auth.actions.ts`
+  (archivo `"use server"`) exportaba ademas de sus Server Actions el valor
+  `initialSimpleActionState` (y la interfaz `SimpleActionState`), lo que
+  Next.js rechaza en tiempo de compilacion con "A use server file can only
+  export async functions, found object." y dejaba inutilizable el
+  formulario de cambio de contrasena. El estado inicial compartido
+  (`SimpleActionState`/`initialSimpleActionState`) se traslada a un modulo
+  normal sin `"use server"`, `src/server/actions/action-state.ts`, siguiendo
+  el mismo patron ya usado por `productivity-action-state.ts`. Los
+  formularios cliente (`ChangePasswordForm.tsx`, `PersonAccountCell.tsx`,
+  `PublishWeekButton.tsx`) y `publish.actions.ts` importan ahora el estado
+  inicial desde ese modulo en vez de reexportarlo desde una accion de
+  servidor. Sin cambios de comportamiento: `changeOwnPasswordAction` sigue
+  comprobando la sesion, validando la contrasena actual y la nueva, y
+  desactivando `mustChangePassword` tras el cambio.
+
 ## [0.6.0] - MVP-1C — Resultados, publicacion y clasificacion
 
 ### Corregido
