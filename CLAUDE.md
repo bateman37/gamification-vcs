@@ -18,7 +18,9 @@ tomadas sin justificarlo explicitamente, y `docs/DISCOVERY-1-SPLIT-8.md`,
 `docs/KPI_CONFIGURATION.md`, `docs/IMPORT_PRODUCTIVITY.md`,
 `docs/IMPORT_ESCALATIONS_QUALITY_VOICE.md`, `docs/MANUAL_KPI_ENTRY.md` y
 `docs/POSITION_POINTS_CONFIGURATION.md` si vas a trabajar en KPI, cargas de
-datos, motor de calculo o en la configuracion de puntos por posicion.
+datos, motor de calculo o en la configuracion de puntos por posicion, y
+`docs/FACTIONS.md` y `docs/PROFESSIONS_AND_PROFILES.md` si vas a trabajar en
+facciones, profesiones, bonus de KPI, fichas de participante o avatares.
 
 ## Estado real de las cargas semanales (no romper sin justificarlo)
 
@@ -101,6 +103,54 @@ motivo en `docs/DECISIONS.md`:
   `SplitKpiConfig`, no la cuentes como KPI cargado, y no implementes
   calculo de posiciones ni reparto de estos puntos hasta que le toque su
   turno en el roadmap (`MVP-1C`).
+
+## Profesiones, bonus y fichas (`0.8.0` / MVP-2B, no romper sin justificarlo)
+
+Reglas asentadas que una sesion futura no debe deshacer sin registrar el
+motivo en `docs/DECISIONS.md` (detalle completo en
+`docs/PROFESSIONS_AND_PROFILES.md`):
+
+- Las profesiones son **opcionales por split**, con el mismo criterio que
+  las facciones: un split sin ninguna profesion creada se comporta
+  exactamente como en `0.7.0`. No crees profesiones predeterminadas, seeds
+  ni catalogos globales.
+- **No implementes las reglas historicas de profesiones del Split 8**
+  (Mecanico, Arreglador, Mercenario, Cientifico, Piloto) que describe
+  `docs/DISCOVERY-1-SPLIT-8.md`. El modelo vigente es el simplificado:
+  nombre libre, dos KPI distintos del catalogo cerrado y un unico bonus
+  fijo del `20 %`, igual para todas.
+- El `+20 %` es una **unica constante tipada del dominio**
+  (`PROFESSION_BONUS_PERCENT`, `src/domain/profession-bonus.ts`) y una
+  **unica funcion pura** (`applyProfessionBonus`). No repartas `1.2`,
+  `0.2` ni `20` por resolvers, servicios o componentes, y no hagas el
+  porcentaje configurable.
+- Orden del calculo: formula del KPI -> maximo base -> bonus. El maximo
+  **nunca** se vuelve a aplicar despues del bonus (un resultado puede
+  superar su maximo base hasta un 20 %), y `applicableMaxPoints` sigue
+  sumando maximos base, no maximos inflados: el porcentaje mostrado puede
+  superar el 100 %.
+- El bonus no se aplica nunca a `VAC`/`AVISO`, `NOT_APPLICABLE`, cero ni
+  negativos, ni a KPI ajenos a la profesion o inactivos. Todo el calculo
+  usa `Prisma.Decimal` sin redondeo prematuro.
+- La primera publicacion del split bloquea definiciones **y** asignaciones
+  de profesion, para administrador y participante, sin accion de
+  desbloqueo. El alias y el avatar **no** forman parte de ese bloqueo:
+  siguen editables mientras el split no este `CLOSED`.
+- Las vistas historicas explican una semana publicada **siempre** con su
+  snapshot (`professionNameSnapshot`, `basePointsBeforeProfession`,
+  `professionBonusPoints`...), nunca con la definicion actual de la
+  profesion. No recalcules retroactivamente ninguna publicacion.
+- `/fichas` resuelve la persona **siempre** desde `session.user.personId`.
+  Nunca aceptes un `personId` del navegador, y no reutilices la accion
+  administrativa de participante para el autoservicio: cada intencion
+  (alias propio, profesion propia, avatar propio) tiene su propia
+  operacion de entrada minima.
+- El avatar vive en `SplitParticipantAvatar` (PostgreSQL, entidad
+  uno-a-uno separada). Nunca lo guardes en `public/`, en disco ni como
+  base64 en una columna de texto, no introduzcas un servicio externo de
+  imagenes, y no selecciones `imageData` en ningun listado: solo al servir
+  la imagen. El formato real se valida decodificando el contenido con
+  `sharp`, nunca por extension o `File.type`.
 
 ## Reglas de trabajo
 

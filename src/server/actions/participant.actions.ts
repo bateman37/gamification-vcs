@@ -8,6 +8,15 @@ import { createPersonSchema } from "@/server/validation/person";
 import { addParticipantSchema, updateParticipantSchema } from "@/server/validation/participant";
 import { runAction, type ActionState } from "@/server/actions/action-result";
 import { DomainError } from "@/lib/errors";
+import { requireAdminSession } from "@/lib/session";
+
+/**
+ * Administracion de participantes: solo `ADMIN`. Una Server Action es una
+ * ruta invocable directamente, asi que la autorizacion se vuelve a resolver
+ * aqui desde la sesion (`0.8.0` / MVP-2B, seccion 29 del encargo): el
+ * autoservicio del participante usa operaciones propias de intencion
+ * limitada (`profile.actions.ts`), nunca estas.
+ */
 
 export async function addParticipantAction(
   splitId: string,
@@ -15,6 +24,7 @@ export async function addParticipantAction(
   formData: FormData,
 ): Promise<ActionState> {
   return runAction(async () => {
+    await requireAdminSession();
     const newPersonName = String(formData.get("newPersonFullName") ?? "").trim();
     let personId = String(formData.get("personId") ?? "").trim();
 
@@ -32,12 +42,14 @@ export async function addParticipantAction(
     }
 
     const factionIdRaw = String(formData.get("factionId") ?? "").trim();
+    const professionIdRaw = String(formData.get("professionId") ?? "").trim();
     const input = addParticipantSchema.parse({
       personId,
       alias: formData.get("alias"),
       level: formData.get("level"),
       startWeekSequenceNumber: formData.get("startWeekSequenceNumber"),
       factionId: factionIdRaw || undefined,
+      professionId: professionIdRaw || undefined,
     });
     await addParticipant(prisma, splitId, input);
     revalidatePath(`/splits/${splitId}`);
@@ -52,11 +64,14 @@ export async function updateParticipantAction(
   formData: FormData,
 ): Promise<ActionState> {
   return runAction(async () => {
+    await requireAdminSession();
     const factionIdRaw = String(formData.get("factionId") ?? "").trim();
+    const professionIdRaw = String(formData.get("professionId") ?? "").trim();
     const input = updateParticipantSchema.parse({
       alias: formData.get("alias"),
       level: formData.get("level"),
       factionId: factionIdRaw || undefined,
+      professionId: professionIdRaw || undefined,
     });
     await updateParticipant(prisma, participantId, input);
     revalidatePath(`/splits/${splitId}`);

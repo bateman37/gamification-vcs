@@ -43,6 +43,10 @@ export default async function WeeklyResultsPage({ params }: { params: { id: stri
           finalPoints: kpiResult.finalPoints?.toNumber() ?? null,
           baseMax: kpiResult.baseMax?.toNumber() ?? null,
           capped: kpiResult.capped,
+          basePointsBeforeProfession: kpiResult.basePointsBeforeProfession?.toNumber() ?? null,
+          professionBonusPoints: kpiResult.professionBonusPoints?.toNumber() ?? null,
+          professionApplied: kpiResult.professionApplied,
+          professionName: kpiResult.professionNameSnapshot,
           kpiRank: kpiResult.kpiRank,
           rankedParticipantCount: kpiResult.rankedParticipantCount,
         })),
@@ -51,6 +55,16 @@ export default async function WeeklyResultsPage({ params }: { params: { id: stri
         weeklyRank: participantResult.weeklyRank,
         positionPoints: participantResult.positionPoints,
         rankedParticipantCount: participantResult.rankedParticipantCount,
+        // Una semana publicada siempre explica el bonus con su propia instantanea, nunca con la definicion actual.
+        professionName: participantResult.professionNameSnapshot,
+        professionKpiNames:
+          participantResult.professionKpiCodeA && participantResult.professionKpiCodeB
+            ? `${KPI_CATALOG[participantResult.professionKpiCodeA].name} + ${KPI_CATALOG[participantResult.professionKpiCodeB].name}`
+            : null,
+        professionBonusTotal: participantResult.kpiResults.reduce(
+          (sum, kpiResult) => sum + (kpiResult.professionBonusPoints?.toNumber() ?? 0),
+          0,
+        ),
       }))
       .sort((a, b) => a.weeklyRank - b.weeklyRank || a.alias.localeCompare(b.alias, "es"));
 
@@ -102,7 +116,12 @@ export default async function WeeklyResultsPage({ params }: { params: { id: stri
           </p>
         </div>
 
-        <WeeklyResultsTable rows={rows} activeKpis={activeKpis} splitParticipantCount={splitParticipantCount} />
+        <WeeklyResultsTable
+          rows={rows}
+          activeKpis={activeKpis}
+          splitParticipantCount={splitParticipantCount}
+          showProfessionColumn={publication.participantResults.some((result) => result.splitUsedProfessions)}
+        />
 
         <FactionWeeklyPreviewTable rows={factionRows} />
 
@@ -149,6 +168,10 @@ export default async function WeeklyResultsPage({ params }: { params: { id: stri
         finalPoints: kpiResult.finalPoints,
         baseMax: kpiResult.baseMax,
         capped: kpiResult.capped,
+        basePointsBeforeProfession: kpiResult.basePointsBeforeProfession,
+        professionBonusPoints: kpiResult.professionBonusPoints,
+        professionApplied: kpiResult.professionApplied,
+        professionName: kpiResult.professionName,
         kpiRank: kpiResult.kpiRank,
         rankedParticipantCount: kpiResult.rankedParticipantCount,
       })),
@@ -157,6 +180,11 @@ export default async function WeeklyResultsPage({ params }: { params: { id: stri
       weeklyRank: participant.weeklyRank,
       positionPoints: participant.positionPoints,
       rankedParticipantCount: results.participants.length,
+      professionName: participant.profession?.name ?? null,
+      professionKpiNames: participant.profession
+        ? `${KPI_CATALOG[participant.profession.kpiCodeA].name} + ${KPI_CATALOG[participant.profession.kpiCodeB].name}`
+        : null,
+      professionBonusTotal: participant.professionBonusTotal,
     }))
     .sort((a, b) => a.weeklyRank - b.weeklyRank || a.alias.localeCompare(b.alias, "es"));
 
@@ -193,7 +221,12 @@ export default async function WeeklyResultsPage({ params }: { params: { id: stri
         </div>
       )}
 
-      <WeeklyResultsTable rows={rows} activeKpis={activeKpis} splitParticipantCount={splitParticipantCount} />
+      <WeeklyResultsTable
+        rows={rows}
+        activeKpis={activeKpis}
+        splitParticipantCount={splitParticipantCount}
+        showProfessionColumn={results.usesProfessions}
+      />
 
       <FactionWeeklyPreviewTable rows={results.factionPreview.factions} />
 

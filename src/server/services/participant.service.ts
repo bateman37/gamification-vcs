@@ -1,7 +1,13 @@
-import type { Person, Prisma, PrismaClient, SplitParticipant } from "@prisma/client";
+import type { Person, Prisma, PrismaClient, SplitParticipant, SplitProfession } from "@prisma/client";
 import { DomainError } from "@/lib/errors";
 import { normalizeAlias } from "@/lib/normalize";
 import type { AddParticipantInput, UpdateParticipantInput } from "@/server/validation/participant";
+import {
+  resolveProfessionIdOrThrow,
+  splitHasAnyPublication,
+  splitUsesProfessions,
+} from "@/server/services/profession.service";
+import { isProfessionAvailableForLevel } from "@/domain/profession-bonus";
 
 type Db = PrismaClient | Prisma.TransactionClient;
 
@@ -71,6 +77,11 @@ export async function addParticipant(
   }
 
   const factionId = await resolveFactionIdOrThrow(db, splitId, input.factionId);
+  // Un alta posterior a la primera publicacion exige profesion en el propio formulario: el catalogo
+  // y las profesiones ya estan bloqueados, asi que no podria elegirla despues (ver docs/PROFESSIONS_AND_PROFILES.md).
+  const professionId = await resolveProfessionIdOrThrow(db, splitId, input.professionId, input.level, {
+    requiredWhenAvailable: await splitHasAnyPublication(db, splitId),
+  });
   const aliasNormalized = normalizeAlias(input.alias);
 
   try {
@@ -83,6 +94,7 @@ export async function addParticipant(
         level: input.level,
         startWeekSequenceNumber: input.startWeekSequenceNumber,
         factionId,
+        professionId,
       },
     });
   } catch (error) {
@@ -102,16 +114,66 @@ export async function addParticipant(
   }
 }
 
+/**
+ * Decide la profesion resultante de una edicion administrativa de
+ * participante (ver docs/PROFESSIONS_AND_PROFILES.md, secciones 5 y 7):
+ *
+ * - Antes de la primera publicacion del split: se puede escoger, cambiar o
+ *   dejar vacia, siempre validando split y nivel.
+ * - Desde la primera publicacion: la profesion queda congelada. Un intento
+ *   de cambiarla (o de vaciarla) se rechaza en servidor, aunque llegue
+ *   directamente a la Server Action con un id manipulado. Un cambio de nivel
+ *   incompatible con la profesion congelada tambien se rechaza, sin
+ *   eliminarla ni cambiarla automaticamente.
+ */
+async function resolveProfessionIdForUpdate(
+  db: PrismaClient,
+  existing: SplitParticipant & { profession: SplitProfession | null },
+  input: UpdateParticipantInput,
+): Promise<string | null> {
+  const locked = await splitHasAnyPublication(db, existing.splitId);
+
+  if (!locked) {
+    return resolveProfessionIdOrThrow(db, existing.splitId, input.professionId, input.level, {
+      requiredWhenAvailable: false,
+    });
+  }
+
+  const requestedProfessionId = input.professionId ?? null;
+  if (requestedProfessionId !== (existing.professionId ?? null)) {
+    throw new DomainError(
+      "La profesion quedo bloqueada al publicar la primera semana del split: ya no se puede cambiar.",
+      "professionId",
+    );
+  }
+  if (existing.profession && !isProfessionAvailableForLevel(existing.profession, input.level)) {
+    throw new DomainError(
+      `No se puede cambiar el nivel a ${input.level}: la profesion congelada "${existing.profession.name}" no esta disponible para ese nivel.`,
+      "level",
+    );
+  }
+  if (!existing.professionId && (await splitUsesProfessions(db, existing.splitId))) {
+    // Defensivo: un participante sin profesion en un split con profesiones ya publicado no deberia
+    // existir (la publicacion lo bloquea), y tampoco puede resolverse desde aqui.
+    throw new DomainError(
+      "Este participante no tiene profesion y el split ya esta publicado: las profesiones estan bloqueadas.",
+      "professionId",
+    );
+  }
+  return existing.professionId ?? null;
+}
+
 export async function updateParticipant(
   db: PrismaClient,
   participantId: string,
   input: UpdateParticipantInput,
 ): Promise<SplitParticipant> {
-  const existing = await db.splitParticipant.findUnique({ where: { id: participantId } });
+  const existing = await db.splitParticipant.findUnique({ where: { id: participantId }, include: { profession: true } });
   if (!existing) {
     throw new DomainError("El participante indicado no existe.");
   }
   const factionId = await resolveFactionIdOrThrow(db, existing.splitId, input.factionId ?? existing.factionId ?? undefined);
+  const professionId = await resolveProfessionIdForUpdate(db, existing, input);
   const aliasNormalized = normalizeAlias(input.alias);
 
   try {
@@ -122,6 +184,7 @@ export async function updateParticipant(
         aliasNormalized,
         level: input.level,
         factionId,
+        professionId,
       },
     });
   } catch (error) {
@@ -138,6 +201,13 @@ export interface ParticipantWithPerson extends SplitParticipant {
 
 export interface ParticipantWithPersonAndFaction extends ParticipantWithPerson {
   faction: { name: string; color: string } | null;
+  /** Profesion actual del participante (`0.8.0` / MVP-2B). `null` si el split no usa profesiones o todavia no ha elegido. */
+  profession: SplitProfession | null;
+}
+
+/** Participante con su profesion cargada, para el motor agregado semanal (evita N+1). */
+export interface ParticipantWithPersonAndProfession extends ParticipantWithPerson {
+  profession: SplitProfession | null;
 }
 
 /**
@@ -152,9 +222,10 @@ export async function countParticipantsForSplit(db: Db, splitId: string): Promis
 }
 
 export async function listParticipantsForSplit(db: Db, splitId: string): Promise<ParticipantWithPersonAndFaction[]> {
+  // Nunca se selecciona `avatar`: los bytes de la imagen no deben cargarse en un listado (ver seccion 31 del encargo).
   return db.splitParticipant.findMany({
     where: { splitId },
-    include: { person: true, faction: { select: { name: true, color: true } } },
+    include: { person: true, faction: { select: { name: true, color: true } }, profession: true },
     orderBy: { startWeekSequenceNumber: "asc" },
   });
 }
@@ -171,12 +242,34 @@ export async function listApplicableParticipantsForWeek(
   weekSequenceNumber: number,
 ): Promise<ParticipantWithPerson[]> {
   return db.splitParticipant.findMany({
-    where: {
-      splitId,
-      startWeekSequenceNumber: { lte: weekSequenceNumber },
-      OR: [{ endWeekSequenceNumber: null }, { endWeekSequenceNumber: { gte: weekSequenceNumber } }],
-    },
+    where: applicableParticipantsWhere(splitId, weekSequenceNumber),
     include: { person: true },
+    orderBy: { alias: "asc" },
+  });
+}
+
+function applicableParticipantsWhere(splitId: string, weekSequenceNumber: number) {
+  return {
+    splitId,
+    startWeekSequenceNumber: { lte: weekSequenceNumber },
+    OR: [{ endWeekSequenceNumber: null }, { endWeekSequenceNumber: { gte: weekSequenceNumber } }],
+  };
+}
+
+/**
+ * Igual que `listApplicableParticipantsForWeek`, pero cargando tambien la
+ * profesion de cada participante en la misma consulta (`0.8.0` / MVP-2B).
+ * La usa el motor agregado semanal, que necesita la profesion para aplicar
+ * el bonus sin una consulta por participante ni por KPI.
+ */
+export async function listApplicableParticipantsWithProfessionForWeek(
+  db: Db,
+  splitId: string,
+  weekSequenceNumber: number,
+): Promise<ParticipantWithPersonAndProfession[]> {
+  return db.splitParticipant.findMany({
+    where: applicableParticipantsWhere(splitId, weekSequenceNumber),
+    include: { person: true, profession: true },
     orderBy: { alias: "asc" },
   });
 }

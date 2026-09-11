@@ -4,6 +4,93 @@ Formato inspirado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/)
 Este proyecto usa versionado `0.x` mientras se construye el nucleo
 funcional; la primera version publicada es `0.1.0`.
 
+## [0.8.0] - MVP-2B — Profesiones, bonus de KPI y fichas de participante
+
+### Anadido
+
+- **Profesiones configurables por split (`SplitProfession`):** opcionales
+  igual que las facciones (un split sin ninguna profesion creada se
+  comporta exactamente como en `0.7.0`, sin selectores ni bonus). Cada
+  profesion tiene nombre unico normalizado dentro del split, exactamente
+  dos KPI **distintos** del catalogo cerrado y disponibilidad por nivel
+  `N0`/`N1`/`N2`, con administracion completa en el detalle del split. No
+  se implementan las reglas historicas de Mecanico, Arreglador, Mercenario,
+  Cientifico ni Piloto del antiguo Split 8 (ver `docs/DECISIONS.md`).
+- **Bonus fijo del `+20 %` despues del maximo base**, en una unica funcion
+  pura del dominio (`applyProfessionBonus`,
+  `src/domain/profession-bonus.ts`), con el porcentaje como constante
+  tipada e ineditable. Se aplica solo a resultados `COMPUTED`
+  estrictamente positivos de los dos KPI de la profesion, con
+  `Prisma.Decimal` y sin redondeo prematuro; el maximo **no** se vuelve a
+  aplicar despues, asi que un resultado puede superar su maximo base hasta
+  un 20 % (`70 -> 84`). Nunca se aplica a `VAC`/`AVISO`, `No aplica`, cero
+  ni negativos, ni a KPI ajenos a la profesion o inactivos.
+- **Asignacion y bloqueo:** el administrador asigna la profesion al anadir
+  o editar un participante (`Profesión (opcional hasta publicar)`, filtrada
+  por nivel, con badge `Sin elegir` en la tabla) y el propio participante
+  puede elegirla desde su ficha. Desde la primera publicacion del split,
+  definiciones y asignaciones quedan bloqueadas para ambos, un cambio de
+  nivel incompatible con la profesion congelada se rechaza sin borrarla, y
+  un alta posterior exige profesion en el propio formulario.
+- **Instantanea publicada ampliada:** profesion congelada por participante
+  (`professionId`, `professionNameSnapshot`, sus dos KPI,
+  `professionBonusPercent` y `splitUsedProfessions`) y desglose del bonus
+  por KPI (`basePointsBeforeProfession`, `professionBonusPoints`,
+  `professionApplied`, `professionNameSnapshot`).
+- **Fichas privadas (`/fichas`)**, junto a `Resultados` en la navegacion
+  superior: una ficha por participacion de split con avatar, alias
+  editable, profesion, y nivel y faccion de solo lectura, ordenadas
+  `ACTIVE` / `DRAFT` / `CLOSED`. La persona se resuelve **siempre** desde
+  `session.user.personId`; las operaciones son de autoservicio y de
+  intencion limitada, y no pueden tocar nivel, faccion, persona ni semana
+  inicial.
+- **Avatar por split (`SplitParticipantAvatar`)** guardado en PostgreSQL en
+  una entidad uno-a-uno separada (los bytes nunca se cargan en listados),
+  validado y normalizado en servidor con `sharp`: JPEG/PNG/WebP
+  comprobados decodificando el contenido real, maximo 5 MB de entrada,
+  correccion de orientacion EXIF, redimension a 512 px como maximo por
+  lado y salida WebP sin metadatos. Ruta de servicio autorizada por sesion,
+  con MIME final real, `X-Content-Type-Options: nosniff`, cache privada y
+  `ETag`.
+- **Presentacion del bonus** en la tabla administrativa de participantes,
+  en la previsualizacion y en la semana publicada (borde y badge
+  `+20 % profesion`, nunca solo color, con el desglose completo accesible),
+  en `/resultados > Por split` (siempre desde el snapshot de esa semana) y
+  en el historico general (`+N por profesion` por KPI y
+  `Bonus profesion: N` en el total del periodo).
+- Migracion `add_professions_and_participant_profiles` y documento nuevo
+  `docs/PROFESSIONS_AND_PROFILES.md`.
+- Dependencia directa fijada: `sharp@0.33.5` (procesamiento de avatares).
+
+### Corregido
+
+- **Rotulo semanal del historico general:** con agrupacion `Semana`, el
+  periodo se identifica por la **fecha de inicio real** de esa semana
+  (`07/09/2026`) en vez de `Semana 1 (2026)`, formateada con el helper UTC
+  de fechas para no desplazarla un dia. El orden pasa a ser cronologico
+  descendente por la fecha real (no alfabetico por la etiqueta), dos
+  semanas de splits distintos que empiecen el mismo dia no se fusionan, y
+  el nombre del split se muestra como texto secundario cuando el filtro
+  incluye varios. `Mes` y `Año` no cambian.
+
+### Seguridad
+
+- Las Server Actions administrativas de participante y de profesion vuelven
+  a exigir `requireAdminSession()` dentro de la propia accion, porque una
+  Server Action es una ruta invocable directamente.
+- La lectura de un avatar exige sesion y solo la autoriza para su
+  propietaria o para un administrador; una ficha ajena devuelve `404`,
+  igual que una inexistente.
+
+### Compatibilidad
+
+- Los campos nuevos son `nullable` o tienen un valor predeterminado seguro:
+  las publicaciones anteriores a `0.8.0` conservan `null`/`false`, se
+  siguen leyendo sin errores y **no se recalculan**. Una semana publicada
+  en `0.7.0` aparece sin profesion y sin bonus, sin datos inventados. La
+  migracion no crea profesiones ni bonuses retroactivos y no borra
+  personas, publicaciones, facciones ni resultados.
+
 ## [0.7.0] - MVP-2A — Facciones, clasificacion de facciones y consolidacion de UX
 
 ### Anadido

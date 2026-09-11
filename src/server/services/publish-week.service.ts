@@ -66,6 +66,9 @@ export async function publishWeek(
           }
 
           const faction = participant.factionId ? factionById.get(participant.factionId) ?? null : null;
+          // Profesion congelada tal como estaba al publicar (`0.8.0` / MVP-2B). `null` cuando el split no
+          // usa profesiones; `splitUsedProfessions` distingue ese caso de una publicacion anterior a 0.8.0.
+          const profession = participant.profession;
 
           const participantResult = await tx.publishedParticipantWeeklyResult.create({
             data: {
@@ -84,6 +87,12 @@ export async function publishWeek(
               factionId: faction?.id ?? null,
               factionNameSnapshot: faction?.name ?? null,
               factionColorSnapshot: faction?.color ?? null,
+              professionId: profession?.id ?? null,
+              professionNameSnapshot: profession?.name ?? null,
+              professionKpiCodeA: profession?.kpiCodeA ?? null,
+              professionKpiCodeB: profession?.kpiCodeB ?? null,
+              professionBonusPercent: profession?.bonusPercent ?? null,
+              splitUsedProfessions: results.usesProfessions,
             },
           });
 
@@ -97,6 +106,10 @@ export async function publishWeek(
               finalPoints: kpiResult.finalPoints,
               baseMax: kpiResult.baseMax,
               capped: kpiResult.capped,
+              basePointsBeforeProfession: kpiResult.basePointsBeforeProfession,
+              professionBonusPoints: kpiResult.professionBonusPoints,
+              professionApplied: kpiResult.professionApplied,
+              professionNameSnapshot: kpiResult.professionName,
               kpiRank: kpiResult.kpiRank,
               rankedParticipantCount: kpiResult.rankedParticipantCount,
             })),

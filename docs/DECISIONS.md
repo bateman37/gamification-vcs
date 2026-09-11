@@ -907,3 +907,163 @@ selector "Ordenar por" independiente.
 controles ordenables en vez de (o ademas de) un selector; encabezados con
 enlaces `GET` evitan un componente cliente adicional y conservan filtros de
 forma natural a traves de la propia URL.
+
+## Profesiones opcionales por split, con el mismo criterio que las facciones (`0.8.0` / MVP-2B)
+
+**Decision:** las profesiones son una capa opcional por split. Un split que
+nunca ha tenido ninguna profesion creada se comporta exactamente igual que
+antes de `0.8.0`: no se exige nada para activarlo ni publicarlo, no aparece
+ningun selector y no se aplica ningun bonus. En cuanto existe la primera
+profesion, ese split "usa profesiones" y se le aplica el conjunto completo
+de reglas (asignacion obligatoria antes de publicar, bloqueo desde la
+primera publicacion, profesion obligatoria en altas posteriores).
+
+**Motivo:** es exactamente el mismo criterio ya acordado y documentado para
+las facciones en `0.7.0` ("Facciones opcionales por split, no obligatorias
+de forma retroactiva"). Mantener los dos modulos de juego con la misma
+semantica evita que un split existente quede bloqueado por una capa nueva y
+evita reescribir la suite de pruebas ya validada, que crea splits sin
+profesiones para verificar reglas ajenas a esta entrega.
+
+## Las reglas historicas de profesiones del Split 8 no se implementan (`0.8.0` / MVP-2B)
+
+**Decision:** `docs/DISCOVERY-1-SPLIT-8.md` describe profesiones concretas
+del antiguo Split 8 (Mecanico, Arreglador, Mercenario, Cientifico, Piloto)
+con efectos propios y distintos entre si. Esas reglas **no** se
+implementan. Esta entrega usa exclusivamente el modelo simplificado y
+configurable: nombre libre, dos KPI cualesquiera del catalogo cerrado y un
+unico bonus fijo del `20 %` despues del maximo base, igual para todas.
+
+**Motivo:** requisito explicito del encargo `0.8.0` / MVP-2B. Un catalogo
+cerrado de profesiones con efectos especiales por nombre habria significado
+reglas de negocio duplicadas y no configurables, justo lo contrario de la
+configuracion por split que el producto ya usa para KPI, puntos por
+posicion y facciones.
+
+## El porcentaje del bonus es una constante del dominio, no una columna (`0.8.0` / MVP-2B)
+
+**Decision:** el `20 %` vive como una unica constante tipada
+(`PROFESSION_BONUS_PERCENT`, `src/domain/profession-bonus.ts`), de la que
+se derivan el factor decimal (`PROFESSION_BONUS_RATE`) y el texto visible
+(`PROFESSION_BONUS_LABEL`). No se guarda en `SplitProfession`, no se repite
+como `1.2`, `0.2` ni `20` en servicios ni componentes, y el administrador
+no puede editarlo. En la instantanea publicada si se congela
+(`professionBonusPercent`), porque una publicacion debe poder explicarse
+por si sola aunque la constante cambie en el futuro.
+
+**Motivo:** el encargo fija el porcentaje y prohibe explicitamente hacerlo
+configurable. Una constante unica evita que una futura pantalla o un
+resolver apliquen un valor divergente, y congelarla al publicar mantiene la
+instantanea autoexplicativa sin convertirla en configuracion.
+
+## Una unica funcion pura aplica el bonus, despues del maximo base (`0.8.0` / MVP-2B)
+
+**Decision:** `applyProfessionBonus` es la unica funcion que decide y
+calcula el bonus. Los diez resolvers de `src/domain/kpis/*` no se han
+tocado: siguen produciendo el resultado base con su formula y su maximo. El
+motor agregado (`weekly-results.service.ts`) llama a `applyProfessionBonus`
+justo despues de `applyBaseMax`, solo para resultados `COMPUTED`, y el
+maximo **no** se vuelve a aplicar despues del bonus (un resultado puede
+superar el maximo base hasta un 20 %). `applicableMaxPoints` sigue sumando
+maximos base, no maximos inflados, de modo que el porcentaje mostrado puede
+superar el `100 %`.
+
+**Motivo:** requisito explicito del encargo, y coherente con la decision ya
+existente "Motor agregado semanal como capa de lectura sobre los resolvers
+existentes": repartir condiciones `x 1.2` entre diez resolvers habria
+duplicado la regla diez veces y habria hecho imposible probarla de forma
+aislada. Volver a aplicar el maximo despues del bonus habria anulado el
+efecto justo en el caso mas interesante (un KPI ya al tope).
+
+## El bonus no se aplica a `VAC`, `No aplica`, cero ni negativos (`0.8.0` / MVP-2B)
+
+**Decision:** `applyProfessionBonus` solo actua cuando los puntos tras el
+maximo base son **estrictamente positivos**. Un `VAC` (que sigue mostrando
+y aportando `0`, hotfix `AVISO`/`0`), un `NOT_APPLICABLE`, un cero real y
+un resultado negativo quedan exactamente igual.
+
+**Motivo:** requisito explicito del encargo. Bonificar un negativo lo
+empeoraria (un `-10` pasaria a `-12`), que es justo lo contrario de lo que
+significa un bonus; y bonificar un `VAC` o un `No aplica` inventaria un
+resultado donde el sistema afirma que no lo hay.
+
+## El historico suma los `professionBonusPoints` publicados, nunca los recalcula (`0.8.0` / MVP-2B)
+
+**Decision:** el desglose de bonus de un periodo agregado del historico
+general suma exclusivamente los `professionBonusPoints` ya congelados en
+`PublishedKpiResult`. Nunca se recalcula el bonus con la profesion actual
+del participante, y ninguna publicacion se recalcula retroactivamente.
+
+**Motivo:** es la misma regla de inmutabilidad ya aplicada a facciones y a
+la configuracion de KPI: una semana publicada se explica siempre con su
+propia instantanea. Recalcular habria hecho que el historico cambiara solo
+por editar una definicion viva.
+
+## El avatar vive en PostgreSQL, en una entidad separada, no en `public/` (`0.8.0` / MVP-2B)
+
+**Decision:** la imagen se guarda ya procesada en
+`SplitParticipantAvatar.imageData` (`bytea`), una entidad uno-a-uno
+separada de `SplitParticipant` con `onDelete: Cascade`. No se guarda en
+`public/`, ni en una ruta local del servidor, ni como base64 dentro de una
+columna de texto, ni en ningun servicio externo de imagenes. Los bytes solo
+se seleccionan en `readAvatarForViewer`, la unica funcion que sirve la
+imagen; ningun listado de participantes, fichas o resultados los carga.
+
+**Motivo:** el encargo exige que el fichero sobreviva al reinicio de la
+aplicacion y no dependa de disco efimero, y prohibe introducir un servicio
+externo. Separar la tabla es lo que permite cumplir a la vez la exigencia
+de persistencia y la de rendimiento (no cargar binarios en consultas
+normales), sin renunciar al monolito con una unica base de datos.
+
+## Un avatar solo lo ve su duena o un administrador (`0.8.0` / MVP-2B)
+
+**Decision:** `GET /api/fichas/[splitParticipantId]/avatar` exige sesion.
+Un `PARTICIPANT` solo puede leer la ficha vinculada a su propio
+`session.user.personId`; un `ADMIN` puede leer cualquiera. Un intento de
+leer una ficha ajena devuelve `404`, exactamente igual que una ficha
+inexistente.
+
+**Motivo:** el encargo pide que la lectura del avatar no exponga otra ficha
+sin autorizacion, pero no define un caso de uso publico de la imagen (las
+clasificaciones y los resultados compartidos siguen mostrando solo alias).
+La regla mas restrictiva compatible con las pantallas existentes es
+"propietaria o administrador". Devolver `404` en vez de `403` evita
+confirmar la existencia de fichas ajenas. La gestion administrativa de
+avatares queda explicitamente fuera de alcance.
+
+## Operaciones de autoservicio separadas de la administracion (`0.8.0` / MVP-2B)
+
+**Decision:** la ficha privada no reutiliza `updateParticipant`. Cada
+intencion tiene su propia operacion de entrada minima
+(`updateOwnAlias`, `chooseOwnProfession`, `saveOwnAvatar`,
+`deleteOwnAvatar`), que resuelve la identidad desde la sesion y comprueba
+`splitParticipant.personId === session.user.personId`. Ademas,
+`addParticipantAction`, `updateParticipantAction` y las tres acciones de
+profesion vuelven a exigir `requireAdminSession()` dentro de la propia
+Server Action.
+
+**Motivo:** requisito explicito del encargo (seccion 29). Ampliar la accion
+administrativa generica con un permiso de participante habria permitido que
+un formulario de ficha cambiase nivel, faccion, persona o semana inicial.
+Repetir la comprobacion de rol dentro de cada Server Action cierra el hueco
+de que una Server Action es una ruta invocable directamente, no solo el
+destino de un formulario ya renderizado por una pagina protegida.
+
+## El historico semanal se identifica por la fecha de inicio real (`0.8.0` / MVP-2B)
+
+**Decision:** con agrupacion `Semana`, el historico general muestra la
+fecha del primer dia de la semana (`SplitWeek.startDate`, formateada como
+`DD/MM/AAAA` con el helper UTC `formatCalendarDateEs`) en vez de
+`Semana 1 (2026)`. La clave interna sigue siendo `splitId + sequenceNumber`
+para no fusionar dos semanas de splits distintos que empiecen el mismo dia,
+el orden pasa a ser cronologico descendente por la fecha real (no
+alfabetico por la etiqueta) y, cuando el filtro incluye varios splits, el
+nombre del split se muestra como texto secundario. `Mes` y `Año` no
+cambian.
+
+**Motivo:** correccion pedida explicitamente en el encargo. El numero
+secuencial de semana solo tiene sentido dentro de un split concreto, asi
+que en un historico que puede mezclar splits resultaba ambiguo. Formatear
+en UTC evita el error clasico de mostrar el domingo anterior; ordenar por
+la fecha real evita que `10/09` aparezca antes que `07/09` por comparacion
+de texto.

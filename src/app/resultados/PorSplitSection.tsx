@@ -7,7 +7,8 @@ import {
 import { computeSplitClassification } from "@/server/services/classification.service";
 import { computeFactionClassification } from "@/server/services/faction-classification.service";
 import { formatPoints } from "@/lib/format";
-import { formatCalendarDate } from "@/lib/dates";
+import { formatCalendarDate, formatCalendarDateEs } from "@/lib/dates";
+import { PROFESSION_BONUS_PERCENT } from "@/domain/profession-bonus";
 import { EmptyState } from "@/components/ui";
 import { colorBandForPercentage, COLOR_BAND_CLASSES, NOT_APPLICABLE_COLOR_BAND } from "@/domain/color-bands";
 import { resolveKpiResultDisplayPoints } from "@/domain/kpi-outcome-display";
@@ -39,6 +40,9 @@ export async function PorSplitSection({
 
   const classification = await computeSplitClassification(prisma, selectedSplitId);
   const factionClassification = await computeFactionClassification(prisma, selectedSplitId);
+  // Solo se muestra la columna si alguna semana publicada usaba profesiones: una publicacion
+  // anterior a `0.8.0` (o un split sin profesiones) se sigue viendo exactamente como antes.
+  const showProfessionColumn = detail.weeks.some((week) => week.splitUsedProfessions);
 
   return (
     <div className="space-y-6">
@@ -86,6 +90,7 @@ export async function PorSplitSection({
             <thead className="border-b border-slate-200 bg-slate-50 text-slate-600">
               <tr>
                 <th className="px-3 py-2 font-medium">Semana</th>
+                {showProfessionColumn && <th className="px-3 py-2 font-medium">Profesion</th>}
                 {detail.weeks[0]?.kpiCells.map((cell) => (
                   <th key={cell.kpiCode} className="px-3 py-2 text-center font-medium">
                     {cell.kpiName}
@@ -103,7 +108,25 @@ export async function PorSplitSection({
                 const percentage = week.applicableMaxPoints && week.applicableMaxPoints > 0 ? (week.totalKpiPoints / week.applicableMaxPoints) * 100 : null;
                 return (
                   <tr key={week.splitWeekId} className="border-b border-slate-100">
-                    <td className="px-3 py-2 font-medium">S{week.weekSequenceNumber}</td>
+                    <td className="px-3 py-2 font-medium">
+                      S{week.weekSequenceNumber}
+                      <span className="block text-xs font-normal text-slate-500">{formatCalendarDateEs(week.weekStartDate)}</span>
+                    </td>
+                    {showProfessionColumn && (
+                      <td className="px-3 py-2 text-slate-600">
+                        {week.profession ? (
+                          <>
+                            <span className="font-medium text-slate-800">{week.profession.name}</span>
+                            {week.profession.kpiNames && <span className="block text-xs text-slate-500">{week.profession.kpiNames}</span>}
+                            {week.professionBonusTotal > 0 && (
+                              <span className="block text-xs text-indigo-700">+{formatPoints(week.professionBonusTotal)} por profesion</span>
+                            )}
+                          </>
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
+                      </td>
+                    )}
                     {week.kpiCells.map((cell) => {
                       if (cell.status === "NOT_APPLICABLE") {
                         return (
@@ -114,11 +137,33 @@ export async function PorSplitSection({
                       }
                       // VAC se muestra como el valor numerico 0, igual que cualquier otro cero (hotfix AVISO/0, ver docs/DECISIONS.md).
                       const cellPoints = resolveKpiResultDisplayPoints(cell.status, cell.finalPoints) ?? 0;
+                      // El porcentaje usa el maximo base publicado, sin inflar por profesion: puede superar el 100 %.
                       const cellPercentage = cell.baseMax && cell.baseMax > 0 ? (cellPoints / cell.baseMax) * 100 : 0;
                       const band = colorBandForPercentage(cellPercentage);
+                      const bonusApplied =
+                        cell.professionApplied && cell.basePointsBeforeProfession !== null && cell.professionBonusPoints !== null;
+                      const breakdown = bonusApplied
+                        ? `Resultado tras máximo: ${formatPoints(cell.basePointsBeforeProfession!)} | Bonus ${
+                            cell.professionName ?? "profesión"
+                          } (+${PROFESSION_BONUS_PERCENT} %): +${formatPoints(cell.professionBonusPoints!)} | Resultado final: ${formatPoints(cellPoints)}`
+                        : undefined;
                       return (
-                        <td key={cell.kpiCode} className={`px-3 py-2 text-center ${COLOR_BAND_CLASSES[band.band]}`}>
+                        <td
+                          key={cell.kpiCode}
+                          title={breakdown}
+                          className={`px-3 py-2 text-center ${COLOR_BAND_CLASSES[band.band]} ${
+                            bonusApplied ? "border-2 border-dashed border-indigo-500" : ""
+                          }`}
+                        >
                           {formatPoints(cellPoints)}
+                          {bonusApplied && (
+                            <>
+                              <span className="mt-1 block rounded bg-indigo-100 px-1 py-0.5 text-[10px] font-semibold text-indigo-800">
+                                +{PROFESSION_BONUS_PERCENT} % profesion
+                              </span>
+                              <span className="sr-only"> ({breakdown})</span>
+                            </>
+                          )}
                           <div className="text-xs text-slate-500">
                             {cell.kpiRank ?? "—"} de {detail.splitParticipantCount}
                           </div>

@@ -100,6 +100,7 @@ model Split {
   positionPointRules SplitPositionPointRule[]
   publishedResults   PublishedParticipantWeeklyResult[]
   factions           SplitFaction[]
+  professions        SplitProfession[]
 }
 
 /// Semana de un split. La identidad funcional es splitId + sequenceNumber,
@@ -152,14 +153,25 @@ model SplitParticipant {
   /// asignacion completa antes de activar un split que ya tiene facciones
   /// creadas (ver docs/DECISIONS.md).
   factionId               String?
+  /// Profesion actual del participante dentro de este split (`0.8.0` /
+  /// MVP-2B, ver docs/PROFESSIONS_AND_PROFILES.md). Nullable: `null`
+  /// mientras el split no usa profesiones, o mientras la persona todavia no
+  /// ha elegido antes de la primera publicacion. Una persona tiene como
+  /// mucho una profesion en cada split; la profesion pertenece a la
+  /// participacion, nunca a `Person`.
+  professionId            String?
   createdAt               DateTime         @default(now())
   updatedAt               DateTime         @updatedAt
 
-  split     Split         @relation(fields: [splitId], references: [id], onDelete: Cascade)
-  person    Person        @relation(fields: [personId], references: [id])
-  startWeek SplitWeek     @relation("ParticipantStartWeek", fields: [splitId, startWeekSequenceNumber], references: [splitId, sequenceNumber])
+  split      Split            @relation(fields: [splitId], references: [id], onDelete: Cascade)
+  person     Person           @relation(fields: [personId], references: [id])
+  startWeek  SplitWeek        @relation("ParticipantStartWeek", fields: [splitId, startWeekSequenceNumber], references: [splitId, sequenceNumber])
   // Restrict: no se borra fisicamente una faccion mientras tenga participantes asignados (ver docs/FACTIONS.md).
-  faction   SplitFaction? @relation(fields: [factionId], references: [id], onDelete: Restrict)
+  faction    SplitFaction?    @relation(fields: [factionId], references: [id], onDelete: Restrict)
+  // Restrict: no se borra fisicamente una profesion mientras tenga participantes asignados (ver docs/PROFESSIONS_AND_PROFILES.md).
+  profession SplitProfession? @relation(fields: [professionId], references: [id], onDelete: Restrict)
+  // Cascade: el avatar no tiene sentido sin su ficha.
+  avatar     SplitParticipantAvatar?
 
   productivityRows   ProductivityWeeklyRow[]
   escalationRows     EscalationWeeklyRow[]
@@ -177,6 +189,63 @@ model SplitParticipant {
   // El alias normalizado debe ser unico dentro del split (no entre splits).
   @@unique([splitId, aliasNormalized])
   @@index([factionId])
+  @@index([professionId])
+}
+
+/// Profesion de un split (`0.8.0` / MVP-2B, ver
+/// docs/PROFESSIONS_AND_PROFILES.md). Es una capa opcional por split: si el
+/// administrador no crea ninguna, el split se comporta exactamente como en
+/// `0.7.0`. Cada profesion declara exactamente dos KPI distintos del
+/// catalogo cerrado y los niveles tecnicos para los que esta disponible. El
+/// porcentaje de bonus no se guarda aqui: es una constante unica del
+/// dominio (`PROFESSION_BONUS_PERCENT`, `src/domain/profession-bonus.ts`),
+/// siempre `+20 %` despues del maximo base. Nunca se guardan formulas,
+/// expresiones ni JSON libre enviado por el navegador.
+model SplitProfession {
+  id             String   @id @default(uuid())
+  splitId        String
+  name           String
+  /// Nombre normalizado (minusculas, sin espacios exteriores), unico dentro del split.
+  nameNormalized String
+  /// Primer KPI potenciado. Siempre distinto de `kpiCodeB` (restriccion de base de datos).
+  kpiCodeA       KpiCode
+  /// Segundo KPI potenciado.
+  kpiCodeB       KpiCode
+  /// Disponibilidad por nivel tecnico. Al menos uno debe ser `true` (restriccion de base de datos).
+  availableN0    Boolean  @default(false)
+  availableN1    Boolean  @default(false)
+  availableN2    Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  split            Split                              @relation(fields: [splitId], references: [id], onDelete: Cascade)
+  participants     SplitParticipant[]
+  publishedResults PublishedParticipantWeeklyResult[]
+
+  @@unique([splitId, nameNormalized])
+}
+
+/// Avatar de una participacion de split (`0.8.0` / MVP-2B, ver
+/// docs/PROFESSIONS_AND_PROFILES.md). Entidad uno-a-uno separada de
+/// `SplitParticipant` a proposito: los bytes nunca deben cargarse en los
+/// listados de participantes, fichas o resultados, solo cuando el navegador
+/// pide realmente la imagen. La imagen se guarda ya procesada y normalizada
+/// (WebP, maximo 512 px por lado, sin EXIF ni metadatos del original).
+model SplitParticipantAvatar {
+  /// Clave primaria y unica: como mucho un avatar por participacion.
+  splitParticipantId String   @id
+  /// Bytes de la imagen ya procesada (nunca el original subido).
+  imageData          Bytes
+  /// MIME final real de `imageData` (siempre `image/webp` en esta entrega).
+  mimeType           String
+  /// Tamano en bytes de `imageData`. No negativo (restriccion de base de datos).
+  byteSize           Int
+  /// SHA-256 de `imageData`: version estable usada como `ETag` de cache.
+  sha256             String
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  splitParticipant SplitParticipant @relation(fields: [splitParticipantId], references: [id], onDelete: Cascade)
 }
 
 /// Faccion de un split (`0.7.0` / MVP-2A, ver docs/FACTIONS.md). Cada
@@ -573,6 +642,20 @@ model PublishedParticipantWeeklyResult {
   factionId              String?
   factionNameSnapshot    String?
   factionColorSnapshot   String?
+  /// Profesion congelada del participante en el momento de publicar (`0.8.0` /
+  /// MVP-2B, ver docs/PROFESSIONS_AND_PROFILES.md). Los cuatro campos son
+  /// `null` cuando el split no usa profesiones o en publicaciones anteriores
+  /// a esta version: nunca se completan retroactivamente.
+  professionId           String?
+  professionNameSnapshot String?
+  professionKpiCodeA     KpiCode?
+  professionKpiCodeB     KpiCode?
+  /// Porcentaje de bonus congelado (siempre `20` cuando hay profesion).
+  professionBonusPercent Int?
+  /// `true` si el split usaba profesiones al publicar esta semana. `false`
+  /// en publicaciones anteriores a `0.8.0` y en splits sin profesiones: es
+  /// lo que permite distinguir "sin profesiones" de "profesion desconocida".
+  splitUsedProfessions   Boolean          @default(false)
   createdAt              DateTime         @default(now())
 
   publication      WeekPublication      @relation(fields: [publicationId], references: [id], onDelete: Cascade)
@@ -580,6 +663,7 @@ model PublishedParticipantWeeklyResult {
   splitParticipant SplitParticipant     @relation(fields: [splitParticipantId], references: [id], onDelete: Restrict)
   person           Person               @relation(fields: [personId], references: [id], onDelete: Restrict)
   faction          SplitFaction?        @relation(fields: [factionId], references: [id], onDelete: Restrict)
+  profession       SplitProfession?     @relation(fields: [professionId], references: [id], onDelete: Restrict)
   kpiResults       PublishedKpiResult[]
 
   // Un solo resultado por participante y publicacion (equivale a una vez por semana, ya que la publicacion es unica por semana).
@@ -588,6 +672,7 @@ model PublishedParticipantWeeklyResult {
   @@index([splitId])
   @@index([splitParticipantId])
   @@index([factionId])
+  @@index([professionId])
 }
 
 /// Resultado congelado de un KPI para un participante publicado: estado
@@ -599,9 +684,23 @@ model PublishedKpiResult {
   kpiNameSnapshot           String
   outcomeStatus             PublishedKpiOutcomeStatus
   rawPoints                 Decimal?                  @db.Decimal(14, 4)
+  /// Puntos definitivos, ya con el bonus de profesion incluido desde
+  /// `0.8.0`. En publicaciones anteriores coincide con los puntos tras el
+  /// maximo base, porque entonces no existia ningun bonus.
   finalPoints               Decimal?                  @db.Decimal(14, 4)
   baseMax                   Decimal?                  @db.Decimal(14, 4)
   capped                    Boolean                   @default(false)
+  /// Puntos tras aplicar el maximo base y **antes** del bonus de profesion
+  /// (`0.8.0` / MVP-2B). `null` en publicaciones anteriores a esta version.
+  basePointsBeforeProfession Decimal?                 @db.Decimal(14, 4)
+  /// Puntos anadidos por la profesion (`baseFinalPoints x 0,20`). `null` en
+  /// publicaciones anteriores; `0` cuando la profesion no aplica a este KPI.
+  professionBonusPoints     Decimal?                  @db.Decimal(14, 4)
+  /// `true` solo si el bonus se aplico realmente a este KPI.
+  professionApplied         Boolean                   @default(false)
+  /// Nombre de la profesion que produjo el bonus, congelado para poder
+  /// explicar el efecto sin consultar la definicion actual.
+  professionNameSnapshot    String?
   kpiRank                   Int?
   rankedParticipantCount    Int?
   createdAt                 DateTime                  @default(now())
