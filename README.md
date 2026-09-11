@@ -8,8 +8,9 @@ resultados y clasificacion.
 
 ## Estado actual
 
-**MVP-1A — Personas y creacion de splits** y **MVP-1B — KPI activos y
-configuracion** (ver `docs/ROADMAP.md`).
+**MVP-1A — Personas y creacion de splits**, **MVP-1B — KPI activos y
+configuracion** e **IMPORT-1A / MVP-1C.1 — Carga semanal de
+Productividad** (ver `docs/ROADMAP.md`).
 
 Estas entregas implementan:
 
@@ -23,10 +24,16 @@ Estas entregas implementan:
   de cada tipo de calculo (ver `docs/KPI_CONFIGURATION.md`).
 - Activacion de un split cuando tiene al menos un participante **y** al
   menos un KPI activo.
+- Carga semanal del Excel de Productividad desde el calendario de semanas
+  de un split activo, con previsualizacion, emparejamiento por nombre
+  real, calculo administrativo de Cazador de soluciones y Explorador de
+  datos, y sustitucion explicita de una carga anterior (ver
+  `docs/IMPORT_PRODUCTIVITY.md`).
 
-Todavia **no** incluye motor de calculo de resultados, carga de datos,
-importacion de Excel, clasificacion, autenticacion ni ninguna capa de
-juego adicional (facciones, profesiones, objetos, economia, renombre...).
+Todavia **no** incluye el resto de origenes de carga (Escalados, Calidad,
+Llamadas, Estabilidad, Cronomagia, Articulos, Dedicacion, Formaciones),
+clasificacion, vista individual, autenticacion ni ninguna capa de juego
+adicional (facciones, profesiones, objetos, economia, renombre...).
 Consulta `docs/ROADMAP.md` para el plan completo.
 
 ## Pila tecnologica
@@ -218,6 +225,46 @@ marcha (`npm run dev`):
    comprueba que sigue activo y que puedes configurar sus KPI desde la
    misma pantalla.
 
+## Carga semanal de Productividad (IMPORT-1A / MVP-1C.1)
+
+Desde el detalle de un split `Activo`, cada fila del "Calendario de
+semanas" tiene una accion `Introducir KPI` (o `Ver KPI` si el split esta
+`Cerrado`) que abre una pantalla independiente para esa semana. Ahi, el
+grupo `Productividad` permite subir un `.xlsx` con la productividad real
+de la semana, analizarlo sin guardar, confirmarlo (o sustituir una carga
+anterior) y comprobar los resultados de Cazador de soluciones y Explorador
+de datos ya calculados. Detalle completo, contrato exacto del Excel y
+reglas de emparejamiento:
+[`docs/IMPORT_PRODUCTIVITY.md`](docs/IMPORT_PRODUCTIVITY.md).
+
+## Comprobar la carga de Productividad manualmente
+
+Con la migracion aplicada (`npm run db:migrate:deploy`) y la aplicacion en
+marcha (`npm run dev`):
+
+1. Detén el servidor de desarrollo anterior antes de `npm ci`, para evitar
+   el bloqueo del DLL de Prisma en Windows.
+2. Actualiza dependencias (`npm ci`) y aplica la nueva migracion.
+3. Inicia la aplicacion en `localhost`.
+4. Abre un split activo con al menos "Cazador de soluciones" o
+   "Explorador de datos" activado, y pulsa `Introducir KPI` en la fila de
+   la semana que quieras cargar.
+5. Comprueba que la pantalla solo muestra los KPI activos y que
+   Productividad agrupa Cazador y Explorador con un unico estado rojo
+   `Pendiente`.
+6. Pulsa `Cargar`, analiza tu Excel real de productividad y revisa
+   encontrados, ignorados y participantes sin dato.
+7. Verifica al menos dos calculos a mano con el nivel y la configuracion
+   mostrados en pantalla.
+8. Confirma la carga y comprueba que el unico estado cambia a amarillo
+   (`Carga parcial`) o verde (`Cargado`) segun la cobertura.
+9. Pulsa `Comprobar` y revisa los resultados persistidos.
+10. Vuelve a cargar el mismo archivo: la pantalla debe pedir
+    `Sustituir carga` en vez de crear una carga duplicada.
+11. Sustituyelo y comprueba que no aparecen filas duplicadas.
+12. Comprueba que un split cerrado permite `Ver KPI` y `Comprobar`, pero
+    no `Cargar`.
+
 ## Documentos del proyecto
 
 - [`docs/PROJECT_CONTEXT.md`](docs/PROJECT_CONTEXT.md) — objetivo del
@@ -228,6 +275,9 @@ marcha (`npm run dev`):
   descubrimiento funcional del Split 8 (contexto historico de los KPI).
 - [`docs/KPI_CONFIGURATION.md`](docs/KPI_CONFIGURATION.md) — catalogo de
   KPI, sus parametros y las reglas de configuracion por split.
+- [`docs/IMPORT_PRODUCTIVITY.md`](docs/IMPORT_PRODUCTIVITY.md) — carga
+  semanal del Excel de Productividad y calculo de Cazador de soluciones y
+  Explorador de datos.
 - [`docs/DECISIONS.md`](docs/DECISIONS.md) — decisiones tecnicas y de
   producto registradas.
 - [`CHANGELOG.md`](CHANGELOG.md) — historial de cambios.

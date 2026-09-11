@@ -13,6 +13,7 @@ import { ActivateSplitButton } from "./ActivateSplitButton";
 import { AddParticipantForm } from "./AddParticipantForm";
 import { ParticipantEditRow } from "./ParticipantEditRow";
 import { KpiConfigSection } from "./KpiConfigSection";
+import { WeekKpiLoadCell } from "./WeekKpiLoadCell";
 
 const STATUS_TONE: Record<string, "slate" | "green" | "gray"> = {
   DRAFT: "slate",
@@ -89,6 +90,7 @@ export default async function SplitDetailPage({ params }: { params: { id: string
                 <th className="px-3 py-2 font-medium">Semana</th>
                 <th className="px-3 py-2 font-medium">Inicio</th>
                 <th className="px-3 py-2 font-medium">Fin</th>
+                <th className="px-3 py-2 font-medium">Carga de KPI</th>
               </tr>
             </thead>
             <tbody>
@@ -97,6 +99,9 @@ export default async function SplitDetailPage({ params }: { params: { id: string
                   <td className="px-3 py-2">{week.sequenceNumber}</td>
                   <td className="px-3 py-2">{formatCalendarDate(week.startDate)}</td>
                   <td className="px-3 py-2">{formatCalendarDate(week.endDate)}</td>
+                  <td className="px-3 py-2">
+                    <WeekKpiLoadCell splitId={split.id} splitStatus={split.status} week={week} />
+                  </td>
                 </tr>
               ))}
             </tbody>

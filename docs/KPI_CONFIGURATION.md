@@ -14,7 +14,16 @@ por nivel y sus parametros propios.
 `MVP-1B` **no** implementa el motor de calculo de resultados. Los
 "calculos" descritos en este documento son la forma que tendra el futuro
 calculo (`MVP-1C`), documentada para que la configuracion actual tenga
-sentido, pero ningun resultado se calcula todavia con estos datos.
+sentido, pero ningun resultado se calculaba todavia con estos datos.
+
+**Actualizacion (`IMPORT-1A / MVP-1C.1`):** dos de los diez calculos,
+Cazador de soluciones (`SOLUTION_HUNTER`) y Explorador de datos
+(`DATA_EXPLORER`), ya estan implementados de verdad a partir de la carga
+semanal del Excel de Productividad. La implementacion (funciones puras,
+reglas de "No aplica"/"Sin dato" y la pantalla administrativa de carga y
+comprobacion) esta documentada en `docs/IMPORT_PRODUCTIVITY.md`. Los otros
+ocho KPI de este documento siguen siendo solo configuracion: su calculo
+sigue pendiente de `IMPORT-1` y `MVP-1C`.
 
 ## El catalogo cerrado
 

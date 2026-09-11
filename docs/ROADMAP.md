@@ -27,7 +27,7 @@ satisfactorias.
 
 ## MVP-1B — KPI activos y configuracion
 
-**Estado: completado.**
+**Estado: completado y validado manualmente por el usuario.**
 
 - Catalogo cerrado de los 10 KPI descritos en
   `docs/DISCOVERY-1-SPLIT-8.md` y documentado en
@@ -47,14 +47,44 @@ satisfactorias.
   incluye todavia motor de calculo de resultados, carga de datos,
   importacion de Excel ni clasificacion (ver `IMPORT-1` y `MVP-1C`).
 
-## IMPORT-1 — Auditoria e implementacion de cargas
+## IMPORT-1A / MVP-1C.1 — Carga semanal de Productividad
+
+**Estado: completado.**
+
+- Pantalla independiente de cargas de KPI para cada semana de un split
+  (`/splits/[id]/weeks/[weekId]/kpis`), accesible desde una accion
+  `Introducir KPI` (o `Ver KPI` en splits cerrados) en cada fila del
+  calendario de semanas.
+- Lectura y validacion en servidor, en memoria, del Excel real de
+  Productividad (`.xlsx`, ocho encabezados fijos), con previsualizacion
+  sin persistencia (`Analizar archivo`).
+- Emparejamiento por nombre real (`Person.fullName`, no alias) con los
+  participantes aplicables de la semana, distinguiendo encontrado,
+  ignorado, sin dato y ambiguo.
+- Calculo administrativo de **Cazador de soluciones** (`SOLUTION_HUNTER`)
+  y **Explorador de datos** (`DATA_EXPLORER`) a partir de esa
+  productividad, aplicando el parametro propio, el multiplicador de nivel
+  y el maximo base configurados en `MVP-1B`; los puntos se calculan al
+  consultar, no se guardan como instantanea.
+- Persistencia de una carga vigente por semana (`ProductivityImport` /
+  `ProductivityWeeklyRow`), con sustitucion explicita y atomica.
+- Agrupacion de KPI activos por origen de carga, con un unico indicador de
+  estado (`Pendiente` / `Carga parcial` / `Cargado`) para el grupo de
+  Productividad; el resto de KPI activos aparecen pendientes y
+  deshabilitados hasta su propia entrega.
+- Detalle completo en `docs/IMPORT_PRODUCTIVITY.md`.
+- Fuera de alcance: el resto de origenes de `IMPORT-1` (Escalados,
+  Calidad, Llamadas, Estabilidad, Cronomagia, Articulos, Dedicacion,
+  Formaciones), clasificacion general y vista individual (`MVP-1C`).
+
+## IMPORT-1 — Auditoria e implementacion del resto de cargas
 
 **Estado: pendiente de recibir los Excel originales.**
 
 - El usuario proporcionara ejemplos reales de los Excel de entrada tal
-  como llegan hoy (Productividad, Escalados, Calidad, Llamadas,
-  Articulos, Formaciones) y de las entradas manuales (Estabilidad,
-  Cronomagia, Dedicacion).
+  como llegan hoy (Escalados, Calidad, Llamadas, Articulos, Formaciones) y
+  de las entradas manuales (Estabilidad, Cronomagia, Dedicacion). La carga
+  de Productividad ya se implemento (ver `IMPORT-1A / MVP-1C.1`).
 - A partir de esos ejemplos se definiran columnas, encabezados,
   variaciones de nombres, duplicados, vacios, ceros, correcciones y
   previsualizacion antes de guardar.
@@ -65,8 +95,9 @@ satisfactorias.
 
 **Estado: pendiente.**
 
-- Apertura de una semana para carga de datos.
-- Calculo de los KPI activos segun sus parametros configurados.
+- Apertura y cierre formal de una semana para carga de datos (mas alla de
+  la carga de Productividad ya implementada, que no incluye publicacion).
+- Calculo del resto de KPI activos segun sus parametros configurados.
 - Panel de administracion para revisar los resultados antes de
   publicarlos.
 - Vista individual del resultado de cada participante.

@@ -65,6 +65,18 @@ export async function listSplitWeeks(db: Db, splitId: string): Promise<SplitWeek
 }
 
 /**
+ * Busca una semana comprobando que pertenece al split indicado. Devuelve
+ * `null` tanto si la semana no existe como si pertenece a otro split: la
+ * pantalla de cargas de KPI nunca debe deducir ni aceptar una semana sin
+ * validar esta relacion en servidor.
+ */
+export async function getSplitWeek(db: Db, splitId: string, weekId: string): Promise<SplitWeek | null> {
+  const week = await db.splitWeek.findUnique({ where: { id: weekId } });
+  if (!week || week.splitId !== splitId) return null;
+  return week;
+}
+
+/**
  * Actualiza un split que todavia esta en borrador: nombre, descripcion,
  * fecha de inicio y numero de semanas. Si la fecha o la duracion cambian,
  * las semanas se recalculan de la forma mas sencilla posible: las semanas

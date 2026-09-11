@@ -106,3 +106,25 @@ export async function listParticipantsForSplit(db: Db, splitId: string): Promise
     orderBy: { startWeekSequenceNumber: "asc" },
   });
 }
+
+/**
+ * Participantes cuya vigencia incluye una semana concreta del split, segun
+ * `startWeekSequenceNumber` y `endWeekSequenceNumber` (ver
+ * docs/IMPORT_PRODUCTIVITY.md). `endWeekSequenceNumber` todavia no se usa
+ * en ningun flujo, pero la consulta ya lo respeta si algun dia se informa.
+ */
+export async function listApplicableParticipantsForWeek(
+  db: Db,
+  splitId: string,
+  weekSequenceNumber: number,
+): Promise<ParticipantWithPerson[]> {
+  return db.splitParticipant.findMany({
+    where: {
+      splitId,
+      startWeekSequenceNumber: { lte: weekSequenceNumber },
+      OR: [{ endWeekSequenceNumber: null }, { endWeekSequenceNumber: { gte: weekSequenceNumber } }],
+    },
+    include: { person: true },
+    orderBy: { alias: "asc" },
+  });
+}

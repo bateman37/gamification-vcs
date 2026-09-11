@@ -1,10 +1,12 @@
-# Modelo de datos — MVP-1A y MVP-1B
+# Modelo de datos — MVP-1A, MVP-1B e IMPORT-1A / MVP-1C.1
 
 Fuente de verdad: `prisma/schema.prisma` y las migraciones
-`prisma/migrations/20260910133815_init/migration.sql` (MVP-1A) y
+`prisma/migrations/20260910133815_init/migration.sql` (MVP-1A),
 `prisma/migrations/20260910202939_add_kpi_configuration/migration.sql`
-(MVP-1B). Este documento describe y explica ese esquema; en caso de
-discrepancia, el esquema real manda.
+(MVP-1B) y
+`prisma/migrations/20260911082446_add_productivity_import/migration.sql`
+(IMPORT-1A / MVP-1C.1). Este documento describe y explica ese esquema; en
+caso de discrepancia, el esquema real manda.
 
 ## Diagrama entidad-relacion
 
@@ -15,6 +17,9 @@ erDiagram
     Split ||--o{ SplitParticipant : "tiene"
     Split ||--o{ SplitKpiConfig : "configura"
     SplitWeek ||--o{ SplitParticipant : "es semana inicial de"
+    SplitWeek ||--o| ProductivityImport : "tiene carga vigente"
+    ProductivityImport ||--o{ ProductivityWeeklyRow : "contiene"
+    SplitParticipant ||--o{ ProductivityWeeklyRow : "tiene fila en"
 
     Person {
         string id PK
@@ -68,6 +73,33 @@ erDiagram
         decimal multiplierN1 "opcional: null = nivel no aplicable"
         decimal multiplierN2 "opcional: null = nivel no aplicable"
         json parameters "parametros propios del KPI, validados por esquema"
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    ProductivityImport {
+        string id PK
+        string splitWeekId FK "unico: una carga vigente por semana"
+        string originalFilename
+        string fileSha256 "identifica el archivo, no deduce la semana"
+        int sourceRowCount
+        int importedRowCount
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    ProductivityWeeklyRow {
+        string id PK
+        string productivityImportId FK
+        string splitParticipantId FK "onDelete Restrict"
+        string sourceAgentName "trazabilidad"
+        int updates "conservado para Domador de Escaladas"
+        int comments
+        int publicComments
+        int internalComments
+        int ticketsUpdatedWithComment "entrada de Explorador de datos"
+        int ticketsResolved "entrada de Cazador de soluciones"
+        int ticketsCreated
         datetime createdAt
         datetime updatedAt
     }
@@ -179,6 +211,50 @@ splits.
   mucho una configuracion por cada KPI del catalogo (en la practica,
   siempre las diez).
 
+### `ProductivityImport`
+
+Cabecera de la carga semanal del Excel de Productividad para una semana de
+un split (ver `docs/IMPORT_PRODUCTIVITY.md`). Un unico archivo alimenta
+`SOLUTION_HUNTER` y `DATA_EXPLORER`.
+
+- `id`: UUID, clave primaria.
+- `splitWeekId`: referencia a `SplitWeek` (borrado en cascada si se borra
+  la semana). Indice unico: como mucho una carga **vigente** por semana.
+- `originalFilename`: nombre del archivo tal como se subio, solo para
+  mostrarlo en pantalla; nunca se guarda el binario.
+- `fileSha256`: hash del contenido procesado. Identifica el archivo para
+  depuracion administrativa; no se usa para deducir la semana ni ninguna
+  otra logica de negocio.
+- `sourceRowCount` / `importedRowCount`: total de filas de datos leidas y
+  numero de filas realmente persistidas (solo las "encontradas"). Ambas
+  con restriccion de base de datos que exige un valor no negativo.
+
+### `ProductivityWeeklyRow`
+
+Una fila por participante encontrado dentro de una carga.
+
+- `id`: UUID, clave primaria.
+- `productivityImportId`: referencia a `ProductivityImport` (borrado en
+  cascada si se borra la carga, por ejemplo al sustituirla).
+- `splitParticipantId`: referencia a `SplitParticipant` con
+  `onDelete: Restrict`, a proposito: una fila de productividad nunca debe
+  desaparecer por borrar accidentalmente al participante.
+- `sourceAgentName`: nombre tal como aparecia en la columna "Nombre del
+  actualizador", conservado para trazabilidad (la identidad real es
+  `Person.fullName`, pero se guarda el texto de origen).
+- Los siete conteos (`updates`, `comments`, `publicComments`,
+  `internalComments`, `ticketsUpdatedWithComment`, `ticketsResolved`,
+  `ticketsCreated`) son `Int`, todos con restriccion de base de datos que
+  exige un valor no negativo. `updates` se conserva para el futuro calculo
+  de Domador de Escaladas (`ESCALATION_TAMER`); no se usa todavia.
+- Indice unico `ProductivityWeeklyRow_productivityImportId_splitParticipant_key`
+  (`productivityImportId` + `splitParticipantId`): una carga solo puede
+  tener una fila por participante.
+- Los puntos de Cazador de soluciones y Explorador de datos **no** se
+  guardan aqui: se calculan al consultar, a partir de estos conteos, el
+  nivel del participante y `SplitKpiConfig` (ver
+  `docs/IMPORT_PRODUCTIVITY.md` y `docs/DECISIONS.md`).
+
 ## Decisiones sobre fechas
 
 - Todas las fechas de negocio (`Split.startDate`, `SplitWeek.startDate`,
@@ -210,9 +286,11 @@ Estas entidades aparecen en el contexto funcional del producto pero
 **no** se han creado todavia. Se documentan para que una futura entrega no
 tenga que redescubrirlas:
 
-- Resultados calculados de los KPI (`MVP-1C`).
-- Registros de carga de datos (Excel o manual) e importadores
-  (`IMPORT-1`).
+- Resultados calculados de los KPI distintos de Productividad (`MVP-1C`).
+- Registros de carga de datos de los demas origenes (Escalados, Calidad,
+  Llamadas, Estabilidad, Cronomagia, Articulos, Dedicacion, Formaciones;
+  ver `IMPORT-1`). La carga de Productividad ya existe: `ProductivityImport`
+  y `ProductivityWeeklyRow`, arriba.
 - Clasificacion general y su calculo acumulado (`MVP-1C`).
 - Usuarios, autenticacion y sesiones.
 - Facciones, profesiones, localizaciones, objetos, economia de creditos y
