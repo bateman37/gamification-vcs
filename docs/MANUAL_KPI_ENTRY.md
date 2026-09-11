@@ -94,13 +94,17 @@ exito (bug corregido en `BUGFIX-1 / UX-SPLIT-1`, ver `docs/DECISIONS.md`).
 
 ### Reglas comunes
 
-- Todos los campos visibles son obligatorios para poder guardar el conjunto
-  semanal completo, **salvo las tres excepciones explicitas de
-  `BUGFIX-1 / UX-SPLIT-1`**: en Redactor estrella, Estudiante entusiasta y
-  Aprendiz experto, un campo vacio o solo con espacios se interpreta y
-  persiste como `0` (ver sus secciones especificas mas abajo). En Guardian
-  de la Estabilidad y Cronomagia laboral un campo vacio sigue sin
-  convertirse en cero: se rechaza como obligatorio.
+- En los cinco KPI manuales, un campo vacio, ausente o solo con espacios se
+  interpreta y persiste como `0` (`parseNonNegativeNumberDefaultZero`, ver
+  `docs/DECISIONS.md`): ningun campo se rechaza ya como "obligatorio" por
+  estar en blanco. Esta regla se amplio a Guardian de la Estabilidad y
+  Cronomagia laboral en `0.6.0` / MVP-1C, sustituyendo la decision anterior
+  de `BUGFIX-1 / UX-SPLIT-1` que los mantenia como obligatorios; Redactor
+  estrella, Estudiante entusiasta y Aprendiz experto no cambian. En
+  Cronomagia laboral, un vacio en "Horas totales" sigue exigiendo que
+  "Horas productivas" tambien sea `0` o este vacio (ver su seccion mas
+  abajo). Texto no numerico, negativos y valores no finitos siguen
+  rechazandose siempre.
 - Se acepta coma o punto como separador decimal en los campos que admiten
   decimales.
 - Todos los errores detectables se devuelven en una sola respuesta,
@@ -119,6 +123,11 @@ exito (bug corregido en `BUGFIX-1 / UX-SPLIT-1`, ver `docs/DECISIONS.md`).
   deshabilita la entrada con una explicacion; `CLOSED` deja `Comprobar` en
   solo lectura y prohibe cualquier escritura en servidor, aunque se invoque
   la accion directamente.
+- **Semana publicada (`0.6.0` / MVP-1C):** ademas del estado del split, si
+  la semana ya tiene una publicacion (`WeekPublication`), el guardado se
+  rechaza en servidor (`assertWeekIsEditable`) aunque el split siga
+  `ACTIVE`; `Comprobar` sigue disponible en modo lectura. Ver
+  `docs/RESULTS_PUBLICATION.md`.
 
 ### Estado de carga (`Pendiente`/`Cargado`, nunca `Carga parcial`)
 
@@ -142,7 +151,9 @@ exito (bug corregido en `BUGFIX-1 / UX-SPLIT-1`, ver `docs/DECISIONS.md`).
 **Participantes:** solo N2 aplicables a la semana.
 
 **Campo:** `Resultados de estabilidad` — decimal mayor o igual que cero. El
-cero es un resultado real, nunca vacaciones.
+cero es un resultado real, nunca vacaciones. Un campo vacio, ausente o solo
+con espacios se guarda tambien como `0` (`0.6.0` / MVP-1C, ver
+`docs/DECISIONS.md`); texto no numerico y negativos se siguen rechazando.
 
 **Formula** (`src/domain/kpis/stability.ts`):
 
@@ -158,18 +169,24 @@ Si el multiplicador N2 es `null`, el resultado es `No aplica`.
 **Participantes:** todos los aplicables.
 
 **Campos:** `Horas productivas` y `Horas totales de la semana` (ambos
-decimales, mayores o iguales que cero, obligatorios). La pantalla de
-introduccion calcula el occupancy en vivo para ayudar a revisar antes de
-guardar (calculo de ayuda en el cliente; el servidor vuelve a calcular con
-`Prisma.Decimal` al guardar y al comprobar).
+decimales, mayores o iguales que cero). Desde `0.6.0` / MVP-1C, un campo
+vacio, ausente o solo con espacios en cualquiera de los dos se interpreta y
+persiste como `0` (ver `docs/DECISIONS.md`). La pantalla de introduccion
+calcula el occupancy en vivo para ayudar a revisar antes de guardar
+(tratando tambien un campo vacio como `0`, igual que el servidor); el
+servidor vuelve a calcular con `Prisma.Decimal` al guardar y al comprobar.
 
 **Reglas:**
 
-- Si `Horas totales = 0`, `Horas productivas` debe ser tambien `0`
-  (vacaciones toda la semana). Esa combinacion se rechaza en cualquier otro
-  caso (`productivas > 0` con `total = 0` es un error de validacion).
-- La fila `0/0` se guarda igual, se muestra como `VAC` y no recibe puntos,
-  pero cuenta como fila completa (no impide `Cargado`).
+- Si `Horas totales` es `0` o esta vacia (equivale a `0`), `Horas
+  productivas` debe ser tambien `0` o estar vacia (vacaciones toda la
+  semana). Esa combinacion se rechaza en cualquier otro caso (`productivas
+  > 0` con `total` en `0`/vacio es un error de validacion).
+- La fila `0/0` (incluida `vacio/vacio`) se guarda igual, se muestra como
+  `VAC` con `0 %` de occupancy, y no recibe puntos, pero cuenta como fila
+  completa (no impide `Cargado`).
+- `vacio/40` guarda las productivas como `0` y calcula normalmente
+  (`0 %`), sin marcarse como `VAC`.
 - Las horas productivas pueden superar las horas totales (ocurre en los
   datos reales): no es un error.
 - El grupo muestra `n VAC` (a nivel de grupo de estado de carga, `vacCount`

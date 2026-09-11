@@ -22,6 +22,10 @@ export async function resetDatabase(): Promise<void> {
   await testDb.writerWeeklyEntry.deleteMany();
   await testDb.studentWeeklyEntry.deleteMany();
   await testDb.apprenticeWeeklyEntry.deleteMany();
+  // WeekPublication en cascada borra PublishedParticipantWeeklyResult y PublishedKpiResult; debe
+  // borrarse antes que SplitParticipant/SplitWeek/Split/Person, a los que esas filas restringen el borrado.
+  await testDb.weekPublication.deleteMany();
+  await testDb.user.deleteMany();
   await testDb.splitParticipant.deleteMany();
   await testDb.splitKpiConfig.deleteMany();
   await testDb.splitPositionPointRule.deleteMany();

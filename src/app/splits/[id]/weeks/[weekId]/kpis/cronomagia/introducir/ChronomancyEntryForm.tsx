@@ -29,10 +29,14 @@ function fieldErrorMessage(state: ManualEntryActionState, participantId: string,
   return state.fieldErrors?.find((error) => error.participantId === participantId && error.field === field)?.message;
 }
 
-/** Convierte texto con coma o punto decimal en numero, para el occupancy en vivo (calculo de ayuda, no autoritativo). */
+/**
+ * Convierte texto con coma o punto decimal en numero, para el occupancy en
+ * vivo (calculo de ayuda, no autoritativo). Un campo vacio se interpreta
+ * como `0`, igual que el servidor al guardar (bugfix `0.6.0` / MVP-1C).
+ */
 function parseHours(value: string): number | null {
   const trimmed = value.trim();
-  if (trimmed === "") return null;
+  if (trimmed === "") return 0;
   const parsed = Number(trimmed.replace(",", "."));
   return Number.isFinite(parsed) ? parsed : null;
 }
@@ -52,7 +56,7 @@ function ChronomancyRow({
   const productive = parseHours(productiveHours);
   const total = parseHours(totalHours);
   let occupancyText = "-";
-  if (total === 0) occupancyText = "VAC";
+  if (total === 0) occupancyText = "VAC · 0 %";
   else if (productive !== null && total !== null && total > 0) {
     occupancyText = `${formatPoints(Math.min(productive / total, 1) * 100)} %`;
   }

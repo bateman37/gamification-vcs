@@ -1,5 +1,5 @@
 import type { ParticipantLevel, PrismaClient } from "@prisma/client";
-import { loadWeekContext } from "@/server/services/shared/week-context";
+import { loadWeekContext, assertWeekIsEditable } from "@/server/services/shared/week-context";
 import { assertSplitAcceptsManualEntries, computeManualEntryStatus } from "@/server/services/shared/manual-entries";
 import { listApplicableParticipantsForWeek } from "@/server/services/participant.service";
 import { listKpiConfigsForSplit } from "@/server/services/kpi.service";
@@ -10,13 +10,18 @@ import {
   type StabilityGuardianOutcomeView,
 } from "@/domain/kpis/stability";
 import type { LoadCoverageStatus } from "@/domain/kpis/loadGroups";
-import { parseRequiredNonNegativeNumber, ManualEntryValidationError, type ManualEntryFieldError } from "@/server/validation/manual-entry";
+import { parseNonNegativeNumberDefaultZero, ManualEntryValidationError, type ManualEntryFieldError } from "@/server/validation/manual-entry";
 
 /**
  * Entrada manual semanal de Guardian de la Estabilidad (`STABILITY_GUARDIAN`,
  * ver docs/MANUAL_KPI_ENTRY.md). Solo aplica a participantes N2. Un
  * resultado `0` es un dato real, nunca vacaciones: este KPI nunca muestra
  * `VAC`.
+ *
+ * Bugfix (`0.6.0` / MVP-1C): un campo vacio, ausente o solo con espacios se
+ * interpreta y guarda como `0`, igual que Redactor estrella, Estudiante
+ * entusiasta y Aprendiz experto (ver docs/DECISIONS.md). Sigue rechazando
+ * texto no numerico, negativos y valores no finitos.
  */
 
 async function getActiveStabilityGuardianConfig(db: PrismaClient, splitId: string): Promise<KpiConfigView | null> {
@@ -67,13 +72,14 @@ export async function getStabilityFormView(db: PrismaClient, splitId: string, we
 export async function saveStabilityEntries(db: PrismaClient, splitId: string, weekId: string, formData: FormData): Promise<void> {
   const { split, weekId: resolvedWeekId, weekSequenceNumber } = await loadWeekContext(db, splitId, weekId);
   assertSplitAcceptsManualEntries(split, "Guardian de la Estabilidad");
+  await assertWeekIsEditable(db, resolvedWeekId);
 
   const participants = await listN2ApplicableParticipants(db, splitId, weekSequenceNumber);
 
   const fieldErrors: ManualEntryFieldError[] = [];
   const rows: { splitParticipantId: string; resultValue: number }[] = [];
   for (const participant of participants) {
-    const result = parseRequiredNonNegativeNumber(formData, "resultValue", "Resultados de estabilidad", participant.id);
+    const result = parseNonNegativeNumberDefaultZero(formData, "resultValue", "Resultados de estabilidad", participant.id);
     if (!result.ok) {
       fieldErrors.push(result.error);
       continue;

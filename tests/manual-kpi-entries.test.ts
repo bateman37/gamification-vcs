@@ -613,3 +613,142 @@ describe("Contador semanal de KPI cargados", () => {
     expect(fullSummary.get(week.id)).toEqual({ loadedCount: 10, totalActiveCount: 10 });
   });
 });
+
+describe("Guardian de la Estabilidad: campo vacio equivale a cero (0.6.0 / MVP-1C)", () => {
+  it("un campo vacio o con espacios se guarda como cero y la carga queda completa", async () => {
+    const split = await createDraftSplit();
+    const person = await createPerson(testDb, { fullName: "Persona Guardian Vacio", email: undefined });
+    const participant = await addParticipant(testDb, split.id, { personId: person.id, alias: "GuardianVacio", level: "N2", startWeekSequenceNumber: 1 });
+    await updateKpiConfig(testDb, split.id, "STABILITY_GUARDIAN", {
+      isActive: true,
+      baseMax: 30,
+      multiplierN2: 1,
+      parameters: { pointsPerResult: 30 },
+    });
+    await activateSplit(testDb, split.id);
+    const week = (await listSplitWeeks(testDb, split.id))[0]!;
+
+    await saveStabilityEntries(testDb, split.id, week.id, form({ [`resultValue__${participant.id}`]: "   " }));
+    const check = await getStabilityCheckView(testDb, split.id, week.id);
+    expect(check.rows[0]?.resultValue).toBe(0);
+    expect(check.rows[0]?.stabilityGuardian).toMatchObject({ status: "computed", finalPoints: 0 });
+
+    const status = await getStabilityLoadStatus(testDb, split.id, week.id, week.sequenceNumber);
+    expect(status).toEqual({ status: "LOADED", vacCount: 0 });
+  });
+
+  it("sigue rechazando texto no numerico y negativos", async () => {
+    const split = await createDraftSplit();
+    const person = await createPerson(testDb, { fullName: "Persona Guardian Invalido", email: undefined });
+    const participant = await addParticipant(testDb, split.id, { personId: person.id, alias: "GuardianInvalido", level: "N2", startWeekSequenceNumber: 1 });
+    await updateKpiConfig(testDb, split.id, "STABILITY_GUARDIAN", {
+      isActive: true,
+      baseMax: 30,
+      multiplierN2: 1,
+      parameters: { pointsPerResult: 30 },
+    });
+    await activateSplit(testDb, split.id);
+    const week = (await listSplitWeeks(testDb, split.id))[0]!;
+
+    for (const invalidValue of ["-1", "no-es-un-numero"]) {
+      await expect(
+        saveStabilityEntries(testDb, split.id, week.id, form({ [`resultValue__${participant.id}`]: invalidValue })),
+      ).rejects.toBeInstanceOf(ManualEntryValidationError);
+    }
+  });
+});
+
+describe("Cronomagia laboral: ambos campos vacios equivalen a cero (0.6.0 / MVP-1C)", () => {
+  it("vacio/vacio se guarda como 0/0, VAC y 0% de occupancy", async () => {
+    const split = await createDraftSplit();
+    const person = await createPerson(testDb, { fullName: "Persona Cronomagia Vacio", email: undefined });
+    const participant = await addParticipant(testDb, split.id, { personId: person.id, alias: "CronoVacio", level: "N1", startWeekSequenceNumber: 1 });
+    await updateKpiConfig(testDb, split.id, "WORK_CHRONOMANCY", {
+      isActive: true,
+      baseMax: 60,
+      multiplierN1: 1,
+      parameters: { pointsAtFullOccupancy: 60 },
+    });
+    await activateSplit(testDb, split.id);
+    const week = (await listSplitWeeks(testDb, split.id))[0]!;
+
+    await saveChronomancyEntries(
+      testDb,
+      split.id,
+      week.id,
+      form({ [`productiveHours__${participant.id}`]: "", [`totalHours__${participant.id}`]: "" }),
+    );
+    const check = await getChronomancyCheckView(testDb, split.id, week.id);
+    expect(check.rows[0]?.productiveHours).toBe(0);
+    expect(check.rows[0]?.totalHours).toBe(0);
+    expect(check.rows[0]?.workChronomancy).toEqual({ status: "vac" });
+  });
+
+  it("vacio/40 se guarda como productivas 0 y calcula normalmente (0%)", async () => {
+    const split = await createDraftSplit();
+    const person = await createPerson(testDb, { fullName: "Persona Cronomagia Parcial", email: undefined });
+    const participant = await addParticipant(testDb, split.id, { personId: person.id, alias: "CronoParcial", level: "N1", startWeekSequenceNumber: 1 });
+    await updateKpiConfig(testDb, split.id, "WORK_CHRONOMANCY", {
+      isActive: true,
+      baseMax: 60,
+      multiplierN1: 1,
+      parameters: { pointsAtFullOccupancy: 60 },
+    });
+    await activateSplit(testDb, split.id);
+    const week = (await listSplitWeeks(testDb, split.id))[0]!;
+
+    await saveChronomancyEntries(
+      testDb,
+      split.id,
+      week.id,
+      form({ [`productiveHours__${participant.id}`]: "", [`totalHours__${participant.id}`]: "40" }),
+    );
+    const check = await getChronomancyCheckView(testDb, split.id, week.id);
+    expect(check.rows[0]?.productiveHours).toBe(0);
+    expect(check.rows[0]?.totalHours).toBe(40);
+    expect(check.rows[0]?.workChronomancy).toMatchObject({ status: "computed", occupancy: 0, finalPoints: 0 });
+  });
+
+  it("1/vacio y 1/0 siguen rechazandose (total 0 exige productivas 0)", async () => {
+    const split = await createDraftSplit();
+    const person = await createPerson(testDb, { fullName: "Persona Cronomagia Rechazo", email: undefined });
+    const participant = await addParticipant(testDb, split.id, { personId: person.id, alias: "CronoRechazo", level: "N1", startWeekSequenceNumber: 1 });
+    await updateKpiConfig(testDb, split.id, "WORK_CHRONOMANCY", {
+      isActive: true,
+      baseMax: 60,
+      multiplierN1: 1,
+      parameters: { pointsAtFullOccupancy: 60 },
+    });
+    await activateSplit(testDb, split.id);
+    const week = (await listSplitWeeks(testDb, split.id))[0]!;
+
+    await expect(
+      saveChronomancyEntries(testDb, split.id, week.id, form({ [`productiveHours__${participant.id}`]: "1", [`totalHours__${participant.id}`]: "" })),
+    ).rejects.toBeInstanceOf(ManualEntryValidationError);
+    await expect(
+      saveChronomancyEntries(testDb, split.id, week.id, form({ [`productiveHours__${participant.id}`]: "1", [`totalHours__${participant.id}`]: "0" })),
+    ).rejects.toBeInstanceOf(ManualEntryValidationError);
+    expect(await testDb.chronomancyWeeklyEntry.count({ where: { splitWeekId: week.id } })).toBe(0);
+  });
+
+  it("sigue rechazando negativos y texto invalido", async () => {
+    const split = await createDraftSplit();
+    const person = await createPerson(testDb, { fullName: "Persona Cronomagia Invalida", email: undefined });
+    const participant = await addParticipant(testDb, split.id, { personId: person.id, alias: "CronoInvalida", level: "N1", startWeekSequenceNumber: 1 });
+    await updateKpiConfig(testDb, split.id, "WORK_CHRONOMANCY", {
+      isActive: true,
+      baseMax: 60,
+      multiplierN1: 1,
+      parameters: { pointsAtFullOccupancy: 60 },
+    });
+    await activateSplit(testDb, split.id);
+    const week = (await listSplitWeeks(testDb, split.id))[0]!;
+
+    await expect(
+      saveChronomancyEntries(testDb, split.id, week.id, form({ [`productiveHours__${participant.id}`]: "-1", [`totalHours__${participant.id}`]: "10" })),
+    ).rejects.toBeInstanceOf(ManualEntryValidationError);
+    await expect(
+      saveChronomancyEntries(testDb, split.id, week.id, form({ [`productiveHours__${participant.id}`]: "no-es-un-numero", [`totalHours__${participant.id}`]: "10" })),
+    ).rejects.toBeInstanceOf(ManualEntryValidationError);
+  });
+});

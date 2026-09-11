@@ -34,3 +34,18 @@ export function assertSplitAcceptsLoads(split: Split, originLabel: string): void
     throw new DomainError(`Solo se puede analizar o confirmar una carga de ${originLabel} en un split activo.`);
   }
 }
+
+/**
+ * Guarda centralizada de bloqueo (seccion 5.4 de docs/RESULTS_PUBLICATION.md):
+ * una semana publicada nunca puede modificarse, ni por carga Excel, ni por
+ * entrada manual, ni por ninguna otra mutacion futura sobre sus datos. Se
+ * consulta siempre en servidor, nunca se confia en `disabled` de la
+ * interfaz. Debe llamarse con el mismo `db`/transaccion que hara la
+ * escritura, para que la comprobacion sea consistente con la operacion.
+ */
+export async function assertWeekIsEditable(db: Db, weekId: string): Promise<void> {
+  const publication = await db.weekPublication.findUnique({ where: { splitWeekId: weekId } });
+  if (publication) {
+    throw new DomainError("Semana publicada: los datos estan bloqueados y no se pueden modificar.");
+  }
+}

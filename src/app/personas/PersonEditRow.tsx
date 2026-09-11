@@ -6,13 +6,21 @@ import { updatePersonAction } from "@/server/actions/person.actions";
 import { initialActionState } from "@/server/actions/action-result";
 import { ErrorMessage, FieldError, SubmitButton } from "@/components/ui";
 import type { PersonWithParticipationCount } from "@/server/services/person.service";
+import type { PersonWithAccount } from "@/server/services/auth.service";
+import { PersonAccountCell } from "./PersonAccountCell";
 
 function SaveButton() {
   const { pending } = useFormStatus();
   return <SubmitButton pending={pending}>Guardar</SubmitButton>;
 }
 
-export function PersonEditRow({ person }: { person: PersonWithParticipationCount }) {
+export function PersonEditRow({
+  person,
+  account,
+}: {
+  person: PersonWithParticipationCount;
+  account: PersonWithAccount["account"];
+}) {
   const [editing, setEditing] = useState(false);
   const updateWithId = updatePersonAction.bind(null, person.id);
   const [state, formAction] = useFormState(updateWithId, initialActionState);
@@ -23,6 +31,9 @@ export function PersonEditRow({ person }: { person: PersonWithParticipationCount
         <td className="px-3 py-2">{person.fullName}</td>
         <td className="px-3 py-2 text-slate-500">{person.email ?? "-"}</td>
         <td className="px-3 py-2 text-center">{person.participationCount}</td>
+        <td className="px-3 py-2">
+          <PersonAccountCell personId={person.id} account={account} />
+        </td>
         <td className="px-3 py-2 text-right">
           <button
             type="button"
@@ -38,7 +49,7 @@ export function PersonEditRow({ person }: { person: PersonWithParticipationCount
 
   return (
     <tr className="border-b border-slate-100 bg-slate-50">
-      <td colSpan={4} className="px-3 py-3">
+      <td colSpan={5} className="px-3 py-3">
         <form action={formAction} className="flex flex-wrap items-start gap-3">
           <div>
             <label className="block text-xs font-medium text-slate-600">Nombre completo</label>

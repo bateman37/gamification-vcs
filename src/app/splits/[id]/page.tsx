@@ -6,6 +6,8 @@ import { listAllPersons } from "@/server/services/person.service";
 import { listKpiConfigsForSplit } from "@/server/services/kpi.service";
 import { listPositionPointRules } from "@/server/services/position-points.service";
 import { getWeeklyKpiLoadSummary } from "@/server/services/kpi-load-summary.service";
+import { computeSplitClassification } from "@/server/services/classification.service";
+import { requireAdminSession } from "@/lib/session";
 import { TOTAL_KPI_COUNT } from "@/domain/kpis/catalog";
 import { formatCalendarDate } from "@/lib/dates";
 import { Badge, EmptyState } from "@/components/ui";
@@ -19,6 +21,8 @@ import { PositionPointsSection } from "./PositionPointsSection";
 import { SplitDetailNav, type SplitDetailNavItem } from "./SplitDetailNav";
 import { WeekKpiLoadCell } from "./WeekKpiLoadCell";
 import { WeekKpiLoadedCount } from "./WeekKpiLoadedCount";
+import { WeekResultsCell } from "./WeekResultsCell";
+import { ClassificationSummarySection } from "./ClassificationSummarySection";
 
 const STATUS_TONE: Record<string, "slate" | "green" | "gray"> = {
   DRAFT: "slate",
@@ -27,6 +31,7 @@ const STATUS_TONE: Record<string, "slate" | "green" | "gray"> = {
 };
 
 export default async function SplitDetailPage({ params }: { params: { id: string } }) {
+  await requireAdminSession();
   const split = await getSplitById(prisma, params.id);
   if (!split) {
     notFound();
@@ -39,7 +44,12 @@ export default async function SplitDetailPage({ params }: { params: { id: string
     listKpiConfigsForSplit(prisma, split.id),
     listPositionPointRules(prisma, split.id),
   ]);
-  const kpiLoadSummaries = await getWeeklyKpiLoadSummary(prisma, split.id, weeks);
+  const [kpiLoadSummaries, publications, classification] = await Promise.all([
+    getWeeklyKpiLoadSummary(prisma, split.id, weeks),
+    prisma.weekPublication.findMany({ where: { splitWeekId: { in: weeks.map((week) => week.id) } } }),
+    computeSplitClassification(prisma, split.id),
+  ]);
+  const publishedAtByWeekId = new Map(publications.map((publication) => [publication.splitWeekId, publication.publishedAt]));
 
   const participatingPersonIds = new Set(participants.map((participant) => participant.personId));
   const availablePeople = people.filter((person) => !participatingPersonIds.has(person.id));
@@ -51,6 +61,7 @@ export default async function SplitDetailPage({ params }: { params: { id: string
   const navItems: SplitDetailNavItem[] = [
     { href: "#resumen", label: "Resumen" },
     { href: "#calendario-semanas", label: "Calendario de semanas" },
+    { href: "#clasificacion-general", label: "Clasificacion general" },
     { href: "#participantes", label: "Participantes" },
     ...(showAddParticipant ? [{ href: "#anadir-participante", label: "Anadir participante" }] : []),
     { href: "#kpi-configuracion", label: "KPI del split" },
@@ -113,13 +124,15 @@ export default async function SplitDetailPage({ params }: { params: { id: string
                   <th className="px-3 py-2 font-medium">Fin</th>
                   <th className="px-3 py-2 font-medium">KPI cargados</th>
                   <th className="px-3 py-2 font-medium">Carga de KPI</th>
+                  <th className="px-3 py-2 font-medium">Resultados</th>
                 </tr>
               </thead>
               <tbody>
                 {weeks.map((week) => {
                   const summary = kpiLoadSummaries.get(week.id) ?? { loadedCount: 0, totalActiveCount: 0 };
+                  const publishedAt = publishedAtByWeekId.get(week.id) ?? null;
                   return (
-                    <tr key={week.id} className="border-b border-slate-100">
+                    <tr key={week.id} className={`border-b border-slate-100 ${publishedAt ? "bg-sky-50/60" : ""}`}>
                       <td className="px-3 py-2">{week.sequenceNumber}</td>
                       <td className="px-3 py-2">{formatCalendarDate(week.startDate)}</td>
                       <td className="px-3 py-2">{formatCalendarDate(week.endDate)}</td>
@@ -129,6 +142,9 @@ export default async function SplitDetailPage({ params }: { params: { id: string
                       <td className="px-3 py-2">
                         <WeekKpiLoadCell splitId={split.id} splitStatus={split.status} week={week} />
                       </td>
+                      <td className="px-3 py-2">
+                        <WeekResultsCell splitId={split.id} weekId={week.id} summary={summary} publishedAt={publishedAt} />
+                      </td>
                     </tr>
                   );
                 })}
@@ -136,6 +152,8 @@ export default async function SplitDetailPage({ params }: { params: { id: string
             </table>
           </div>
         </section>
+
+        <ClassificationSummarySection splitId={split.id} classification={classification} />
 
         <section id="participantes" className="scroll-mt-6 space-y-3">
           <h2 className="text-lg font-semibold">Participantes</h2>

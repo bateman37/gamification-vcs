@@ -1,5 +1,5 @@
 import type { ParticipantLevel, PrismaClient } from "@prisma/client";
-import { loadWeekContext } from "@/server/services/shared/week-context";
+import { loadWeekContext, assertWeekIsEditable } from "@/server/services/shared/week-context";
 import { assertSplitAcceptsManualEntries, computeManualEntryStatus } from "@/server/services/shared/manual-entries";
 import { listApplicableParticipantsForWeek } from "@/server/services/participant.service";
 import { listKpiConfigsForSplit } from "@/server/services/kpi.service";
@@ -10,13 +10,19 @@ import {
   type WorkChronomancyOutcomeView,
 } from "@/domain/kpis/chronomancy";
 import type { LoadCoverageStatus } from "@/domain/kpis/loadGroups";
-import { parseRequiredNonNegativeNumber, ManualEntryValidationError, type ManualEntryFieldError } from "@/server/validation/manual-entry";
+import { parseNonNegativeNumberDefaultZero, ManualEntryValidationError, type ManualEntryFieldError } from "@/server/validation/manual-entry";
 
 /**
  * Entrada manual semanal de Cronomagia laboral (`WORK_CHRONOMANCY`, ver
  * docs/MANUAL_KPI_ENTRY.md). `totalHours = 0` significa vacaciones toda la
  * semana (VAC): la fila se guarda igualmente, cuenta como completa y no
  * otorga puntos.
+ *
+ * Bugfix (`0.6.0` / MVP-1C): un campo vacio, ausente o solo con espacios en
+ * "Horas productivas" o "Horas totales de la semana" se interpreta y guarda
+ * como `0` (ver docs/DECISIONS.md). Sigue rechazandose un valor positivo de
+ * productivas cuando las totales son 0 o estan vacias (0 totales exige 0
+ * productivas), asi como negativos, texto invalido y valores no finitos.
  */
 
 async function getActiveWorkChronomancyConfig(db: PrismaClient, splitId: string): Promise<KpiConfigView | null> {
@@ -71,14 +77,15 @@ export async function getChronomancyFormView(db: PrismaClient, splitId: string, 
 export async function saveChronomancyEntries(db: PrismaClient, splitId: string, weekId: string, formData: FormData): Promise<void> {
   const { split, weekId: resolvedWeekId, weekSequenceNumber } = await loadWeekContext(db, splitId, weekId);
   assertSplitAcceptsManualEntries(split, "Cronomagia laboral");
+  await assertWeekIsEditable(db, resolvedWeekId);
 
   const participants = await listApplicableParticipantsForWeek(db, splitId, weekSequenceNumber);
 
   const fieldErrors: ManualEntryFieldError[] = [];
   const rows: { splitParticipantId: string; productiveHours: number; totalHours: number }[] = [];
   for (const participant of participants) {
-    const totalResult = parseRequiredNonNegativeNumber(formData, "totalHours", "Horas totales de la semana", participant.id);
-    const productiveResult = parseRequiredNonNegativeNumber(formData, "productiveHours", "Horas productivas", participant.id);
+    const totalResult = parseNonNegativeNumberDefaultZero(formData, "totalHours", "Horas totales de la semana", participant.id);
+    const productiveResult = parseNonNegativeNumberDefaultZero(formData, "productiveHours", "Horas productivas", participant.id);
     if (!totalResult.ok) fieldErrors.push(totalResult.error);
     if (!productiveResult.ok) fieldErrors.push(productiveResult.error);
     if (!totalResult.ok || !productiveResult.ok) continue;

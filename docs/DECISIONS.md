@@ -578,3 +578,188 @@ construir el motor de calculo esta fuera del alcance de esta entrega. Dejar
 la configuracion lista y validada de antemano evita mezclar dos cambios
 grandes (configuracion y calculo) en una misma entrega, siguiendo la regla
 de entregas pequenas del proyecto.
+
+## Vacio como cero tambien en Guardian de la Estabilidad y Cronomagia laboral (`0.6.0` / MVP-1C)
+
+**Decision:** desde `0.6.0`, un campo vacio, ausente o solo con espacios en
+"Resultados de estabilidad" (Guardian de la Estabilidad) y en "Horas
+productivas"/"Horas totales de la semana" (Cronomagia laboral) se
+interpreta y persiste como `0`, usando el mismo helper compartido
+(`parseNonNegativeNumberDefaultZero`) ya usado por Redactor estrella,
+Estudiante entusiasta y Aprendiz experto. Esta decision sustituye
+expresamente la de `BUGFIX-1 / UX-SPLIT-1` que mantenia estos dos KPI como
+obligatorios.
+
+**Motivo:** el mismo patron de uso real detectado en los otros tres KPI
+manuales (un campo en blanco significa sistematicamente "cero") aplica
+tambien aqui, y exigir el campo bloqueaba publicar semanas completas y
+validas. El comportamiento especial de Cronomagia (`totalHours = 0` implica
+`productiveHours = 0`, estado `VAC`) no cambia: solo cambia como se
+interpreta un campo vacio antes de esa regla.
+
+## Motor agregado semanal como capa de lectura sobre los resolvers existentes
+
+**Decision:** `weekly-results.service.ts` no recalcula ninguna formula: para
+cada KPI activo llama directamente a los mismos resolvers de
+`src/domain/kpis/*` que ya usan las pantallas de "Comprobar" (por ejemplo
+`resolveSolutionHunterOutcome`, `resolveEscalationTamerOutcome`), leyendo
+las mismas tablas de origen (`ProductivityWeeklyRow`,
+`StabilityWeeklyEntry`, etc.) en un numero acotado de consultas por semana
+(una por origen necesario, nunca una por participante). Los resultados de
+cada resolver se normalizan a tres estados funcionales (`COMPUTED`, `VAC`,
+`NOT_APPLICABLE`) solo para la vista agregada y la instantanea publicada;
+los estados internos de cada KPI (`no_data`, `no_escalation_data`,
+`zero_updates`, etc.) no cambian ni se duplican.
+
+**Motivo:** el encargo exige explicitamente reutilizar los calculos
+existentes y prohibe copiar formulas en un "motor generico". Construir el
+agregado como una capa fina sobre los resolvers evita divergencias futuras
+entre lo que muestra "Comprobar" KPI a KPI y lo que muestra la
+previsualizacion o la semana publicada.
+
+## Interpretacion de "Actualizaciones es 0" y de "Falta Productividad" en el agregado semanal
+
+**Decision:** dentro del motor agregado (no en `resolveEscalationTamerOutcome`,
+que no cambia), dos estados de Domador de Escaladas que no son directamente
+"computado" se resuelven asi para la suma semanal y la instantanea:
+
+- `zero_updates` (reasignaciones reales o inferidas, pero `updates = 0`,
+  division no calculable): se trata como `COMPUTED` con ratio de escalados
+  `0` (nadie puede escalar sobre cero actualizaciones), es decir
+  `basePoints x multiplicador`, limitado por el maximo. Se calcula con el
+  mismo helper `applyBaseMax` que el resto de KPI, sin duplicar
+  `calculateEscalationTamerPoints` (que deliberadamente no admite
+  denominador cero).
+- `no_productivity_data` (fila real de Escalados sin fila de Productividad
+  de la misma semana): se muestra como `VAC` en la tabla, pero se anade a
+  `blockingIssues` con el alias de la persona afectada: es una
+  inconsistencia entre dos archivos ya cargados, no una ausencia normal, y
+  debe resolverse (recargando Productividad o Escalados) antes de publicar.
+
+**Motivo:** ninguna de las dos situaciones estaba contemplada en `MVP-1C.2`
+porque hasta ahora solo se mostraban en pantallas de "Comprobar" sin
+bloquear ninguna accion. El encargo pide explicitamente no publicar una
+inconsistencia real "oculta como cero" ni bloquear silenciosamente sin
+explicar el motivo exacto.
+
+## `no_data` inesperado en un KPI manual atomico bloquea publicar, no se oculta como cero
+
+**Decision:** los cinco KPI manuales se guardan de forma atomica (todo el
+conjunto de una semana o nada), por lo que, si la semana esta marcada como
+`n/n` completa, todo participante aplicable deberia tener fila. Si el
+motor agregado encuentra de todas formas una fila ausente (por ejemplo, un
+participante anadido despues del ultimo guardado, con una semana inicial
+anterior a la actual), la muestra como `VAC` en la tabla pero anade un
+mensaje a `blockingIssues` identificando al participante y el KPI, y la
+publicacion se rechaza hasta que se corrija.
+
+**Motivo:** es exactamente el caso "inesperado" que el encargo pide no
+ocultar como cero. Mostrarlo como `VAC` mantiene la previsualizacion
+legible sin fingir que hay un resultado calculado; el bloqueo evita
+publicar una instantanea con un hueco real sin que el administrador lo note.
+
+## Ranking de competicion y clasificacion acumulada como funciones puras genericas
+
+**Decision:** `src/domain/ranking.ts` expone dos funciones puras:
+`rankByScoreDescending` (una sola puntuacion `Prisma.Decimal`, usada por el
+ranking semanal y el ranking por KPI) y `rankByComparator` (comparador
+generico que decide tanto orden como empate, usado por la clasificacion
+acumulada del split, que empata solo cuando puntos por posicion **y**
+puntos KPI coinciden). Ambas reciben un `tiebreak` separado que solo decide
+el orden visual entre empatados (alias normalizado y despues id), sin
+alterar nunca la posicion asignada. `src/domain/color-bands.ts` expone una
+unica funcion pura `colorBandForPercentage` para las bandas de color,
+reutilizada por la previsualizacion, la semana publicada y la vista
+individual.
+
+**Motivo:** el encargo pide explicitamente una funcion pura y probada para
+el ranking y otra para las bandas de color, en vez de comparaciones
+dispersas por las vistas. Separar "criterio de empate" de "orden visual"
+evita el error de que el alias conceda una ventaja de negocio.
+
+## `zero_updates` de Domador tratado como ratio 0 en el agregado: alcance de la decision
+
+**Nota:** esta interpretacion (ver mas arriba, "Interpretacion de
+'Actualizaciones es 0'...") solo aplica dentro de `weekly-results.service.ts`
+y de la instantanea publicada. Las pantallas de "Comprobar" y de
+confirmacion de Escalados siguen mostrando el estado `zero_updates` tal
+cual (`No calculable: Actualizaciones es 0`), sin puntos, exactamente como
+en `MVP-1C.3`; no se ha tocado `resolveEscalationTamerOutcome`.
+
+## Publicacion como instantanea inmutable con `splitId` desnormalizado
+
+**Decision:** publicar una semana (`publishWeek`) recalcula todo con el
+motor agregado usando el mismo `PrismaClient` (nunca datos enviados por el
+navegador) y escribe `WeekPublication`, `PublishedParticipantWeeklyResult` y
+`PublishedKpiResult` dentro de una unica transaccion con aislamiento
+`Serializable`. `PublishedParticipantWeeklyResult.splitId` se guarda
+desnormalizado (ademas de la relacion real via `publicationId ->
+splitWeekId -> splitId`) para poder consultar la clasificacion de un split
+completo indexando directamente por `splitId`, sin recorrer esa cadena de
+relaciones por cada fila. Una carrera concurrente (violacion de la
+restriccion unica sobre `splitWeekId`, o fallo de serializacion) no se
+propaga como error: si al comprobar de nuevo ya existe una publicacion para
+esa semana, se devuelve como resultado idempotente (`alreadyPublished:
+true`), nunca como una segunda publicacion.
+
+**Motivo:** el encargo exige explicitamente que la publicacion sea correcta
+bajo peticiones concurrentes y que las consultas de clasificacion esten
+acotadas. `Serializable` es el nivel de aislamiento que Postgres/Prisma
+documentan como apropiado quejandose (en vez de corrompiendo datos) ante
+una carrera real; desnormalizar `splitId` es la misma tecnica ya usada en
+otras tablas del proyecto para evitar N+1 en listados por split.
+
+## Publicar bloquea la escritura con una guarda centralizada, no con `disabled`
+
+**Decision:** `assertWeekIsEditable(db, weekId)`
+(`src/server/services/shared/week-context.ts`) consulta `WeekPublication`
+en el mismo `db`/transaccion que va a escribir, y se llama al principio de
+las nueve acciones de escritura semanal (cuatro confirmaciones de Excel:
+Productividad, Escalados, Calidad, Llamadas; cinco guardados manuales:
+Guardian, Cronomagia, Redactor, Estudiante, Aprendiz), justo despues de la
+comprobacion de que el split esta `ACTIVE`. Anadir un participante con
+`startWeekSequenceNumber` en una semana ya publicada tambien se rechaza en
+`addParticipant`, comprobando la publicacion de esa semana antes de crear
+la fila.
+
+**Motivo:** el encargo prohibe explicitamente confiar en `disabled` de la
+interfaz para una regla de negocio critica. Centralizar la comprobacion
+evita que una novena mutacion futura olvide añadirla.
+
+## Autenticacion local con Auth.js/NextAuth (credenciales) y JWT
+
+**Decision:** `next-auth` v4 con `CredentialsProvider` (correo + contrasena
+con `bcryptjs`) y sesion `JWT` (sin tabla de sesiones en base de datos).
+`src/middleware.ts` protege por prefijo de ruta (`/personas`, `/splits`
+-> solo `ADMIN`; `/resultados`, `/cuenta` -> cualquier usuario autenticado)
+en cada peticion, incluida una URL escrita a mano; `src/lib/session.ts`
+(`requireSession`, `requireAdminSession`) es la segunda capa dentro de
+paginas y acciones de servidor. Cuando `mustChangePassword` esta activo, el
+middleware redirige a `/cuenta/cambiar-contrasena` sin importar la ruta
+solicitada (salvo esa misma ruta), y esa pagina cierra la sesion tras
+guardar la nueva contrasena para forzar un JWT limpio (la sesion `JWT` de
+NextAuth no relee la base de datos en cada peticion, asi que un campo como
+`mustChangePassword` solo se refresca con un nuevo inicio de sesion).
+
+**Motivo:** requisito explicito de usar una libreria mantenida en vez de
+criptografia o cookies caseras. JWT evita una tabla de sesiones adicional
+sin sacrificar seguridad para este alcance (cookies `HttpOnly`,
+`SameSite`, firmadas con `AUTH_SECRET`). Cerrar sesion tras cambiar la
+contrasena es la forma mas simple de mantener el JWT consistente con el
+nuevo estado sin anadir un mecanismo de revalidacion de sesion.
+
+## El participante nunca decide que persona ve mediante un parametro de URL
+
+**Decision:** en `/resultados`, un usuario `PARTICIPANT` siempre usa
+`session.user.personId` (resuelto en servidor a partir del JWT) para
+decidir que datos leer; el parametro `?persona=` de la URL solo se lee
+cuando `session.user.role === "ADMIN"`. Los servicios de lectura
+(`getPersonSplitDetail`, `listSplitsWithPublishedResultsForPerson`,
+`getPersonHistory`) siempre filtran por `personId` en la consulta a base de
+datos, nunca devuelven ni filtran en memoria datos de otra persona.
+
+**Motivo:** requisito explicito de seguridad del encargo: un participante
+no debe poder ver el detalle de otro cambiando la URL o manipulando un
+payload. Ignorar el parametro por completo (en vez de validarlo) es la
+forma mas simple de no depender de que la validacion se acuerde de
+comprobar todos los casos.

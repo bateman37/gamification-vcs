@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import type { ParticipantLevel, Prisma, PrismaClient, Split } from "@prisma/client";
 import { DomainError } from "@/lib/errors";
 import { getSplitWeek } from "@/server/services/split.service";
+import { assertWeekIsEditable } from "@/server/services/shared/week-context";
 import { listApplicableParticipantsForWeek, type ParticipantWithPerson } from "@/server/services/participant.service";
 import { listKpiConfigsForSplit } from "@/server/services/kpi.service";
 import { toKpiConfigView, type KpiConfigView } from "@/domain/kpis/mapping";
@@ -205,6 +206,7 @@ export async function confirmProductivityImport(
 ): Promise<void> {
   const { split, weekSequenceNumber } = await loadWeekContext(db, splitId, weekId);
   assertSplitAcceptsLoads(split);
+  await assertWeekIsEditable(db, weekId);
 
   const [readResult, applicableParticipants] = await Promise.all([
     readProductivityWorkbook(file.buffer),

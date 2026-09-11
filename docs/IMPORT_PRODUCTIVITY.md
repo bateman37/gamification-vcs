@@ -231,6 +231,11 @@ Estos tres estados se distinguen siempre, nunca se confunden con cero:
 - Solo un split `ACTIVE` permite analizar, confirmar o sustituir una carga
   (`assertSplitAcceptsLoads`). Se comprueba en el servicio, no solo en la
   interfaz.
+- **Semana publicada (`0.6.0` / MVP-1C):** si la semana ya tiene una
+  publicacion (`WeekPublication`), confirmar o sustituir la carga se
+  rechaza en servidor (`assertWeekIsEditable`) aunque el split siga
+  `ACTIVE`; analizar (sin guardar) y `Comprobar` siguen disponibles. Ver
+  `docs/RESULTS_PUBLICATION.md`.
 - En `DRAFT`, la pantalla semanal se puede alcanzar pero el acceso normal
   (boton del calendario) esta deshabilitado; `Cargar` no esta disponible.
 - En `CLOSED`, la accion es `Ver KPI`: se puede `Comprobar` (si hay datos),

@@ -4,6 +4,108 @@ Formato inspirado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/)
 Este proyecto usa versionado `0.x` mientras se construye el nucleo
 funcional; la primera version publicada es `0.1.0`.
 
+## [0.6.0] - MVP-1C — Resultados, publicacion y clasificacion
+
+### Corregido
+
+- **Guardian de la Estabilidad** (`STABILITY_GUARDIAN`): un campo vacio,
+  ausente o solo con espacios en "Resultados de estabilidad" se interpreta
+  y persiste ahora como `0`, reutilizando el mismo helper que ya usaban
+  Redactor estrella, Estudiante entusiasta y Aprendiz experto. Sustituye
+  la decision de `BUGFIX-1 / UX-SPLIT-1` que lo mantenia obligatorio.
+- **Cronomagia laboral** (`WORK_CHRONOMANCY`): un campo vacio, ausente o
+  solo con espacios en "Horas productivas" o "Horas totales de la semana"
+  se interpreta y persiste ahora como `0`. `vacio/vacio` se guarda como
+  `0/0` (`VAC`, `0 %`, sin puntos); `vacio/40` guarda productivas `0` y
+  calcula normalmente; un valor positivo de productivas con total en `0`
+  o vacio se sigue rechazando. La pantalla de introduccion y la de
+  comprobar muestran `0 %`/`VAC · 0 %` en vez de una celda vacia.
+
+### Anadido
+
+- **Motor agregado de resultados semanales**
+  (`src/server/services/weekly-results.service.ts`): reutiliza los
+  resolvers existentes de `src/domain/kpis/*` (sin duplicar formulas) para
+  calcular, por cada participante aplicable, el resultado de cada KPI
+  activo normalizado a tres estados (`COMPUTED`, `VAC`, `NOT_APPLICABLE`),
+  la suma semanal (sin perder negativos), el maximo aplicable (excluyendo
+  `NOT_APPLICABLE`), el ranking semanal y los puntos por posicion. Solo
+  calcula participantes cuando la semana esta completa
+  (`totalActiveCount > 0 && loadedCount === totalActiveCount`, la misma
+  regla que ya usaba el contador "KPI cargados").
+- Dos funciones puras y probadas: `src/domain/ranking.ts`
+  (`rankByScoreDescending`/`rankByComparator`, ranking de competicion
+  `1, 2, 2, 4`) y `src/domain/color-bands.ts` (`colorBandForPercentage`,
+  bandas de color por porcentaje del maximo).
+- **Previsualizacion en vivo y publicacion**
+  (`/splits/[id]/weeks/[weekId]/resultados`): tabla ordenable con mapa de
+  calor accesible, leyenda de estados/colores, resumen (participantes, KPI
+  activos, total de `VAC`) y boton `Publicar semana` con confirmacion
+  explicita, visible solo para administrador y solo cuando no hay
+  bloqueantes.
+- **Publicacion inmutable**: nuevas entidades `WeekPublication`,
+  `PublishedParticipantWeeklyResult` y `PublishedKpiResult` (migraciones
+  `add_results_publication_and_auth` y
+  `add_publication_check_constraints`). `publishWeek`
+  (`src/server/services/publish-week.service.ts`) recalcula en servidor y
+  escribe la instantanea completa dentro de una transaccion serializable;
+  una carrera concurrente no crea una segunda publicacion.
+- **Bloqueo real de una semana publicada**: guarda centralizada
+  `assertWeekIsEditable` (`src/server/services/shared/week-context.ts`),
+  aplicada a las nueve acciones de escritura semanal (cuatro cargas de
+  Excel, cinco entradas manuales) y a la incorporacion de un participante
+  con semana inicial en una semana ya publicada.
+- Nuevas columnas y bloques: `Resultados` en el calendario de semanas
+  (`/splits/[id]`), resumen `KPI cargados: n/x` + `Ver resultados de la
+  semana` en la pantalla de cargas, y bloque `Clasificacion general` bajo
+  el calendario con enlace a la vista detallada
+  (`/splits/[id]/clasificacion`).
+- **Clasificacion general del split**
+  (`src/server/services/classification.service.ts`): usa exclusivamente
+  los puntos por posicion de semanas publicadas (la suma de KPI solo
+  desempata visualmente); resumen para administrador, vista detallada con
+  filtros (semana/acumulado, KPI, orden) y version limitada para
+  participante (alias, posiciones, totales; nunca nombre real, KPI
+  individuales, niveles ni `VAC` de otros).
+- **Autenticacion local** (Auth.js/NextAuth v4 + `bcryptjs`): nueva
+  entidad `User` (`ADMIN`/`PARTICIPANT`, vinculado opcionalmente uno a uno
+  con `Person`), `src/middleware.ts` (proteccion de rutas por rol en cada
+  peticion), `/login`, cierre de sesion, cambio de contrasena propia
+  (`/cuenta/cambiar-contrasena`, obligatorio en el primer acceso), gestion
+  de cuentas de participante integrada en `/personas`, y script
+  `npm run db:create-admin` para el primer administrador.
+- **Vista individual** (`/resultados`): selector de persona (solo
+  administrador; el participante siempre usa su propia sesion), subvistas
+  `Por split` (resumen, evolucion semana a semana, posicion por KPI,
+  clasificacion limitada) e `Historico general` (filtros de ano/split/
+  agrupacion semana-mes-ano, con desglose por KPI y `VAC` aparte).
+- Documentacion nueva: `docs/RESULTS_PUBLICATION.md` (referencia
+  principal de resultados/publicacion/clasificacion) y
+  `docs/AUTHENTICATION.md`; actualizacion de `README.md`,
+  `docs/ROADMAP.md`, `docs/DECISIONS.md`, `docs/DATA_MODEL.md`,
+  `docs/MANUAL_KPI_ENTRY.md`, `docs/IMPORT_PRODUCTIVITY.md`,
+  `docs/IMPORT_ESCALATIONS_QUALITY_VOICE.md`,
+  `docs/POSITION_POINTS_CONFIGURATION.md` y `.env.example`.
+- Pruebas de servicio (Vitest, contra PostgreSQL real) sobre las reglas
+  criticas de esta entrega: los dos bugfixes de vacio-como-cero; el motor
+  agregado con VAC/negativos/ranking `1,2,2,4`/bloqueo por posicion sin
+  regla/interpretacion de "Actualizaciones es 0" y "Falta Productividad";
+  ranking de competicion y bandas de color como funciones puras; la
+  publicacion (instantanea completa, no duplicacion, config posterior sin
+  efecto, bloqueo de las nueve mutaciones, participante nuevo en semana
+  publicada rechazado); y el ciclo de cuenta y la privacidad de la vista
+  individual (contrasena nunca en claro, cuenta duplicada rechazada,
+  `getPersonSplitDetail` filtra siempre por persona).
+
+### Fuera de alcance en esta entrega
+
+Despublicar, reabrir o editar una semana publicada; exportacion Excel/PDF
+de resultados; medallas; recuperacion de contrasena por correo; SSO/OAuth;
+importacion automatica de los cinco KPI manuales; facciones, profesiones,
+economia, tienda, objetos o recompensas; integracion con Power BI; API
+publica; despliegue en la nube; Docker como requisito; y actualizacion
+general de dependencias. Ver `docs/ROADMAP.md`.
+
 ## [0.5.1] - BUGFIX-1 / UX-SPLIT-1 — Correcciones de formularios manuales y configuracion compacta del split
 
 ### Corregido

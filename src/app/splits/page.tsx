@@ -4,6 +4,7 @@ import { listSplitsWithParticipantCount } from "@/server/services/split.service"
 import { formatCalendarDate, addCalendarDays } from "@/lib/dates";
 import { SPLIT_STATUS_LABELS } from "@/lib/labels";
 import { Badge, EmptyState } from "@/components/ui";
+import { requireAdminSession } from "@/lib/session";
 
 const STATUS_TONE: Record<string, "slate" | "green" | "gray"> = {
   DRAFT: "slate",
@@ -12,6 +13,7 @@ const STATUS_TONE: Record<string, "slate" | "green" | "gray"> = {
 };
 
 export default async function SplitsPage() {
+  await requireAdminSession();
   const splits = await listSplitsWithParticipantCount(prisma);
 
   return (
