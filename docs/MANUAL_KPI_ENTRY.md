@@ -56,7 +56,10 @@ los dos ultimos valores sueltos. Nunca se inserta una fila artificial en
 - Un cero inferido se muestra como `0 (inferido)`, con un `title` accesible:
   "El fichero de Escalados esta cargado y la persona no aparece; se
   interpreta como cero reasignaciones."
-- La ausencia en ambos origenes se muestra como `VAC`.
+- La ausencia en ambos origenes se muestra como `AVISO` (hotfix
+  `AVISO`/`0`, ver `docs/DECISIONS.md`; el estado interno sigue siendo
+  `vac`). En resultados/publicacion/clasificacion/historico ese mismo
+  resultado se muestra como `0` (ver `docs/RESULTS_PUBLICATION.md`).
 
 ### Correccion del contador `vacCount`
 
@@ -140,11 +143,13 @@ exito (bug corregido en `BUGFIX-1 / UX-SPLIT-1`, ver `docs/DECISIONS.md`).
 - Guardian de la Estabilidad sin ningun N2 aplicable esa semana se
   considera `Cargado` (`No aplica esta semana`): de lo contrario nunca se
   podria alcanzar `X/X`.
-- Ninguno de los cinco KPI manuales muestra `VAC` de grupo. Guardian,
-  Redactor, Estudiante y Aprendiz nunca muestran `VAC` en absoluto (el cero
-  es un dato normal y completo). Cronomagia es la unica excepcion: una fila
-  con `totalHours = 0` se muestra como `VAC` **por fila**, pero cuenta como
-  guardada y no afecta al estado `Cargado`/`Pendiente` del grupo.
+- Ninguno de los cinco KPI manuales muestra `AVISO` de grupo. Guardian,
+  Redactor, Estudiante y Aprendiz nunca muestran `AVISO` en absoluto (el
+  cero es un dato normal y completo). Cronomagia es la unica excepcion: una
+  fila con `totalHours = 0` se muestra como `AVISO` **por fila** (hotfix
+  `AVISO`/`0`, ver `docs/DECISIONS.md`; internamente sigue siendo el
+  estado `vac`), pero cuenta como guardada y no afecta al estado
+  `Cargado`/`Pendiente` del grupo.
 
 ## 3. Guardian de la Estabilidad (`STABILITY_GUARDIAN`)
 
@@ -182,16 +187,20 @@ servidor vuelve a calcular con `Prisma.Decimal` al guardar y al comprobar.
   productivas` debe ser tambien `0` o estar vacia (vacaciones toda la
   semana). Esa combinacion se rechaza en cualquier otro caso (`productivas
   > 0` con `total` en `0`/vacio es un error de validacion).
-- La fila `0/0` (incluida `vacio/vacio`) se guarda igual, se muestra como
-  `VAC` con `0 %` de occupancy, y no recibe puntos, pero cuenta como fila
-  completa (no impide `Cargado`).
+- La fila `0/0` (incluida `vacio/vacio`) se guarda igual, se muestra en
+  carga/comprobar como `AVISO` con `0 %` de occupancy (hotfix `AVISO`/`0`,
+  ver `docs/DECISIONS.md`; internamente sigue siendo el estado `vac`), y no
+  recibe puntos, pero cuenta como fila completa (no impide `Cargado`). En
+  resultados/publicacion/clasificacion/historico este mismo resultado se
+  muestra como `0` puntos (ver `docs/RESULTS_PUBLICATION.md`).
 - `vacio/40` guarda las productivas como `0` y calcula normalmente
-  (`0 %`), sin marcarse como `VAC`.
+  (`0 %`), sin marcarse como `AVISO`.
 - Las horas productivas pueden superar las horas totales (ocurre en los
   datos reales): no es un error.
-- El grupo muestra `n VAC` (a nivel de grupo de estado de carga, `vacCount`
-  siempre es `0` para el resto de KPI manuales; para Cronomagia, "VAC" es
-  una senal por fila en Comprobar, no un contador de cobertura).
+- El grupo muestra `n AVISO` (a nivel de grupo de estado de carga,
+  `vacCount` siempre es `0` para el resto de KPI manuales; para
+  Cronomagia, `AVISO` es una senal por fila en Comprobar, no un contador de
+  cobertura).
 
 **Formula** (`src/domain/kpis/chronomancy.ts`), solo si no es VAC:
 
@@ -202,10 +211,12 @@ puntos finales = minimo(puntos sin limite, baseMax)
 ```
 
 `VAC` (por `totalHours = 0`) tiene prioridad sobre el calculo: nunca se
-convierte en cero puntos como si hubiese occupancy cero.
+convierte en cero puntos como si hubiese occupancy cero (se muestra como
+`AVISO` en carga/comprobar y como `0` en resultados, nunca un occupancy
+cero disfrazado de calculo real).
 
 Ejemplos verificados: `38,5 / 40` -> `96,25 %`; `46,7 / 40` -> `100 %` (sin
-error); `0 / 0` -> `VAC`.
+error); `0 / 0` -> `AVISO` en carga/comprobar, `0` puntos en resultados.
 
 ## 5. Redactor estrella (`STAR_WRITER`)
 
@@ -337,7 +348,8 @@ persistida.
 - Un mismo `ProductivityImport` puede sumar dos al numerador si ambos KPI
   (Cazador y Explorador) estan activos.
 - Que falte una persona en un Excel no resta KPI cargados (la carga
-  confirmada sigue completa, con su propio `n VAC` en la pantalla semanal).
+  confirmada sigue completa, con su propio `n AVISO` en la pantalla
+  semanal).
 - Con `X/X`, el indicador se muestra en verde con el texto accesible
   "Carga semanal completa".
 
@@ -352,11 +364,13 @@ origenes de datos), nunca una consulta por KPI y semana.
 1. Split activo con los diez KPI activos y participantes N0/N1/N2.
 2. Cargar Productividad y Escalados dejando fuera de Escalados a alguien
    que si tenga Productividad: debe verse `0 (inferido)`, calcular puntos y
-   no sumar `VAC`. Dejar a otra persona fuera de ambos ficheros: debe
-   aparecer como `VAC`.
+   no sumar `AVISO`. Dejar a otra persona fuera de ambos ficheros: debe
+   aparecer como `AVISO` en Comprobar y como `0` en la previsualizacion de
+   resultados.
 3. Introducir Guardian: solo N2, un cero se conserva como resultado real.
 4. Introducir Cronomagia con un ratio normal, uno superior al 100 % y un
-   `0/0`: porcentaje correcto, limite al 100 % y `VAC` respectivamente.
+   `0/0`: porcentaje correcto, limite al 100 % y `AVISO` respectivamente en
+   Comprobar (`0` puntos en resultados).
 5. Introducir Redactor con entregados, no entregados y propuestas.
 6. Introducir horas de Estudiante, incluido el cero.
 7. Introducir formaciones de Aprendiz y comprobar que no permite superar el

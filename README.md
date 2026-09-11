@@ -37,7 +37,7 @@ Estas entregas implementan:
 - Carga semanal de los Excel de Escalados, Calidad y Llamadas, con calculo
   administrativo de Domador de Escaladas (cruzado con Productividad de la
   misma semana), Maestro Artesano y Embajador de voz. Cada carga confirmada
-  queda verde aunque falten participantes (`n VAC`); el amarillo queda
+  queda verde aunque falten participantes (`n AVISO`); el amarillo queda
   reservado para la dependencia de Domador (ver
   `docs/IMPORT_ESCALATIONS_QUALITY_VOICE.md`).
 - Entrada manual de los cinco KPI restantes — Guardian de la Estabilidad,
@@ -49,7 +49,14 @@ Estas entregas implementan:
   (`n/X` de los KPI activos completos por semana, calculada al consultar).
 - Hotfix: Domador de Escaladas ahora infiere reasignaciones `0` cuando la
   carga de Escalados ya existe y la persona no aparece en ella, siempre que
-  tenga Productividad; si tampoco tiene Productividad, se muestra `VAC`.
+  tenga Productividad; si tampoco tiene Productividad, se muestra `AVISO`.
+- Hotfix `AVISO`/`0`: en las pantallas de carga y comprobacion, el texto
+  `VAC` se sustituye siempre por la palabra fija `AVISO` (`n AVISO`, nunca
+  `AVISOS`), sin cambiar ninguna regla de cuando una carga esta completa. En
+  resultados, previsualizacion, publicacion, clasificacion e historico, ese
+  mismo resultado se muestra siempre como el valor numerico `0` (participa
+  en sumas y rankings como cualquier otro cero); `No aplica` se mantiene
+  diferenciado. Ver `docs/RESULTS_PUBLICATION.md` y `docs/DECISIONS.md`.
 - Correccion de "Volver a introducir datos" en los cinco formularios
   manuales, campos vacios interpretados como `0` en Redactor estrella,
   Estudiante entusiasta y Aprendiz experto, maximo inclusivo de Aprendiz
@@ -353,7 +360,7 @@ split activo, en la misma semana usada para Productividad:
 4. Carga Calidad y Llamadas de la misma semana: Maestro Artesano y
    Embajador de voz deben quedar en verde con sus puntos.
 5. Deja un participante aplicable sin fila en alguno de los tres ficheros:
-   el grupo correspondiente debe seguir en verde, con el contador `n VAC`.
+   el grupo correspondiente debe seguir en verde, con el contador `n AVISO`.
 6. Sustituye cada origen una vez (`Sustituir carga`) y comprueba que los
    otros dos, y Productividad, permanecen intactos.
 7. Comprueba un cero real, un participante `Sin dato`, un `No aplica` y un
@@ -378,14 +385,14 @@ en `docs/MANUAL_KPI_ENTRY.md`.
 1. Con Productividad y Escalados cargados, deja fuera del Excel de
    Escalados a alguien que si tenga Productividad esa semana: en
    `Comprobar Domador de Escaladas` debe verse `0 (inferido)` con ayuda
-   accesible, calcular puntos y no sumar al contador `n VAC`. Deja a otra
-   persona fuera de ambos ficheros: debe verse `VAC`.
+   accesible, calcular puntos y no sumar al contador `n AVISO`. Deja a otra
+   persona fuera de ambos ficheros: debe verse `AVISO`.
 2. Pulsa `Introducir datos` en Guardian de la Estabilidad: solo deben
    aparecer los participantes N2; guarda un `0` y comprueba que se
    conserva como resultado real (no como vacaciones).
 3. Introduce Cronomagia con un ratio normal (por ejemplo `38,5 / 40`), uno
    superior al 100 % (por ejemplo `46,7 / 40`) y un `0 / 0`: revisa el
-   porcentaje, el limite al 100 % y el `VAC` respectivamente en
+   porcentaje, el limite al 100 % y el `AVISO` respectivamente en
    `Comprobar`.
 4. Introduce Redactor con entregados, no entregados y propuestas en la
    misma semana, y revisa que el multiplicador solo afecta a los
@@ -475,11 +482,12 @@ Cierra el ciclo semanal completo. Detalle funcional exhaustivo en
    antes de dejarte navegar.
 2. En un split activo, deja una semana con Guardian de la Estabilidad y
    Cronomagia laboral activos; comprueba que un campo vacio de ambos se
-   guarda como `0` (Cronomagia ambos vacios: `VAC`, `0 %`).
+   guarda como `0` (Cronomagia ambos vacios: `AVISO` en Comprobar, `0 %`).
 3. Completa todos los KPI activos de una semana y abre
    `Ver resultados de la semana`: revisa la tabla, el heatmap y un
    empate (dos participantes con el mismo total reciben la misma
-   posicion y los mismos puntos por posicion).
+   posicion y los mismos puntos por posicion); comprueba que ninguna celda
+   muestra `VAC` ni `AVISO`, sino el valor numerico `0`.
 4. Publica la semana con el boton de confirmacion; intenta modificar una
    carga manual y una de Excel de esa semana y comprueba que ambas se
    rechazan; cambia la configuracion de un KPI y verifica que la

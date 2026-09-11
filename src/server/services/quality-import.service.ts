@@ -182,7 +182,7 @@ export async function confirmQualityImport(db: PrismaClient, splitId: string, we
   });
 }
 
-/** `PENDING` sin carga, `LOADED` con carga confirmada (aunque falten participantes: ver docs/DECISIONS.md), con `n VAC`. */
+/** `PENDING` sin carga, `LOADED` con carga confirmada (aunque falten participantes: ver docs/DECISIONS.md), con `n AVISO`. */
 export async function getQualityLoadStatus(
   db: PrismaClient,
   splitId: string,

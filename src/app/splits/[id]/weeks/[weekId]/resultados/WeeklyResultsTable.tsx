@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { formatPoints } from "@/lib/format";
-import { colorBandForPercentage, COLOR_BAND_CLASSES, VAC_COLOR_BAND, NOT_APPLICABLE_COLOR_BAND } from "@/domain/color-bands";
+import { colorBandForPercentage, COLOR_BAND_CLASSES, NOT_APPLICABLE_COLOR_BAND } from "@/domain/color-bands";
+import { resolveKpiResultDisplayPoints } from "@/domain/kpi-outcome-display";
 import type { KpiResultStatus } from "@/server/services/weekly-results.service";
 
 export interface ResultKpiCell {
@@ -32,13 +33,6 @@ export interface ResultRow {
 type SortKey = "position" | "alias" | "total" | `kpi:${string}`;
 
 function KpiCellView({ cell }: { cell: ResultKpiCell }) {
-  if (cell.status === "VAC") {
-    return (
-      <td className={`px-3 py-2 text-center ${COLOR_BAND_CLASSES[VAC_COLOR_BAND.band]}`} title="Vacaciones o sin dato en una carga confirmada">
-        VAC
-      </td>
-    );
-  }
   if (cell.status === "NOT_APPLICABLE") {
     return (
       <td className={`px-3 py-2 text-center ${COLOR_BAND_CLASSES[NOT_APPLICABLE_COLOR_BAND.band]}`} title="Este KPI no aplica a este nivel">
@@ -46,12 +40,14 @@ function KpiCellView({ cell }: { cell: ResultKpiCell }) {
       </td>
     );
   }
-  const percentage = cell.baseMax && cell.baseMax > 0 ? ((cell.finalPoints ?? 0) / cell.baseMax) * 100 : 0;
+  // VAC se muestra como el valor numerico 0, igual que cualquier otro cero (hotfix AVISO/0, ver docs/DECISIONS.md).
+  const displayPoints = resolveKpiResultDisplayPoints(cell.status, cell.finalPoints) ?? 0;
+  const percentage = cell.baseMax && cell.baseMax > 0 ? (displayPoints / cell.baseMax) * 100 : 0;
   const bandInfo = colorBandForPercentage(percentage);
   const title = `${formatPoints(percentage)} % del maximo${cell.capped ? " (limitado por el maximo)" : ""}`;
   return (
     <td className={`px-3 py-2 text-center font-medium ${COLOR_BAND_CLASSES[bandInfo.band]}`} title={title}>
-      {formatPoints(cell.finalPoints ?? 0)}
+      {formatPoints(displayPoints)}
       {cell.capped && <span aria-hidden="true"> *</span>}
       <span className="sr-only"> ({title})</span>
     </td>
@@ -153,7 +149,6 @@ export function WeeklyResultsTable({ rows, activeKpis }: { rows: ResultRow[]; ac
         <span className={`rounded px-2 py-0.5 ${COLOR_BAND_CLASSES.mid}`}>50-75 %</span>
         <span className={`rounded px-2 py-0.5 ${COLOR_BAND_CLASSES.good}`}>75-90 %</span>
         <span className={`rounded px-2 py-0.5 ${COLOR_BAND_CLASSES.excellent}`}>90 % o mas</span>
-        <span className={`rounded px-2 py-0.5 ${COLOR_BAND_CLASSES.vac}`}>VAC</span>
         <span className={`rounded px-2 py-0.5 ${COLOR_BAND_CLASSES["not-applicable"]}`}>No aplica</span>
         <span>* = limitado por el maximo configurado</span>
       </div>

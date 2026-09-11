@@ -6,13 +6,14 @@ import { getEscalationCheckView } from "@/server/services/escalation-import.serv
 import { formatCalendarDate } from "@/lib/dates";
 import { formatPoints } from "@/lib/format";
 import type { EscalationTamerOutcomeView } from "@/domain/kpis/escalation";
+import { AVISO_LABEL } from "@/domain/kpi-load-status-display";
 import { EmptyState } from "@/components/ui";
 
 function formatOutcome(outcome: EscalationTamerOutcomeView | null): string {
   if (!outcome) return "-";
   if (outcome.status === "not_applicable") return "No aplica";
   if (outcome.status === "no_escalation_data") return "Sin dato de Escalados";
-  if (outcome.status === "vac") return "VAC";
+  if (outcome.status === "vac") return AVISO_LABEL;
   if (outcome.status === "no_productivity_data") return "Falta Productividad";
   if (outcome.status === "zero_updates") return "No calculable: Actualizaciones es 0";
   return formatPoints(outcome.finalPoints ?? 0);
@@ -24,9 +25,9 @@ const INFERRED_ZERO_TITLE =
 /**
  * Reasignaciones de grupo mostradas: la fila real del Excel si existe, `0
  * (inferido)` cuando la carga existe pero la persona falta y hay
- * Productividad (hotfix `MVP-1C.3 / INPUT-1C`), `VAC` cuando falta en
- * ambos origenes, o `Sin dato` en el resto de casos (por ejemplo, no existe
- * la carga de Escalados).
+ * Productividad (hotfix `MVP-1C.3 / INPUT-1C`), `AVISO` cuando falta en
+ * ambos origenes (hotfix `AVISO`/`0`, ver docs/DECISIONS.md), o `Sin dato`
+ * en el resto de casos (por ejemplo, no existe la carga de Escalados).
  */
 function formatReassignments(row: { groupReassignments: number | undefined; escalationTamer: EscalationTamerOutcomeView | null }): {
   text: string;
@@ -37,7 +38,7 @@ function formatReassignments(row: { groupReassignments: number | undefined; esca
   if (outcome?.inferred && (outcome.status === "computed" || outcome.status === "zero_updates")) {
     return { text: "0 (inferido)", title: INFERRED_ZERO_TITLE };
   }
-  if (outcome?.status === "vac") return { text: "VAC" };
+  if (outcome?.status === "vac") return { text: AVISO_LABEL };
   return { text: "Sin dato" };
 }
 

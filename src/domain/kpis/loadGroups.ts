@@ -13,12 +13,13 @@ export type LoadGroupStatus = "PENDING" | "PARTIAL" | "LOADED";
 /**
  * Estado de cobertura de un origen de carga: el color/texto unico del
  * grupo, mas el contador de participantes aplicables sin dato en ese
- * origen ("n VAC"). Una carga confirmada es siempre `LOADED`, aunque
- * `vacCount` sea mayor que cero (ver docs/DECISIONS.md): el amarillo
- * (`PARTIAL`) queda reservado para una dependencia de carga realmente
- * pendiente (Domador de Escaladas con un solo origen de los dos). Los
- * cinco origenes manuales nunca informan `vacCount` (nunca muestran VAC de
- * grupo, ver docs/MANUAL_KPI_ENTRY.md) ni usan `PARTIAL`.
+ * origen ("n AVISO", hotfix `AVISO`/`0`, ver docs/DECISIONS.md). Una carga
+ * confirmada es siempre `LOADED`, aunque `vacCount` sea mayor que cero: el
+ * amarillo (`PARTIAL`) queda reservado para una dependencia de carga
+ * realmente pendiente (Domador de Escaladas con un solo origen de los
+ * dos). Los cinco origenes manuales nunca informan `vacCount` (nunca
+ * muestran AVISO de grupo, ver docs/MANUAL_KPI_ENTRY.md) ni usan
+ * `PARTIAL`.
  */
 export interface LoadCoverageStatus {
   status: LoadGroupStatus;

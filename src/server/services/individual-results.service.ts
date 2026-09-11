@@ -132,7 +132,8 @@ export interface HistoryKpiBreakdown {
   kpiName: string;
   sum: number;
   average: number;
-  computedCount: number;
+  /** Semanas que participan en `sum`/`average`: `COMPUTED` y `VAC` (VAC aporta 0, hotfix AVISO/0, ver docs/DECISIONS.md). `NOT_APPLICABLE` queda siempre excluido. */
+  includedWeekCount: number;
   vacCount: number;
 }
 
@@ -188,7 +189,7 @@ export async function getPersonHistory(db: PrismaClient, personId: string, filte
     publishedWeekCount: number;
     sumPositionPointsDecimal: Prisma.Decimal;
     sumKpiPointsDecimal: Prisma.Decimal;
-    perKpi: Map<string, { kpiName: string; sumDecimal: Prisma.Decimal; computedCount: number; vacCount: number }>;
+    perKpi: Map<string, { kpiName: string; sumDecimal: Prisma.Decimal; includedWeekCount: number; vacCount: number }>;
   }
 
   const groupsByKey = new Map<string, WorkingGroup>();
@@ -213,17 +214,21 @@ export async function getPersonHistory(db: PrismaClient, personId: string, filte
     group.sumKpiPointsDecimal = group.sumKpiPointsDecimal.plus(row.totalKpiPoints);
 
     for (const kpiResult of row.kpiResults) {
+      // No aplica queda siempre excluido de la suma/media/recuento: nunca se convierte en cero (ver docs/DECISIONS.md).
+      if (kpiResult.outcomeStatus === "NOT_APPLICABLE") continue;
+
       let kpiGroup = group.perKpi.get(kpiResult.kpiCode);
       if (!kpiGroup) {
-        kpiGroup = { kpiName: kpiResult.kpiNameSnapshot, sumDecimal: new Prisma.Decimal(0), computedCount: 0, vacCount: 0 };
+        kpiGroup = { kpiName: kpiResult.kpiNameSnapshot, sumDecimal: new Prisma.Decimal(0), includedWeekCount: 0, vacCount: 0 };
         group.perKpi.set(kpiResult.kpiCode, kpiGroup);
       }
       if (kpiResult.outcomeStatus === "COMPUTED") {
         kpiGroup.sumDecimal = kpiGroup.sumDecimal.plus(kpiResult.finalPoints ?? new Prisma.Decimal(0));
-        kpiGroup.computedCount += 1;
-      } else if (kpiResult.outcomeStatus === "VAC") {
+      } else {
+        // VAC (hotfix AVISO/0, ver docs/DECISIONS.md): participa en la suma y la media como un cero real.
         kpiGroup.vacCount += 1;
       }
+      kpiGroup.includedWeekCount += 1;
     }
   }
 
@@ -240,8 +245,8 @@ export async function getPersonHistory(db: PrismaClient, personId: string, filte
         kpiCode,
         kpiName: kpiGroup.kpiName,
         sum: kpiGroup.sumDecimal.toNumber(),
-        average: kpiGroup.computedCount > 0 ? kpiGroup.sumDecimal.div(kpiGroup.computedCount).toNumber() : 0,
-        computedCount: kpiGroup.computedCount,
+        average: kpiGroup.includedWeekCount > 0 ? kpiGroup.sumDecimal.div(kpiGroup.includedWeekCount).toNumber() : 0,
+        includedWeekCount: kpiGroup.includedWeekCount,
         vacCount: kpiGroup.vacCount,
       })),
     }));

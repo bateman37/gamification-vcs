@@ -763,3 +763,49 @@ no debe poder ver el detalle de otro cambiando la URL o manipulando un
 payload. Ignorar el parametro por completo (en vez de validarlo) es la
 forma mas simple de no depender de que la validacion se acuerde de
 comprobar todos los casos.
+
+## Hotfix `AVISO`/`0`: `VAC` se divide en dos presentaciones segun la pantalla
+
+**Decision:** el estado interno `VAC` (`KpiResultStatus`/`PublishedKpiOutcomeStatus`,
+`resolveEscalationTamerOutcome`, `resolveWorkChronomancyOutcome`, etc.) no
+cambia de nombre ni de semantica en ningun servicio ni resolver: sigue
+siendo la misma senal tecnica de "ausencia justificada de datos en un
+origen ya confirmado" descrita mas arriba. Lo que cambia es exclusivamente
+la presentacion, dividida en dos funciones compartidas segun el tipo de
+pantalla:
+
+- **Pantallas de carga y comprobacion** (`StatusIndicator`, `Comprobar
+  Domador de Escaladas`, `Comprobar Cronomagia laboral`, la previsualizacion
+  de Escalados): el texto visible `VAC` se sustituye por la palabra fija
+  `AVISO`, y el contador de grupo `n VAC` pasa a `n AVISO` (`formatAvisoCount`,
+  `src/domain/kpi-load-status-display.ts`), siempre en singular (`1 AVISO`,
+  `2 AVISO`, `3 AVISO`; nunca `AVISOS`). Un `AVISO` no convierte una carga
+  completa en `Carga parcial` ni bloquea guardar: sigue siendo la misma
+  senal puramente informativa que `VAC` ya era.
+- **Resultados, previsualizacion, publicacion, clasificacion e historico**
+  (`WeeklyResultsTable`, `PorSplitSection`, `/splits/[id]/clasificacion`,
+  `HistoricoSection`): un resultado `VAC` se muestra siempre como el valor
+  numerico `0` (`resolveKpiResultDisplayPoints`,
+  `src/domain/kpi-outcome-display.ts`), participando en sumas, medias y
+  rankings exactamente como cualquier otro cero. `NOT_APPLICABLE` se
+  mantiene siempre diferenciado (`No aplica`) y nunca se convierte en `0`
+  en ninguna de las dos presentaciones.
+
+Como consecuencia directa de que `VAC` ahora participa en sumas y medias
+como un cero real (no como una ausencia excluida), dos agregados que antes
+excluian las semanas `VAC` del denominador cambian de comportamiento:
+`computeSplitKpiClassification` (clasificacion detallada acumulada, seccion
+9.4 de `docs/RESULTS_PUBLICATION.md`) y `getPersonHistory` (desglose por KPI
+del historico general, seccion 6) ahora incluyen las semanas `VAC` en su
+recuento (`includedWeekCount`, antes `computedWeekCount`/`computedCount`) y,
+por tanto, en la media resultante; `NOT_APPLICABLE` sigue excluido por
+completo de ambos agregados, como ya lo estaba.
+
+**Motivo:** encargo explicito del hotfix. Ninguna formula de KPI cambia
+(`src/domain/kpis/*` no se ha tocado, solo se reutiliza), ni la logica de
+publicacion, instantaneas o bloqueo de semanas (`weekly-results.service.ts`
+y `publish-week.service.ts` no se han tocado): solo cambia como se presenta
+un resultado ya calculado. Centralizar la conversion en dos funciones
+compartidas (`formatAvisoCount` y `resolveKpiResultDisplayPoints`) evita
+duplicar la misma condicion en cada componente, como pedia explicitamente
+el encargo.

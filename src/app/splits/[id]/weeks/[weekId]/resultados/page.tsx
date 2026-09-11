@@ -143,8 +143,8 @@ export default async function WeeklyResultsPage({ params }: { params: { id: stri
         <p className="mt-1 text-sm text-slate-600">{weekLabel}</p>
         <p className="mt-1 text-xs text-slate-500">Calculado el {results.computedAt.toLocaleString("es-ES")}.</p>
         <p className="mt-2 text-sm text-slate-600">
-          {results.totalParticipantCount} participantes - {results.totalActiveKpiCount} KPI activos - {results.totalVacCount} VAC en
-          total.
+          {results.totalParticipantCount} participantes - {results.totalActiveKpiCount} KPI activos - {results.totalVacCount} valores en
+          0 por ausencia de datos en total.
         </p>
       </div>
 

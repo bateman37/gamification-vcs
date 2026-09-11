@@ -9,6 +9,7 @@ import {
 } from "@/server/actions/manual-entry-action-state";
 import { ErrorMessage, FieldError } from "@/components/ui";
 import { ManualEntrySuccessPanel } from "../../ManualEntrySuccessPanel";
+import { AVISO_LABEL } from "@/domain/kpi-load-status-display";
 import { formatPoints } from "@/lib/format";
 import type { ChronomancyFormRow, ChronomancyFormView } from "@/server/services/chronomancy-entry.service";
 
@@ -56,7 +57,7 @@ function ChronomancyRow({
   const productive = parseHours(productiveHours);
   const total = parseHours(totalHours);
   let occupancyText = "-";
-  if (total === 0) occupancyText = "VAC · 0 %";
+  if (total === 0) occupancyText = `${AVISO_LABEL} · 0 %`;
   else if (productive !== null && total !== null && total > 0) {
     occupancyText = `${formatPoints(Math.min(productive / total, 1) * 100)} %`;
   }

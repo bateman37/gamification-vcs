@@ -46,7 +46,7 @@ export async function HistoricoSection({
                 <th className="px-3 py-2 text-center font-medium">Suma puntos KPI</th>
                 <th className="px-3 py-2 text-center font-medium">Media puntos KPI</th>
                 <th className="px-3 py-2 text-center font-medium">Suma puntos por posicion</th>
-                <th className="px-3 py-2 font-medium">Desglose por KPI (suma / media / VAC)</th>
+                <th className="px-3 py-2 font-medium">Desglose por KPI (suma / media)</th>
               </tr>
             </thead>
             <tbody>
@@ -62,7 +62,6 @@ export async function HistoricoSection({
                       {group.perKpi.map((kpi) => (
                         <li key={kpi.kpiCode}>
                           {kpi.kpiName}: suma {formatPoints(kpi.sum)}, media {formatPoints(kpi.average)}
-                          {kpi.vacCount > 0 && <span className="text-sky-700"> - {kpi.vacCount} VAC</span>}
                         </li>
                       ))}
                     </ul>
