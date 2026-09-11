@@ -134,11 +134,16 @@ export interface KpiClassificationEntry {
   levelSnapshot: string;
   sum: number;
   average: number;
-  computedWeekCount: number;
+  includedWeekCount: number;
   rank: number;
 }
 
-/** Detalle por KPI (seccion 9.4): suma/media y ranking usando solo resultados `COMPUTED`, entre semanas publicadas. */
+/**
+ * Detalle por KPI (seccion 9.4): suma/media y ranking entre semanas
+ * publicadas, incluyendo `COMPUTED` y `VAC` (hotfix AVISO/0, ver
+ * docs/DECISIONS.md: VAC participa como un cero real, nunca se excluye de la
+ * media ni del ranking). `NOT_APPLICABLE` queda siempre excluido.
+ */
 export async function computeSplitKpiClassification(
   db: PrismaClient,
   splitId: string,
@@ -148,7 +153,7 @@ export async function computeSplitKpiClassification(
   const rows = await db.publishedKpiResult.findMany({
     where: {
       kpiCode,
-      outcomeStatus: "COMPUTED",
+      outcomeStatus: { in: ["COMPUTED", "VAC"] },
       participantWeeklyResult: {
         splitId,
         ...(weekId ? { publication: { splitWeekId: weekId } } : {}),
@@ -175,7 +180,10 @@ export async function computeSplitKpiClassification(
       };
       byParticipant.set(participantResult.splitParticipantId, entry);
     }
-    entry.sumDecimal = entry.sumDecimal.plus(row.finalPoints ?? new Prisma.Decimal(0));
+    // VAC (hotfix AVISO/0, ver docs/DECISIONS.md) no aporta puntos, pero cuenta en el denominador de la media como un cero real.
+    if (row.outcomeStatus === "COMPUTED") {
+      entry.sumDecimal = entry.sumDecimal.plus(row.finalPoints ?? new Prisma.Decimal(0));
+    }
     entry.count += 1;
   }
 
@@ -197,7 +205,7 @@ export async function computeSplitKpiClassification(
     levelSnapshot: item.level,
     sum: item.sumDecimal.toNumber(),
     average: item.count > 0 ? item.sumDecimal.div(item.count).toNumber() : 0,
-    computedWeekCount: item.count,
+    includedWeekCount: item.count,
     rank,
   }));
 }

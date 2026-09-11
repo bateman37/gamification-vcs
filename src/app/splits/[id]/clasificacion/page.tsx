@@ -6,6 +6,7 @@ import { requireAdminSession } from "@/lib/session";
 import { listKpiConfigsForSplit } from "@/server/services/kpi.service";
 import { computeSplitClassification, computeSplitKpiClassification } from "@/server/services/classification.service";
 import { KPI_CATALOG, KPI_CATALOG_LIST, type KpiCode } from "@/domain/kpis/catalog";
+import { resolveKpiResultDisplayPoints } from "@/domain/kpi-outcome-display";
 import { formatPoints } from "@/lib/format";
 import { EmptyState } from "@/components/ui";
 import { ClassificationFilters } from "./ClassificationFilters";
@@ -87,7 +88,8 @@ export default async function SplitClassificationPage({
         positionPoints: row.positionPoints,
         totalKpiPoints: row.totalKpiPoints.toNumber(),
         positionRank: row.weeklyRank,
-        kpiValue: kpiResult?.outcomeStatus === "COMPUTED" ? kpiResult.finalPoints?.toNumber() ?? null : null,
+        // VAC se muestra como el valor numerico 0, igual que cualquier otro cero (hotfix AVISO/0, ver docs/DECISIONS.md).
+        kpiValue: kpiResult ? resolveKpiResultDisplayPoints(kpiResult.outcomeStatus, kpiResult.finalPoints?.toNumber() ?? null) : null,
         kpiAverage: null,
         kpiRank: kpiResult?.kpiRank ?? null,
         kpiRankedCount: kpiResult?.rankedParticipantCount ?? null,

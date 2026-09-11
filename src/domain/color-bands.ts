@@ -7,7 +7,7 @@
  * publicada.
  */
 
-export type ResultColorBand = "below-zero" | "very-low" | "low" | "mid" | "good" | "excellent" | "vac" | "not-applicable";
+export type ResultColorBand = "below-zero" | "very-low" | "low" | "mid" | "good" | "excellent" | "not-applicable";
 
 export interface ColorBandInfo {
   band: ResultColorBand;
@@ -24,7 +24,6 @@ export function colorBandForPercentage(percentage: number): ColorBandInfo {
   return { band: "excellent", label: "90 % o mas" };
 }
 
-export const VAC_COLOR_BAND: ColorBandInfo = { band: "vac", label: "VAC" };
 export const NOT_APPLICABLE_COLOR_BAND: ColorBandInfo = { band: "not-applicable", label: "No aplica" };
 
 /** Clases Tailwind de fondo/texto para cada banda. Centralizado aqui para no dispersar condicionales de color por las vistas. */
@@ -35,6 +34,5 @@ export const COLOR_BAND_CLASSES: Record<ResultColorBand, string> = {
   mid: "bg-amber-50 text-amber-800",
   good: "bg-green-50 text-green-700",
   excellent: "bg-green-100 text-green-800",
-  vac: "bg-sky-50 text-sky-700",
   "not-applicable": "bg-slate-100 text-slate-500",
 };

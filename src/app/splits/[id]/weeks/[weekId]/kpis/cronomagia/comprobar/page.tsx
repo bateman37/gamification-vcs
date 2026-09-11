@@ -6,13 +6,14 @@ import { getChronomancyCheckView } from "@/server/services/chronomancy-entry.ser
 import { formatCalendarDate } from "@/lib/dates";
 import { formatPoints } from "@/lib/format";
 import type { WorkChronomancyOutcomeView } from "@/domain/kpis/chronomancy";
+import { AVISO_LABEL } from "@/domain/kpi-load-status-display";
 import { EmptyState } from "@/components/ui";
 
 function formatOutcome(outcome: WorkChronomancyOutcomeView | null): string {
   if (!outcome) return "-";
   if (outcome.status === "not_applicable") return "No aplica";
   if (outcome.status === "no_data") return "Sin dato";
-  if (outcome.status === "vac") return "VAC";
+  if (outcome.status === "vac") return AVISO_LABEL;
   return formatPoints(outcome.finalPoints ?? 0);
 }
 

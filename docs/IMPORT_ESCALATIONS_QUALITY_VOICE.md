@@ -125,10 +125,10 @@ Ejemplo verificado (sintetico, configuracion predeterminada de Split 8):
 |---|---|
 | No existe ni Escalados ni Productividad | Rojo — `Pendiente` |
 | Existe exactamente uno de los dos origenes | Amarillo — `Carga parcial` |
-| Existen ambos origenes | Verde — `Cargado`, con `n VAC` si falta la pareja completa de filas para algun participante aplicable |
+| Existen ambos origenes | Verde — `Cargado`, con `n AVISO` (hotfix `AVISO`/`0`, ver `docs/DECISIONS.md`) si falta la pareja completa de filas para algun participante aplicable |
 
 El amarillo nunca se debe a que falten participantes dentro de un origen
-ya presente: eso se expresa con `n VAC` en verde, igual que en
+ya presente: eso se expresa con `n AVISO` en verde, igual que en
 Productividad, Calidad y Llamadas (ver `docs/DECISIONS.md`).
 
 **Correccion de `vacCount` (hotfix `MVP-1C.3 / INPUT-1C`):** con ambos
@@ -180,7 +180,8 @@ multiplicador 2, maximo 100 -> `40`. 0 buenas, 1 mala, misma configuracion
 ### Estado del grupo
 
 `Pendiente` (rojo) sin `QualityImport`; `Cargado` (verde) con carga
-confirmada, con `n VAC` si faltan participantes aplicables. Nunca queda en
+confirmada, con `n AVISO` (hotfix `AVISO`/`0`, ver `docs/DECISIONS.md`) si
+faltan participantes aplicables. Nunca queda en
 `Carga parcial`.
 
 ## 3. Embajador de voz — Excel de Llamadas
@@ -231,7 +232,7 @@ salientes, pesos 1, multiplicador 2, maximo 50 ->
 
 ### Estado del grupo
 
-Igual que Calidad: `Pendiente` / `Cargado` con `n VAC`, nunca `Carga
+Igual que Calidad: `Pendiente` / `Cargado` con `n AVISO`, nunca `Carga
 parcial`.
 
 ## Emparejamiento, previsualizacion y confirmacion
@@ -255,9 +256,19 @@ Los tres origenes reutilizan exactamente las reglas de
 - No se guarda historial de versiones sustituidas, ni el binario del
   Excel, en esta entrega.
 
-## Significado de `n VAC` (no medico)
+## Significado de `n AVISO` (no medico)
 
-`VAC` es una abreviatura visual de "participantes aplicables sin datos en
+**Hotfix `AVISO`/`0`:** el texto visible de este contador, antes `n VAC`,
+es ahora `n AVISO` (siempre en singular: `1 AVISO`, `2 AVISO`, `3 AVISO`,
+nunca `AVISOS`; `formatAvisoCount`,
+`src/domain/kpi-load-status-display.ts`). El estado interno sigue
+llamandose `VAC` en el codigo (no cambia ninguna regla de calculo); solo
+cambia la palabra mostrada en las pantallas de carga y comprobacion. En
+resultados/publicacion/clasificacion/historico, en cambio, este mismo
+estado se muestra como el valor numerico `0` (ver
+`docs/RESULTS_PUBLICATION.md` seccion 2.5 y `docs/DECISIONS.md`).
+
+`AVISO` es una abreviatura visual de "participantes aplicables sin datos en
 este fichero: posible vacaciones o baja". No afirma ni persiste una
 ausencia real: es un contador calculado al consultar, comparando los
 participantes aplicables de la semana con las filas realmente encontradas
@@ -282,6 +293,10 @@ esta cobertura: se reserva para la dependencia de Domador (ver arriba).
 | Domador: reasignaciones (reales o inferidas) conocidas con `updates = 0` | `No calculable: Actualizaciones es 0` |
 | Excel con una persona ajena al split | `Ignorado` en previsualizacion; no se persiste |
 | Nombre que coincide con mas de un participante aplicable | `Ambiguo`; bloquea confirmacion |
+
+El estado `VAC` de esta tabla se muestra en pantalla como `AVISO` en carga y
+comprobacion (hotfix `AVISO`/`0`), y como `0` en resultados/publicacion/
+clasificacion/historico (ver seccion anterior y `docs/DECISIONS.md`).
 
 Esta tabla describe los estados de `resolveEscalationTamerOutcome` (sin
 cambios en esta entrega). El motor agregado de resultados semanales
@@ -312,7 +327,7 @@ Cazador de soluciones/Explorador de datos activos):
 5. Carga Llamadas y comprueba Embajador de voz en verde con sus puntos y
    el detalle de metricas de tiempo.
 6. Deja un participante aplicable sin fila en alguno de los tres ficheros:
-   el grupo debe seguir en verde, con `n VAC` visible.
+   el grupo debe seguir en verde, con `n AVISO` visible.
 7. Sustituye cada origen una vez y comprueba que los otros dos (y
    Productividad) permanecen intactos.
 8. Cierra el split: `Comprobar` sigue disponible en los tres grupos, pero
@@ -322,7 +337,7 @@ Cazador de soluciones/Explorador de datos activos):
 
 - No hay mapeo manual de nombres ni historial de versiones sustituidas
   (igual que Productividad).
-- No se persiste ningun estado de vacaciones o baja: `n VAC` es siempre
+- No se persiste ningun estado de vacaciones o baja: `n AVISO` es siempre
   calculado al consultar.
 - Quedan pendientes el resto de origenes de `IMPORT-1` (Estabilidad,
   Cronomagia, Articulos, Dedicacion, Formaciones), la clasificacion

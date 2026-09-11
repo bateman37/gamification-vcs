@@ -224,7 +224,7 @@ export async function confirmVoiceImport(db: PrismaClient, splitId: string, week
   });
 }
 
-/** `PENDING` sin carga, `LOADED` con carga confirmada (aunque falten participantes), con `n VAC`. */
+/** `PENDING` sin carga, `LOADED` con carga confirmada (aunque falten participantes), con `n AVISO`. */
 export async function getVoiceLoadStatus(
   db: PrismaClient,
   splitId: string,

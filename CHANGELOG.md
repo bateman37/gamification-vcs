@@ -4,6 +4,60 @@ Formato inspirado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/)
 Este proyecto usa versionado `0.x` mientras se construye el nucleo
 funcional; la primera version publicada es `0.1.0`.
 
+## [0.6.2] - Hotfix `AVISO`/`0` — Avisos de carga y ceros en resultados
+
+### Corregido
+
+- **Sustitucion de `VAC` por `AVISO` en pantallas de carga y comprobacion:**
+  el texto visible `VAC` (y el contador de grupo `n VAC`) se sustituye
+  siempre por la palabra fija `AVISO` (`1 AVISO`, `2 AVISO`, `3 AVISO`;
+  nunca `AVISOS`), centralizado en `formatAvisoCount`/`AVISO_LABEL`
+  (`src/domain/kpi-load-status-display.ts`). Afecta al indicador de grupo
+  de la pantalla semanal de KPI (`StatusIndicator`), a `Comprobar Domador
+  de Escaladas`, a la previsualizacion de carga de Escalados y a
+  `Introducir`/`Comprobar Cronomagia laboral`. Un `AVISO` sigue sin
+  convertir una carga completa en `Carga parcial` ni impedir guardar: el
+  estado interno `VAC` y todas las reglas de completitud/bloqueo no
+  cambian.
+- **Ceros en resultados, previsualizacion, publicacion, clasificacion e
+  historico:** un resultado `VAC` (ausencia justificada en un origen ya
+  confirmado, incluido `totalHours = 0` de Cronomagia laboral) se muestra
+  siempre como el valor numerico `0`, centralizado en
+  `resolveKpiResultDisplayPoints` (`src/domain/kpi-outcome-display.ts`) y
+  reutilizado por `WeeklyResultsTable`, `PorSplitSection`,
+  `/splits/[id]/clasificacion` e `HistoricoSection`. Ese `0` participa en
+  sumas, medias y rankings exactamente como cualquier otro cero: en
+  consecuencia, `computeSplitKpiClassification` (clasificacion detallada
+  acumulada) y `getPersonHistory` (desglose por KPI del historico general)
+  ahora incluyen las semanas `VAC` en su recuento (`includedWeekCount`,
+  antes `computedWeekCount`/`computedCount`) y en la media resultante, en
+  vez de excluirlas. `NOT_APPLICABLE` (`No aplica`) se mantiene siempre
+  diferenciado y nunca se convierte en `0` en ninguna pantalla. Ninguna
+  formula de KPI, ni la logica de publicacion/instantaneas/bloqueo de
+  semanas, cambia: solo la presentacion de un resultado ya calculado.
+
+### Documentacion
+
+- `docs/RESULTS_PUBLICATION.md` (nueva seccion 2.5 y actualizacion de las
+  secciones 3, 6 y 7), `docs/IMPORT_ESCALATIONS_QUALITY_VOICE.md`,
+  `docs/MANUAL_KPI_ENTRY.md`, `docs/DECISIONS.md` y `README.md`: reflejan
+  que `AVISO` es la presentacion en pantallas de carga/comprobacion y `0`
+  la presentacion en resultados/publicacion/clasificacion/historico para el
+  mismo estado interno `VAC`.
+
+### Anadido
+
+- Pruebas de servicio (Vitest) acotadas a este hotfix
+  (`tests/aviso-zero-display.test.ts`): `formatAvisoCount` para 1/2/3
+  (siempre `AVISO`, nunca `AVISOS`); `resolveKpiResultDisplayPoints` para
+  `VAC` (-> `0`), `NOT_APPLICABLE` (-> diferenciado, nunca `0`) y un
+  resultado negativo (se mantiene negativo); Cronomagia `0/0` y Guardian
+  sin dato como `0`; Domador con actualizaciones y reasignaciones ausentes
+  calculado con normalidad (no `AVISO`); y, contra PostgreSQL real, que una
+  semana `VAC` ahora participa como cero real en la media de
+  `computeSplitKpiClassification` y `getPersonHistory`, mientras que
+  `NOT_APPLICABLE` sigue excluido por completo de ambos agregados.
+
 ## [0.6.1] - Hotfix — Cambio de contrasena
 
 ### Corregido

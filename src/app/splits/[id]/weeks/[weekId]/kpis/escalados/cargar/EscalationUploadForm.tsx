@@ -10,6 +10,7 @@ import {
 import { ErrorMessage, SubmitButton, SuccessMessage } from "@/components/ui";
 import { formatPoints } from "@/lib/format";
 import type { EscalationTamerOutcomeView } from "@/domain/kpis/escalation";
+import { AVISO_LABEL } from "@/domain/kpi-load-status-display";
 import type { EscalationPreview } from "@/server/services/escalation-import.service";
 
 function AnalyzeButton() {
@@ -35,7 +36,7 @@ function formatOutcome(outcome: EscalationTamerOutcomeView | null): string {
   if (!outcome) return "-";
   if (outcome.status === "not_applicable") return "No aplica";
   if (outcome.status === "no_escalation_data") return "Sin dato de Escalados";
-  if (outcome.status === "vac") return "VAC";
+  if (outcome.status === "vac") return AVISO_LABEL;
   if (outcome.status === "no_productivity_data") return "Falta Productividad";
   if (outcome.status === "zero_updates") return "No calculable: Actualizaciones es 0";
   return formatPoints(outcome.finalPoints ?? 0);

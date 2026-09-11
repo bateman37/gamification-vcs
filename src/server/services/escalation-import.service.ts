@@ -215,12 +215,13 @@ export async function confirmEscalationImport(
 /**
  * Estado del grupo Domador de Escaladas: `PENDING` sin ningun origen,
  * `PARTIAL` (ambar) con exactamente uno de los dos, `LOADED` (verde) con
- * ambos, con `n VAC` de participantes aplicables sin fila ni en Escalados
- * ni en Productividad (hotfix `MVP-1C.3 / INPUT-1C`: quien tiene fila en
- * uno de los dos origenes ya no cuenta como VAC, porque su ausencia en el
- * otro se resuelve como cero implicito o como "Falta Productividad", nunca
- * como VAC). Nunca vuelve a amarillo por falta de participantes con ambos
- * origenes presentes.
+ * ambos, con `n AVISO` (hotfix `AVISO`/`0`, ver docs/DECISIONS.md) de
+ * participantes aplicables sin fila ni en Escalados ni en Productividad
+ * (hotfix `MVP-1C.3 / INPUT-1C`: quien tiene fila en uno de los dos
+ * origenes ya no cuenta, porque su ausencia en el otro se resuelve como
+ * cero implicito o como "Falta Productividad", nunca como AVISO). Nunca
+ * vuelve a amarillo por falta de participantes con ambos origenes
+ * presentes.
  */
 export async function getEscalationLoadStatus(
   db: PrismaClient,

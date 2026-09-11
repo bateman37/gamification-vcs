@@ -26,7 +26,7 @@ export default async function ChronomancyEntryPage({ params }: { params: { id: s
           {formatCalendarDate(week.endDate)})
         </p>
         <p className="mt-2 text-sm text-slate-600">
-          <strong>Horas totales = 0</strong> significa vacaciones toda la semana (VAC): la fila se guarda igual y
+          <strong>Horas totales = 0</strong> significa vacaciones toda la semana (AVISO): la fila se guarda igual y
           cuenta como completa, pero no otorga puntos. Las horas productivas pueden superar las horas totales, no es
           un error.
         </p>

@@ -8,7 +8,8 @@ import { computeSplitClassification } from "@/server/services/classification.ser
 import { formatPoints } from "@/lib/format";
 import { formatCalendarDate } from "@/lib/dates";
 import { EmptyState } from "@/components/ui";
-import { colorBandForPercentage, COLOR_BAND_CLASSES, VAC_COLOR_BAND, NOT_APPLICABLE_COLOR_BAND } from "@/domain/color-bands";
+import { colorBandForPercentage, COLOR_BAND_CLASSES, NOT_APPLICABLE_COLOR_BAND } from "@/domain/color-bands";
+import { resolveKpiResultDisplayPoints } from "@/domain/kpi-outcome-display";
 import { SplitSelector } from "./SplitSelector";
 import { LimitedClassificationTable } from "./LimitedClassificationTable";
 
@@ -88,13 +89,6 @@ export async function PorSplitSection({
                   <tr key={week.splitWeekId} className="border-b border-slate-100">
                     <td className="px-3 py-2 font-medium">S{week.weekSequenceNumber}</td>
                     {week.kpiCells.map((cell) => {
-                      if (cell.status === "VAC") {
-                        return (
-                          <td key={cell.kpiCode} className={`px-3 py-2 text-center ${COLOR_BAND_CLASSES[VAC_COLOR_BAND.band]}`}>
-                            VAC
-                          </td>
-                        );
-                      }
                       if (cell.status === "NOT_APPLICABLE") {
                         return (
                           <td key={cell.kpiCode} className={`px-3 py-2 text-center ${COLOR_BAND_CLASSES[NOT_APPLICABLE_COLOR_BAND.band]}`}>
@@ -102,11 +96,13 @@ export async function PorSplitSection({
                           </td>
                         );
                       }
-                      const cellPercentage = cell.baseMax && cell.baseMax > 0 ? ((cell.finalPoints ?? 0) / cell.baseMax) * 100 : 0;
+                      // VAC se muestra como el valor numerico 0, igual que cualquier otro cero (hotfix AVISO/0, ver docs/DECISIONS.md).
+                      const cellPoints = resolveKpiResultDisplayPoints(cell.status, cell.finalPoints) ?? 0;
+                      const cellPercentage = cell.baseMax && cell.baseMax > 0 ? (cellPoints / cell.baseMax) * 100 : 0;
                       const band = colorBandForPercentage(cellPercentage);
                       return (
                         <td key={cell.kpiCode} className={`px-3 py-2 text-center ${COLOR_BAND_CLASSES[band.band]}`}>
-                          {formatPoints(cell.finalPoints ?? 0)}
+                          {formatPoints(cellPoints)}
                           <div className="text-xs text-slate-500">
                             {cell.kpiRank ?? "—"} de {cell.rankedParticipantCount ?? "—"}
                           </div>

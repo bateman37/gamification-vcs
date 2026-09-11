@@ -111,6 +111,25 @@ activo, solo entre resultados `COMPUTED` de participantes aplicables
 (`VAC`/`NOT_APPLICABLE` no tienen posicion). Cada celda guarda `kpiRank` y
 `rankedParticipantCount` (el "de n" del "x de n").
 
+### 2.5 Presentacion de `VAC`: `AVISO` en carga, `0` en resultados (hotfix)
+
+El estado interno `VAC` (esta seccion) no cambia: sigue siendo la misma
+senal de ausencia justificada en un origen ya confirmado. Solo cambia como
+se presenta, con dos funciones compartidas (ver `docs/DECISIONS.md`):
+
+- En las pantallas de carga y comprobacion (`StatusIndicator`, `Comprobar
+  Domador de Escaladas`, `Comprobar Cronomagia laboral`, la previsualizacion
+  de Escalados), el texto visible es siempre `AVISO` (`n AVISO`, nunca
+  `AVISOS`), calculado con `formatAvisoCount`
+  (`src/domain/kpi-load-status-display.ts`). Nunca convierte una carga
+  completa en `Carga parcial` ni bloquea guardar.
+- En resultados, previsualizacion, publicacion, clasificacion e historico
+  (esta seccion y las siguientes), un `VAC` se muestra siempre como el
+  valor numerico `0`, calculado con `resolveKpiResultDisplayPoints`
+  (`src/domain/kpi-outcome-display.ts`), y participa en sumas, medias y
+  rankings exactamente como cualquier otro cero. `NOT_APPLICABLE` se
+  mantiene siempre diferenciado (`No aplica`) en ambas presentaciones.
+
 ## 3. Mapa de color por porcentaje del maximo
 
 `src/domain/color-bands.ts` (`colorBandForPercentage`, funcion pura y
@@ -126,11 +145,14 @@ baseMax * 100` de una celda `COMPUTED`:
 | 75 % a < 90 % | verde suave |
 | 90 % o mas | verde |
 
-`VAC` usa un neutro azulado/gris con texto `VAC`; `NOT_APPLICABLE` usa
-gris con texto `No aplica`. El color nunca es la unica senal: cada celda
-lleva tambien texto y `title` accesible. Los umbrales dependen solo del
-maximo del KPI (nunca de percentiles entre companeros), por lo que son
-reproducibles a partir de una instantanea publicada.
+Desde el hotfix `AVISO`/`0` (ver seccion 2.5 y `docs/DECISIONS.md`), una
+celda `VAC` se muestra con la misma banda de color que le corresponderia a
+un `0` real segun su maximo (ya no existe una banda `vac` propia);
+`NOT_APPLICABLE` sigue usando gris con texto `No aplica`. El color nunca es
+la unica senal: cada celda lleva tambien texto y `title` accesible. Los
+umbrales dependen solo del maximo del KPI (nunca de percentiles entre
+companeros), por lo que son reproducibles a partir de una instantanea
+publicada.
 
 ## 4. Previsualizacion y publicacion (administrador)
 
@@ -216,8 +238,11 @@ funcional:
   incluso entre splits y anos distintos, con filtros de ano, split (o
   todos) y agrupacion (`Semana`/`Mes`/`Año`). Cada grupo muestra periodo,
   numero de semanas publicadas, suma y media de puntos KPI, suma de
-  puntos por posicion y desglose por KPI (suma/media de `COMPUTED`, con el
-  recuento de `VAC` aparte, sin mezclarlo en la media). El mes y el ano se
+  puntos por posicion y desglose por KPI (suma/media). Desde el hotfix
+  `AVISO`/`0` (ver `docs/DECISIONS.md`), una semana `VAC` de ese KPI
+  participa en la suma y la media como un cero real (`includedWeekCount`
+  cuenta `COMPUTED` y `VAC`; `NOT_APPLICABLE` sigue excluido por completo);
+  no se muestra ya un recuento `VAC` en pantalla. El mes y el ano se
   asignan por `SplitWeek.startDate` como fecha de calendario UTC (nunca
   hora local).
 
@@ -251,7 +276,11 @@ sin conceder ninguna ventaja de negocio.
   activo), orden por puntos de posicion/total KPI/KPI seleccionado,
   columnas de posicion, nombre, alias, nivel, semanas publicadas y
   totales; con un KPI seleccionado, suma/media y posicion por ese KPI
-  usando solo `COMPUTED`.
+  (`computeSplitKpiClassification`). Desde el hotfix `AVISO`/`0` (ver
+  `docs/DECISIONS.md`), una semana `VAC` de ese KPI cuenta como un cero
+  real en la suma, la media y el ranking (`includedWeekCount` incluye
+  `COMPUTED` y `VAC`); `NOT_APPLICABLE` sigue excluido por completo, tanto
+  del acumulado como de una semana concreta (se muestra `—`, nunca `0`).
 - **Vista limitada para participante** (dentro de `/resultados > Por
   split`): alias, posicion semanal/general, total de puntos KPI por
   semana, puntos por posicion de cada semana, sumas acumuladas. Nunca
