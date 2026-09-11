@@ -54,7 +54,16 @@ function KpiCellView({ cell }: { cell: ResultKpiCell }) {
   );
 }
 
-export function WeeklyResultsTable({ rows, activeKpis }: { rows: ResultRow[]; activeKpis: { code: string; name: string }[] }) {
+export function WeeklyResultsTable({
+  rows,
+  activeKpis,
+  splitParticipantCount,
+}: {
+  rows: ResultRow[];
+  activeKpis: { code: string; name: string }[];
+  /** Numero total de participantes del split: denominador unico de "x de n" (seccion 17 de `0.7.0` / MVP-2A). */
+  splitParticipantCount: number;
+}) {
   const [sortKey, setSortKey] = useState<SortKey>("position");
   const [sortDir, setSortDir] = useState<1 | -1>(1);
 
@@ -131,7 +140,7 @@ export function WeeklyResultsTable({ rows, activeKpis }: { rows: ResultRow[]; ac
                   <td className="px-3 py-2 text-center font-semibold">{formatPoints(row.totalKpiPoints)}</td>
                   <td className="px-3 py-2 text-center text-slate-600">{percentage === null ? "—" : `${formatPoints(percentage)} %`}</td>
                   <td className="px-3 py-2 text-center font-semibold">
-                    {row.weeklyRank} <span className="text-xs font-normal text-slate-500">de {row.rankedParticipantCount}</span>
+                    {row.weeklyRank} <span className="text-xs font-normal text-slate-500">de {splitParticipantCount}</span>
                   </td>
                   <td className="px-3 py-2 text-center font-semibold">{row.positionPoints ?? "—"}</td>
                 </tr>

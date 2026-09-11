@@ -15,7 +15,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body>
         <Providers>
           <Nav />
-          <main className="mx-auto max-w-screen-2xl px-4 py-8 sm:px-6 lg:px-8">{children}</main>
+          <main className="mx-auto w-full max-w-[1920px] px-4 py-8 sm:px-6 lg:px-10 2xl:px-16">{children}</main>
         </Providers>
       </body>
     </html>

@@ -128,4 +128,26 @@ describe("Privacidad de la vista individual: solo publicaciones y solo la person
     expect(rowsForA).toHaveLength(1);
     expect(rowsForA[0]?.aliasSnapshot).toBe("AliasA");
   });
+
+  it("el denominador 'x de n' es siempre el total de participantes del split, no solo los que puntuaron ese KPI (seccion 17 de 0.7.0 / MVP-2A)", async () => {
+    const split = await createSplitWithWeeks(testDb, { name: "Split denominador", description: undefined, startDate: "2025-10-06", numberOfWeeks: 2 });
+    const personA = await createPerson(testDb, { fullName: "Denominador A", email: undefined });
+    const personB = await createPerson(testDb, { fullName: "Denominador B", email: undefined });
+    const participantA = await addParticipant(testDb, split.id, { personId: personA.id, alias: "DenomA", level: "N2", startWeekSequenceNumber: 1 });
+    const participantB = await addParticipant(testDb, split.id, { personId: personB.id, alias: "DenomB", level: "N2", startWeekSequenceNumber: 1 });
+
+    await updateKpiConfig(testDb, split.id, "STABILITY_GUARDIAN", { isActive: true, baseMax: 30, multiplierN2: 1, parameters: { pointsPerResult: 30 } });
+    await activateSplit(testDb, split.id);
+    const week = (await listSplitWeeks(testDb, split.id))[0]!;
+    await saveStabilityEntries(testDb, split.id, week.id, form({ [`resultValue__${participantA.id}`]: "1", [`resultValue__${participantB.id}`]: "1" }));
+    await publishWeek(testDb, split.id, week.id, null);
+
+    // Se anade una tercera persona despues de publicar, sin ningun resultado publicado todavia.
+    const personC = await createPerson(testDb, { fullName: "Denominador C", email: undefined });
+    await addParticipant(testDb, split.id, { personId: personC.id, alias: "DenomC", level: "N2", startWeekSequenceNumber: 2 });
+
+    const detail = await getPersonSplitDetail(testDb, personA.id, split.id);
+    // n = 3 (total de participantes del split), no 2 (solo quienes tienen resultado publicado en esa semana).
+    expect(detail!.splitParticipantCount).toBe(3);
+  });
 });

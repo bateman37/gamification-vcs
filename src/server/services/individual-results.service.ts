@@ -1,5 +1,6 @@
 import { Prisma, type PrismaClient } from "@prisma/client";
 import { computeSplitClassification } from "@/server/services/classification.service";
+import { countParticipantsForSplit } from "@/server/services/participant.service";
 
 /**
  * Vista individual de resultados (seccion 7 de docs/RESULTS_PUBLICATION.md):
@@ -48,6 +49,7 @@ export interface PersonSplitKpiCell {
   finalPoints: number | null;
   baseMax: number | null;
   kpiRank: number | null;
+  /** Numerador real del ranking de este KPI (participantes con resultado COMPUTED). No usar como denominador de "x de n" (ver seccion 17 de `0.7.0` / MVP-2A). */
   rankedParticipantCount: number | null;
 }
 
@@ -71,6 +73,10 @@ export interface PersonSplitDetail {
   totalKpiPoints: number;
   currentRank: number | null;
   rankedParticipantCount: number;
+  /** Numero total de personas que participan en el split: denominador unico de todo "x de n" (seccion 17 de `0.7.0` / MVP-2A). */
+  splitParticipantCount: number;
+  /** Faccion actual de la persona en este split (`0.7.0` / MVP-2A). `null` si el split no usa facciones. */
+  currentFaction: { id: string; name: string; color: string } | null;
 }
 
 export async function getPersonSplitDetail(db: PrismaClient, personId: string, splitId: string): Promise<PersonSplitDetail | null> {
@@ -79,6 +85,11 @@ export async function getPersonSplitDetail(db: PrismaClient, personId: string, s
     include: { kpiResults: true, publication: { include: { splitWeek: true } }, split: { select: { name: true } } },
   });
   if (rows.length === 0) return null;
+
+  const currentParticipant = await db.splitParticipant.findUnique({
+    where: { splitId_personId: { splitId, personId } },
+    include: { faction: { select: { id: true, name: true, color: true } } },
+  });
 
   const sortedRows = [...rows].sort((a, b) => a.publication.splitWeek.sequenceNumber - b.publication.splitWeek.sequenceNumber);
 
@@ -107,6 +118,7 @@ export async function getPersonSplitDetail(db: PrismaClient, personId: string, s
 
   const classification = await computeSplitClassification(db, splitId);
   const entry = classification.entries.find((candidate) => candidate.personId === personId);
+  const splitParticipantCount = await countParticipantsForSplit(db, splitId);
 
   return {
     splitId,
@@ -116,6 +128,8 @@ export async function getPersonSplitDetail(db: PrismaClient, personId: string, s
     totalKpiPoints: totalKpiPointsDecimal.toNumber(),
     currentRank: entry?.rank ?? null,
     rankedParticipantCount: classification.entries.length,
+    splitParticipantCount,
+    currentFaction: currentParticipant?.faction ?? null,
   };
 }
 

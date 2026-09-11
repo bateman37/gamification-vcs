@@ -140,6 +140,17 @@ export interface ParticipantWithPersonAndFaction extends ParticipantWithPerson {
   faction: { name: string; color: string } | null;
 }
 
+/**
+ * Numero total de personas que participan en el split (`0.7.0` / MVP-2A,
+ * seccion 17 del encargo). Denominador unico de todos los "x de n" de
+ * resultados de un split: nunca el numero de resultados aplicables de un
+ * KPI concreto (`rankedParticipantCount`, que sigue siendo el numerador de
+ * cada ranking, sin cambiar su formula).
+ */
+export async function countParticipantsForSplit(db: Db, splitId: string): Promise<number> {
+  return db.splitParticipant.count({ where: { splitId } });
+}
+
 export async function listParticipantsForSplit(db: Db, splitId: string): Promise<ParticipantWithPersonAndFaction[]> {
   return db.splitParticipant.findMany({
     where: { splitId },

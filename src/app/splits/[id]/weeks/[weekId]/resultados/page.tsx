@@ -2,13 +2,16 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSplitById, getSplitWeek } from "@/server/services/split.service";
+import { countParticipantsForSplit } from "@/server/services/participant.service";
 import { computeWeeklyResults } from "@/server/services/weekly-results.service";
 import { requireAdminSession } from "@/lib/session";
 import { KPI_CATALOG } from "@/domain/kpis/catalog";
 import { formatCalendarDate } from "@/lib/dates";
 import { EmptyState } from "@/components/ui";
 import { WeeklyResultsTable, type ResultRow } from "./WeeklyResultsTable";
+import { FactionWeeklyPreviewTable, type FactionWeeklyPreviewRow } from "./FactionWeeklyPreviewTable";
 import { PublishWeekButton } from "./PublishWeekButton";
+import { selectFactionTopThree, rankFactions } from "@/domain/faction-ranking";
 
 export default async function WeeklyResultsPage({ params }: { params: { id: string; weekId: string } }) {
   await requireAdminSession();
@@ -19,6 +22,7 @@ export default async function WeeklyResultsPage({ params }: { params: { id: stri
 
   const backHref = `/splits/${split.id}/weeks/${week.id}/kpis`;
   const weekLabel = `Semana ${week.sequenceNumber} (${formatCalendarDate(week.startDate)} a ${formatCalendarDate(week.endDate)})`;
+  const splitParticipantCount = await countParticipantsForSplit(prisma, split.id);
 
   const publication = await prisma.weekPublication.findUnique({
     where: { splitWeekId: week.id },
@@ -54,6 +58,34 @@ export default async function WeeklyResultsPage({ params }: { params: { id: stri
       .map((cell) => ({ code: cell.kpiCode, name: KPI_CATALOG[cell.kpiCode as keyof typeof KPI_CATALOG]?.name ?? cell.kpiName }))
       .sort((a, b) => (KPI_CATALOG[a.code as keyof typeof KPI_CATALOG]?.order ?? 0) - (KPI_CATALOG[b.code as keyof typeof KPI_CATALOG]?.order ?? 0));
 
+    const factionMembersById = new Map<string, { name: string; color: string; members: { splitParticipantId: string; alias: string; positionPoints: number }[] }>();
+    for (const participantResult of publication.participantResults) {
+      if (!participantResult.factionId) continue;
+      let bucket = factionMembersById.get(participantResult.factionId);
+      if (!bucket) {
+        bucket = { name: participantResult.factionNameSnapshot ?? "—", color: participantResult.factionColorSnapshot ?? "#94a3b8", members: [] };
+        factionMembersById.set(participantResult.factionId, bucket);
+      }
+      bucket.members.push({ splitParticipantId: participantResult.splitParticipantId, alias: participantResult.aliasSnapshot, positionPoints: participantResult.positionPoints });
+    }
+    const factionWorking = Array.from(factionMembersById.entries())
+      .map(([factionId, bucket]) => ({ factionId, ...bucket, top: selectFactionTopThree(bucket.members) }))
+      .filter((entry): entry is typeof entry & { top: NonNullable<typeof entry.top> } => entry.top !== null);
+    const factionRanked = rankFactions(
+      factionWorking.map((entry) => ({
+        factionId: entry.factionId,
+        factionName: entry.name,
+        score: entry.top.weeklyScore,
+        contributionVector: entry.top.topContributors.map((contributor) => contributor.positionPoints),
+      })),
+    );
+    const factionRows: FactionWeeklyPreviewRow[] = factionRanked
+      .map(({ item, rank }) => {
+        const entry = factionWorking.find((candidate) => candidate.factionId === item.factionId)!;
+        return { factionId: entry.factionId, name: entry.name, color: entry.color, weeklyRank: rank, weeklyScore: entry.top.weeklyScore, topContributors: entry.top.topContributors };
+      })
+      .sort((a, b) => a.weeklyRank - b.weeklyRank);
+
     return (
       <div className="space-y-6">
         <div>
@@ -70,7 +102,9 @@ export default async function WeeklyResultsPage({ params }: { params: { id: stri
           </p>
         </div>
 
-        <WeeklyResultsTable rows={rows} activeKpis={activeKpis} />
+        <WeeklyResultsTable rows={rows} activeKpis={activeKpis} splitParticipantCount={splitParticipantCount} />
+
+        <FactionWeeklyPreviewTable rows={factionRows} />
 
         <Link href={backHref} className="inline-block text-sm text-slate-600 underline hover:text-slate-900">
           Volver
@@ -159,7 +193,9 @@ export default async function WeeklyResultsPage({ params }: { params: { id: stri
         </div>
       )}
 
-      <WeeklyResultsTable rows={rows} activeKpis={activeKpis} />
+      <WeeklyResultsTable rows={rows} activeKpis={activeKpis} splitParticipantCount={splitParticipantCount} />
+
+      <FactionWeeklyPreviewTable rows={results.factionPreview.factions} />
 
       <div className="flex flex-wrap items-center gap-3">
         <Link href={backHref} className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">

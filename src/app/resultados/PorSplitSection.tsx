@@ -5,6 +5,7 @@ import {
   listSplitsWithPublishedResultsForPerson,
 } from "@/server/services/individual-results.service";
 import { computeSplitClassification } from "@/server/services/classification.service";
+import { computeFactionClassification } from "@/server/services/faction-classification.service";
 import { formatPoints } from "@/lib/format";
 import { formatCalendarDate } from "@/lib/dates";
 import { EmptyState } from "@/components/ui";
@@ -12,15 +13,18 @@ import { colorBandForPercentage, COLOR_BAND_CLASSES, NOT_APPLICABLE_COLOR_BAND }
 import { resolveKpiResultDisplayPoints } from "@/domain/kpi-outcome-display";
 import { SplitSelector } from "./SplitSelector";
 import { LimitedClassificationTable } from "./LimitedClassificationTable";
+import { LimitedFactionClassificationTable } from "./LimitedFactionClassificationTable";
 
 export async function PorSplitSection({
   personId,
   requestedSplitId,
   isAdmin,
+  factionWeek,
 }: {
   personId: string;
   requestedSplitId: string | null;
   isAdmin: boolean;
+  factionWeek: string | null;
 }) {
   const splits = await listSplitsWithPublishedResultsForPerson(prisma, personId);
   if (splits.length === 0) {
@@ -34,6 +38,7 @@ export async function PorSplitSection({
   }
 
   const classification = await computeSplitClassification(prisma, selectedSplitId);
+  const factionClassification = await computeFactionClassification(prisma, selectedSplitId);
 
   return (
     <div className="space-y-6">
@@ -45,7 +50,7 @@ export async function PorSplitSection({
           <div>
             <dt className="text-xs text-slate-500">Posicion actual</dt>
             <dd className="font-semibold">
-              {detail.currentRank ?? "—"} de {detail.rankedParticipantCount}
+              {detail.currentRank ?? "—"} de {detail.splitParticipantCount}
             </dd>
           </div>
           <div>
@@ -60,6 +65,17 @@ export async function PorSplitSection({
             <dt className="text-xs text-slate-500">Semanas publicadas</dt>
             <dd className="font-semibold">{detail.weeks.length}</dd>
           </div>
+          {detail.currentFaction && (
+            <div>
+              <dt className="text-xs text-slate-500">Tu faccion</dt>
+              <dd className="font-semibold">
+                <span className="inline-flex items-center gap-1.5">
+                  <span aria-hidden className="h-3 w-3 rounded-full border border-slate-300" style={{ backgroundColor: detail.currentFaction.color }} />
+                  {detail.currentFaction.name}
+                </span>
+              </dd>
+            </div>
+          )}
         </dl>
       </div>
 
@@ -104,7 +120,7 @@ export async function PorSplitSection({
                         <td key={cell.kpiCode} className={`px-3 py-2 text-center ${COLOR_BAND_CLASSES[band.band]}`}>
                           {formatPoints(cellPoints)}
                           <div className="text-xs text-slate-500">
-                            {cell.kpiRank ?? "—"} de {cell.rankedParticipantCount ?? "—"}
+                            {cell.kpiRank ?? "—"} de {detail.splitParticipantCount}
                           </div>
                         </td>
                       );
@@ -112,7 +128,7 @@ export async function PorSplitSection({
                     <td className="px-3 py-2 text-center font-semibold">{formatPoints(week.totalKpiPoints)}</td>
                     <td className="px-3 py-2 text-center text-slate-600">{percentage === null ? "—" : `${formatPoints(percentage)} %`}</td>
                     <td className="px-3 py-2 text-center font-semibold">
-                      {week.weeklyRank} de {week.rankedParticipantCount}
+                      {week.weeklyRank} de {detail.splitParticipantCount}
                     </td>
                     <td className="px-3 py-2 text-center font-semibold">{week.positionPoints}</td>
                     <td className="px-3 py-2">
@@ -141,6 +157,18 @@ export async function PorSplitSection({
           selfSplitParticipantId={classification.entries.find((entry) => entry.personId === personId)?.splitParticipantId ?? null}
         />
       </div>
+
+      {factionClassification.hasFactionData && (
+        <div className="space-y-3">
+          <h3 className="text-sm font-semibold text-slate-700">Clasificacion general de facciones</h3>
+          <LimitedFactionClassificationTable
+            classification={factionClassification}
+            selfFactionId={detail.currentFaction?.id ?? null}
+            splitId={selectedSplitId}
+            selectedWeek={factionWeek}
+          />
+        </div>
+      )}
     </div>
   );
 }
