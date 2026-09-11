@@ -24,6 +24,7 @@ export async function resetDatabase(): Promise<void> {
   await testDb.apprenticeWeeklyEntry.deleteMany();
   await testDb.splitParticipant.deleteMany();
   await testDb.splitKpiConfig.deleteMany();
+  await testDb.splitPositionPointRule.deleteMany();
   await testDb.splitWeek.deleteMany();
   await testDb.split.deleteMany();
   await testDb.person.deleteMany();

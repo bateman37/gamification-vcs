@@ -1,13 +1,13 @@
 "use client";
 
-import Link from "next/link";
 import { useFormState, useFormStatus } from "react-dom";
 import { saveStudentEntriesAction } from "@/server/actions/student.actions";
 import {
   initialManualEntryActionState,
   type ManualEntryActionState,
 } from "@/server/actions/manual-entry-action-state";
-import { ErrorMessage, FieldError, SuccessMessage } from "@/components/ui";
+import { ErrorMessage, FieldError } from "@/components/ui";
+import { ManualEntrySuccessPanel } from "../../ManualEntrySuccessPanel";
 import type { StudentFormView } from "@/server/services/student-entry.service";
 
 function SaveButton({ label }: { label: string }) {
@@ -37,20 +37,12 @@ export function StudentEntryForm({ splitId, weekId, formView }: { splitId: strin
 
   if (state.ok && state.saved) {
     return (
-      <div className="space-y-3">
-        <SuccessMessage>Datos de Estudiante entusiasta guardados correctamente.</SuccessMessage>
-        <div className="flex flex-wrap gap-4 text-sm">
-          <Link href={comprobarHref} className="underline hover:text-slate-900">
-            Ir a Comprobar
-          </Link>
-          <Link href={introducirHref} className="underline hover:text-slate-900">
-            Volver a introducir datos
-          </Link>
-          <Link href={backHref} className="underline hover:text-slate-900">
-            Volver a las cargas de la semana
-          </Link>
-        </div>
-      </div>
+      <ManualEntrySuccessPanel
+        message="Datos de Estudiante entusiasta guardados correctamente."
+        introducirHref={introducirHref}
+        comprobarHref={comprobarHref}
+        backHref={backHref}
+      />
     );
   }
 

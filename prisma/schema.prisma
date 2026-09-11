@@ -65,9 +65,10 @@ model Split {
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 
-  weeks        SplitWeek[]
-  participants SplitParticipant[]
-  kpiConfigs   SplitKpiConfig[]
+  weeks              SplitWeek[]
+  participants       SplitParticipant[]
+  kpiConfigs         SplitKpiConfig[]
+  positionPointRules SplitPositionPointRule[]
 }
 
 /// Semana de un split. La identidad funcional es splitId + sequenceNumber,
@@ -408,6 +409,28 @@ model StudentWeeklyEntry {
   splitParticipant SplitParticipant @relation(fields: [splitParticipantId], references: [id], onDelete: Restrict)
 
   @@unique([splitWeekId, splitParticipantId])
+}
+
+/// Puntos por posicion semanal de un split (`BUGFIX-1 / UX-SPLIT-1`, ver
+/// docs/POSITION_POINTS_CONFIGURATION.md). Existen exactamente las
+/// posiciones 1..15 por split, cada una con su propio valor de puntos.
+/// Esta entrega solo guarda la configuracion: no calcula posiciones
+/// semanales ni reparte estos puntos, y no es un KPI ni cuenta como uno.
+/// Cada split conserva su propia copia (igual que `SplitKpiConfig`): editar
+/// uno no afecta a los demas.
+model SplitPositionPointRule {
+  id        String   @id @default(uuid())
+  splitId   String
+  /// Posicion semanal (1 a 15). Restriccion de base de datos.
+  position  Int
+  /// Puntos otorgados a esa posicion. Nunca negativo.
+  points    Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  split Split @relation(fields: [splitId], references: [id], onDelete: Cascade)
+
+  @@unique([splitId, position])
 }
 
 /// Entrada manual semanal de Aprendiz experto (`EXPERT_APPRENTICE`, ver

@@ -11,7 +11,7 @@ import {
   type ExpertApprenticeOutcomeView,
 } from "@/domain/kpis/apprentice";
 import type { LoadCoverageStatus } from "@/domain/kpis/loadGroups";
-import { parseRequiredNonNegativeNumber, ManualEntryValidationError, type ManualEntryFieldError } from "@/server/validation/manual-entry";
+import { parseNonNegativeNumberDefaultZero, ManualEntryValidationError, type ManualEntryFieldError } from "@/server/validation/manual-entry";
 
 /**
  * Entrada manual semanal de Aprendiz experto (`EXPERT_APPRENTICE`, ver
@@ -93,10 +93,10 @@ export async function saveApprenticeEntries(db: PrismaClient, splitId: string, w
   const fieldErrors: ManualEntryFieldError[] = [];
   const rows: { splitParticipantId: string; completedTrainings: number }[] = [];
   for (const participant of participants) {
-    const result = parseRequiredNonNegativeNumber(formData, "completedTrainings", "Formaciones completadas", participant.id, {
+    const result = parseNonNegativeNumberDefaultZero(formData, "completedTrainings", "Formaciones completadas", participant.id, {
       integer: true,
       max: targetValue,
-      maxMessage: `Formaciones completadas no puede superar el maximo configurado (${targetValue}).`,
+      maxMessage: `Formaciones completadas debe ser un valor válido: no puede superar el máximo configurado (${targetValue}).`,
     });
     if (!result.ok) {
       fieldErrors.push(result.error);

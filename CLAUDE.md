@@ -16,8 +16,9 @@ Antes de proponer o realizar cualquier cambio, lee en este orden:
 Ademas, revisa `docs/DECISIONS.md` para no contradecir decisiones ya
 tomadas sin justificarlo explicitamente, y `docs/DISCOVERY-1-SPLIT-8.md`,
 `docs/KPI_CONFIGURATION.md`, `docs/IMPORT_PRODUCTIVITY.md`,
-`docs/IMPORT_ESCALATIONS_QUALITY_VOICE.md` y `docs/MANUAL_KPI_ENTRY.md` si
-vas a trabajar en KPI, cargas de datos o motor de calculo.
+`docs/IMPORT_ESCALATIONS_QUALITY_VOICE.md`, `docs/MANUAL_KPI_ENTRY.md` y
+`docs/POSITION_POINTS_CONFIGURATION.md` si vas a trabajar en KPI, cargas de
+datos, motor de calculo o en la configuracion de puntos por posicion.
 
 ## Estado real de las cargas semanales (no romper sin justificarlo)
 
@@ -77,6 +78,29 @@ motivo en `docs/DECISIONS.md`:
   al consultar, con un numero acotado de consultas para todo el
   calendario. Nunca persistas un contador de KPI cargados en `SplitWeek`
   ni en ninguna otra tabla.
+- **Vacio como cero (`BUGFIX-1 / UX-SPLIT-1`):** solo en Redactor
+  estrella, Estudiante entusiasta y Aprendiz experto un campo vacio se
+  interpreta y persiste como `0` (`parseNonNegativeNumberDefaultZero`,
+  `src/server/validation/manual-entry.ts`). Guardian de la Estabilidad y
+  Cronomagia laboral siguen exigiendo el campo (`parseRequiredNonNegativeNumber`).
+  No amplies esta excepcion a otros KPI ni a otros formularios sin
+  registrarlo en `docs/DECISIONS.md`.
+- **Maximo de Aprendiz experto inclusivo:** un valor igual a `targetValue`
+  es valido; solo se rechaza al superarlo. No cambies esa comparacion a
+  exclusiva.
+- **"Volver a introducir datos" usa navegacion HTML completa
+  (`<a>`), nunca `next/link`,** en los cinco formularios manuales
+  (`ManualEntrySuccessPanel.tsx`): una navegacion client-side a la misma
+  ruta no reinicia `useFormState` y deja la pantalla de exito bloqueada.
+  No reintroduzcas `next/link` en ese enlace concreto.
+- **Puntos por posicion semanal (`SplitPositionPointRule`,
+  `BUGFIX-1 / UX-SPLIT-1`) no es un KPI ni una clasificacion.** Es una
+  configuracion aparte, con sus propias quince filas (`1..15`) por split y
+  los valores predeterminados exactos de Split 8 (ver
+  `docs/POSITION_POINTS_CONFIGURATION.md`). No la mezcles con
+  `SplitKpiConfig`, no la cuentes como KPI cargado, y no implementes
+  calculo de posiciones ni reparto de estos puntos hasta que le toque su
+  turno en el roadmap (`MVP-1C`).
 
 ## Reglas de trabajo
 

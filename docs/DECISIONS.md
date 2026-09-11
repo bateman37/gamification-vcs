@@ -514,3 +514,67 @@ anadir un participante, sustituir una carga). Persistir un contador se
 volveria obsoleto en cualquiera de esos casos sin que nadie lo notara; el
 encargo pide explicitamente no persistirlo y evitar una consulta por KPI y
 semana.
+
+## Navegacion completa (no client-side) para "Volver a introducir datos" (`BUGFIX-1 / UX-SPLIT-1`)
+
+**Decision:** el enlace "Volver a introducir datos" de los cinco
+formularios manuales usa una etiqueta `<a>` HTML normal hacia la misma
+URL, en vez de `next/link`. Se extrae a un componente compartido
+(`ManualEntrySuccessPanel`) para no duplicar el bloque de exito en los
+cinco formularios.
+
+**Motivo:** una navegacion client-side de Next.js hacia la misma ruta no
+desmonta el Client Component ni reinicia `useFormState`, dejando la
+pantalla de exito visible para siempre (bug corregido en esta entrega). Una
+navegacion HTML completa fuerza la recarga del Server Component (que
+recupera los datos ya guardados desde PostgreSQL) y reinicia el estado
+local. Un `router.refresh()` no habria sido suficiente: no elimina el
+`state.saved` que mantiene visible la pantalla de exito.
+
+## Vacio como cero solo en tres KPI manuales concretos (`BUGFIX-1 / UX-SPLIT-1`)
+
+**Decision:** un campo vacio o compuesto solo por espacios se interpreta y
+persiste como `0` unicamente en Redactor estrella (`STAR_WRITER`),
+Estudiante entusiasta (`ENTHUSIASTIC_STUDENT`) y Aprendiz experto
+(`EXPERT_APPRENTICE`), mediante un helper explicito
+(`parseNonNegativeNumberDefaultZero`,
+`src/server/validation/manual-entry.ts`) que reutiliza las mismas
+validaciones numericas sin duplicarlas. Guardian de la Estabilidad y
+Cronomagia laboral **no** cambian: sus campos vacios se siguen rechazando
+como obligatorios (`parseRequiredNonNegativeNumber`).
+
+**Motivo:** el encargo audito que, en el uso real de estos tres
+formularios, un campo dejado en blanco significaba sistematicamente "cero
+articulos/horas/formaciones", y exigirlo como obligatorio bloqueaba
+guardar cargas semanales completas y validas. Guardian y Cronomagia no
+presentaban ese problema y su contrato (incluido el `VAC` por fila de
+Cronomagia) no debia tocarse.
+
+## Maximo configurado de Aprendiz experto: inclusivo (`BUGFIX-1 / UX-SPLIT-1`)
+
+**Decision:** `completedTrainings` acepta cualquier valor entre `0` y
+`targetValue` **incluido**; solo un valor estrictamente mayor que
+`targetValue` se rechaza. La validacion compartida
+(`src/server/validation/manual-entry.ts`) usa `value > options.max` (no
+`>=`) para reflejarlo, y queda cubierto por una prueba de regresion
+especifica del limite exacto.
+
+**Motivo:** un maximo configurado exclusivo habria rechazado
+incorrectamente el caso mas comun (alcanzar exactamente el objetivo). El
+encargo pide explicitamente que el maximo sea inclusivo.
+
+## Puntos por posicion semanal: configuracion por split, todavia sin aplicar (`BUGFIX-1 / UX-SPLIT-1`)
+
+**Decision:** cada split tiene su propia tabla `SplitPositionPointRule`
+con las quince posiciones (`1..15`) y sus puntos, con los valores
+predeterminados exactos de Split 8 (ver
+`docs/POSITION_POINTS_CONFIGURATION.md`), creada dentro de la misma
+transaccion que el split (splits nuevos) o mediante backfill (splits
+existentes). No es un KPI, no se guarda como JSON dentro de `Split` y esta
+entrega no calcula ninguna posicion ni reparte estos puntos.
+
+**Motivo:** la clasificacion semanal (`MVP-1C`) necesitara esta tabla, pero
+construir el motor de calculo esta fuera del alcance de esta entrega. Dejar
+la configuracion lista y validada de antemano evita mezclar dos cambios
+grandes (configuracion y calculo) en una misma entrega, siguiendo la regla
+de entregas pequenas del proyecto.

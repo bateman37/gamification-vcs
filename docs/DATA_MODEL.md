@@ -9,8 +9,10 @@ Fuente de verdad: `prisma/schema.prisma` y las migraciones
 `prisma/migrations/20260911100002_add_escalations_quality_voice_import/migration.sql`
 (MVP-1C.2 / IMPORT-1B) y
 `prisma/migrations/20260911111623_add_manual_kpi_entries/migration.sql`
-(MVP-1C.3 / INPUT-1C). Este documento describe y explica ese esquema; en
-caso de discrepancia, el esquema real manda.
+(MVP-1C.3 / INPUT-1C) y
+`prisma/migrations/20260911140000_add_position_points/migration.sql`
+(`BUGFIX-1 / UX-SPLIT-1`). Este documento describe y explica ese esquema;
+en caso de discrepancia, el esquema real manda.
 
 ## Diagrama entidad-relacion
 
@@ -20,6 +22,7 @@ erDiagram
     Split ||--o{ SplitWeek : "tiene"
     Split ||--o{ SplitParticipant : "tiene"
     Split ||--o{ SplitKpiConfig : "configura"
+    Split ||--o{ SplitPositionPointRule : "configura"
     SplitWeek ||--o{ SplitParticipant : "es semana inicial de"
     SplitWeek ||--o| ProductivityImport : "tiene carga vigente"
     ProductivityImport ||--o{ ProductivityWeeklyRow : "contiene"
@@ -246,6 +249,15 @@ erDiagram
         datetime createdAt
         datetime updatedAt
     }
+
+    SplitPositionPointRule {
+        string id PK
+        string splitId FK
+        int position "1 a 15"
+        int points "no negativo"
+        datetime createdAt
+        datetime updatedAt
+    }
 ```
 
 ## Tablas, campos y relaciones
@@ -463,6 +475,33 @@ consultar.
 
 Migracion `add_manual_kpi_entries`, compatible con los datos existentes de
 `0.4.0`.
+
+### `SplitPositionPointRule` (`BUGFIX-1 / UX-SPLIT-1`)
+
+Puntos por posicion semanal de un split (ver
+`docs/POSITION_POINTS_CONFIGURATION.md`). No es un KPI ni se relaciona con
+`SplitKpiConfig`: es una configuracion aparte que todavia no se aplica a
+ningun resultado.
+
+- `id`: UUID, clave primaria.
+- `splitId`: referencia a `Split` (borrado en cascada si se borra el
+  split).
+- `position`: entero. Restriccion de base de datos
+  `SplitPositionPointRule_position_range_check` que exige `1 <= position
+  <= 15`: en esta primera version existen exactamente esas quince
+  posiciones, sin filas dinamicas.
+- `points`: entero. Restriccion de base de datos
+  `SplitPositionPointRule_points_nonnegative_check` que exige un valor no
+  negativo.
+- Indice unico `SplitPositionPointRule_splitId_position_key`
+  (`splitId` + `position`).
+
+Cada split conserva su propia copia (igual que `SplitKpiConfig`): editar
+los puntos de un split no modifica los de otro. Migracion
+`add_position_points`, con backfill de los quince valores exactos de
+Split 8 para cada split existente y creacion automatica de las quince
+reglas al crear un split nuevo, dentro de la misma transaccion que crea el
+split, sus semanas y su configuracion de KPI.
 
 ## Decisiones sobre fechas
 

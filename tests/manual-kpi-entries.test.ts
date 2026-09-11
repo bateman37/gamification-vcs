@@ -305,6 +305,194 @@ describe("Aprendiz experto: conteo entero, maximo configurado y calculo", () => 
     // 6 / 15 x 50 x 1 = 20.
     expect(check.rows[0]?.expertApprentice).toMatchObject({ status: "computed", finalPoints: 20 });
   });
+
+  it("el maximo configurado es inclusivo: acepta exactamente targetValue y rechaza targetValue + 1 (BUGFIX-1 / UX-SPLIT-1)", async () => {
+    const split = await createDraftSplit();
+    const person = await createPerson(testDb, { fullName: "Persona Aprendiz Limite", email: undefined });
+    const participant = await addParticipant(testDb, split.id, { personId: person.id, alias: "AprendizLimite", level: "N1", startWeekSequenceNumber: 1 });
+    await updateKpiConfig(testDb, split.id, "EXPERT_APPRENTICE", {
+      isActive: true,
+      baseMax: 50,
+      multiplierN1: 1,
+      parameters: { targetValue: 15, pointsAtTarget: 50 },
+    });
+    await activateSplit(testDb, split.id);
+    const week = (await listSplitWeeks(testDb, split.id))[0]!;
+
+    // Exactamente targetValue (15) es valido: el maximo es inclusivo.
+    await saveApprenticeEntries(testDb, split.id, week.id, form({ [`completedTrainings__${participant.id}`]: "15" }));
+    const check = await getApprenticeCheckView(testDb, split.id, week.id);
+    expect(check.rows[0]?.completedTrainings).toBe(15);
+    // 15 / 15 x 50 x 1 = 50.
+    expect(check.rows[0]?.expertApprentice).toMatchObject({ status: "computed", finalPoints: 50 });
+
+    // targetValue + 1 (16) se rechaza.
+    await expect(
+      saveApprenticeEntries(testDb, split.id, week.id, form({ [`completedTrainings__${participant.id}`]: "16" })),
+    ).rejects.toBeInstanceOf(ManualEntryValidationError);
+  });
+
+  it("un campo vacio o '0' se guarda como cero, nunca como ausencia de fila (BUGFIX-1 / UX-SPLIT-1)", async () => {
+    const split = await createDraftSplit();
+    const person = await createPerson(testDb, { fullName: "Persona Aprendiz Cero", email: undefined });
+    const participant = await addParticipant(testDb, split.id, { personId: person.id, alias: "AprendizCero", level: "N1", startWeekSequenceNumber: 1 });
+    await updateKpiConfig(testDb, split.id, "EXPERT_APPRENTICE", {
+      isActive: true,
+      baseMax: 50,
+      multiplierN1: 1,
+      parameters: { targetValue: 15, pointsAtTarget: 50 },
+    });
+    await activateSplit(testDb, split.id);
+    const week = (await listSplitWeeks(testDb, split.id))[0]!;
+
+    await saveApprenticeEntries(testDb, split.id, week.id, form({ [`completedTrainings__${participant.id}`]: "" }));
+    const emptyCheck = await getApprenticeCheckView(testDb, split.id, week.id);
+    expect(emptyCheck.rows[0]?.completedTrainings).toBe(0);
+
+    await saveApprenticeEntries(testDb, split.id, week.id, form({ [`completedTrainings__${participant.id}`]: "0" }));
+    const explicitZeroCheck = await getApprenticeCheckView(testDb, split.id, week.id);
+    expect(explicitZeroCheck.rows[0]?.completedTrainings).toBe(0);
+  });
+});
+
+describe("Redactor estrella: campos vacios equivalen a cero (BUGFIX-1 / UX-SPLIT-1)", () => {
+  it("guarda los tres campos vacios de una persona como tres ceros, y el resultado se calcula como cero", async () => {
+    const split = await createDraftSplit();
+    const person = await createPerson(testDb, { fullName: "Persona Redactor Vacio", email: undefined });
+    const participant = await addParticipant(testDb, split.id, { personId: person.id, alias: "RedactorVacio", level: "N1", startWeekSequenceNumber: 1 });
+    await updateKpiConfig(testDb, split.id, "STAR_WRITER", {
+      isActive: true,
+      baseMax: 60,
+      multiplierN1: 2,
+      parameters: { approvedArticlePoints: 10, negativeArticlePoints: 10, proposalPoints: 5 },
+    });
+    await activateSplit(testDb, split.id);
+    const week = (await listSplitWeeks(testDb, split.id))[0]!;
+
+    await saveWriterEntries(
+      testDb,
+      split.id,
+      week.id,
+      form({
+        [`deliveredArticles__${participant.id}`]: "",
+        [`undeliveredArticles__${participant.id}`]: "",
+        [`proposedArticles__${participant.id}`]: "",
+      }),
+    );
+    const check = await getWriterCheckView(testDb, split.id, week.id);
+    expect(check.rows[0]?.deliveredArticles).toBe(0);
+    expect(check.rows[0]?.undeliveredArticles).toBe(0);
+    expect(check.rows[0]?.proposedArticles).toBe(0);
+    expect(check.rows[0]?.starWriter).toMatchObject({ status: "computed", finalPoints: 0 });
+  });
+
+  it("acepta combinaciones de campos vacios y rellenos para la misma carga, sin exigir el campo obligatorio", async () => {
+    const split = await createDraftSplit();
+    const person1 = await createPerson(testDb, { fullName: "Persona Redactor Mixto Uno", email: undefined });
+    const person2 = await createPerson(testDb, { fullName: "Persona Redactor Mixto Dos", email: undefined });
+    const participant1 = await addParticipant(testDb, split.id, { personId: person1.id, alias: "RedactorMixto1", level: "N1", startWeekSequenceNumber: 1 });
+    const participant2 = await addParticipant(testDb, split.id, { personId: person2.id, alias: "RedactorMixto2", level: "N1", startWeekSequenceNumber: 1 });
+    await updateKpiConfig(testDb, split.id, "STAR_WRITER", {
+      isActive: true,
+      baseMax: 60,
+      multiplierN1: 2,
+      parameters: { approvedArticlePoints: 10, negativeArticlePoints: 10, proposalPoints: 5 },
+    });
+    await activateSplit(testDb, split.id);
+    const week = (await listSplitWeeks(testDb, split.id))[0]!;
+
+    await saveWriterEntries(
+      testDb,
+      split.id,
+      week.id,
+      form({
+        [`deliveredArticles__${participant1.id}`]: "2",
+        [`undeliveredArticles__${participant1.id}`]: "",
+        [`proposedArticles__${participant1.id}`]: "1",
+        [`deliveredArticles__${participant2.id}`]: "",
+        [`undeliveredArticles__${participant2.id}`]: "",
+        [`proposedArticles__${participant2.id}`]: "",
+      }),
+    );
+    const check = await getWriterCheckView(testDb, split.id, week.id);
+    const row1 = check.rows.find((row) => row.participantId === participant1.id)!;
+    const row2 = check.rows.find((row) => row.participantId === participant2.id)!;
+    expect(row1.undeliveredArticles).toBe(0);
+    // 2 entregados x 10 x 2 + 1 propuesta x 5 = 45.
+    expect(row1.starWriter).toMatchObject({ status: "computed", finalPoints: 45 });
+    expect(row2.starWriter).toMatchObject({ status: "computed", finalPoints: 0 });
+  });
+
+  it("sigue rechazando negativos, decimales y texto no numerico en campos enteros", async () => {
+    const split = await createDraftSplit();
+    const person = await createPerson(testDb, { fullName: "Persona Redactor Invalido", email: undefined });
+    const participant = await addParticipant(testDb, split.id, { personId: person.id, alias: "RedactorInvalido", level: "N1", startWeekSequenceNumber: 1 });
+    await updateKpiConfig(testDb, split.id, "STAR_WRITER", {
+      isActive: true,
+      baseMax: 60,
+      multiplierN1: 2,
+      parameters: { approvedArticlePoints: 10, negativeArticlePoints: 10, proposalPoints: 5 },
+    });
+    await activateSplit(testDb, split.id);
+    const week = (await listSplitWeeks(testDb, split.id))[0]!;
+
+    for (const invalidValue of ["-1", "1,5", "no-es-un-numero"]) {
+      await expect(
+        saveWriterEntries(
+          testDb,
+          split.id,
+          week.id,
+          form({
+            [`deliveredArticles__${participant.id}`]: invalidValue,
+            [`undeliveredArticles__${participant.id}`]: "0",
+            [`proposedArticles__${participant.id}`]: "0",
+          }),
+        ),
+      ).rejects.toBeInstanceOf(ManualEntryValidationError);
+    }
+    expect(await testDb.writerWeeklyEntry.count({ where: { splitWeekId: week.id } })).toBe(0);
+  });
+});
+
+describe("Estudiante entusiasta: campo vacio equivale a cero (BUGFIX-1 / UX-SPLIT-1)", () => {
+  it("guarda vacio y '0' como cero, y conserva el parseo decimal con coma/punto", async () => {
+    const split = await createDraftSplit();
+    const person1 = await createPerson(testDb, { fullName: "Persona Estudiante Vacio", email: undefined });
+    const person2 = await createPerson(testDb, { fullName: "Persona Estudiante Decimal", email: undefined });
+    const participant1 = await addParticipant(testDb, split.id, { personId: person1.id, alias: "EstudianteVacio", level: "N1", startWeekSequenceNumber: 1 });
+    const participant2 = await addParticipant(testDb, split.id, { personId: person2.id, alias: "EstudianteDecimal", level: "N1", startWeekSequenceNumber: 1 });
+    await updateKpiConfig(testDb, split.id, "ENTHUSIASTIC_STUDENT", {
+      isActive: true,
+      baseMax: 50,
+      multiplierN1: 1,
+      parameters: { pointsPerHour: 12.5 },
+    });
+    await activateSplit(testDb, split.id);
+    const week = (await listSplitWeeks(testDb, split.id))[0]!;
+
+    await saveStudentEntries(
+      testDb,
+      split.id,
+      week.id,
+      form({
+        [`dedicatedHours__${participant1.id}`]: "",
+        [`dedicatedHours__${participant2.id}`]: "2,5",
+      }),
+    );
+    const check = await getStudentCheckView(testDb, split.id, week.id);
+    const row1 = check.rows.find((row) => row.participantId === participant1.id)!;
+    const row2 = check.rows.find((row) => row.participantId === participant2.id)!;
+    expect(row1.dedicatedHours).toBe(0);
+    expect(row1.enthusiasticStudent).toMatchObject({ status: "computed", finalPoints: 0 });
+    // 2.5 x 12.5 x 1 = 31.25.
+    expect(row2.dedicatedHours).toBe(2.5);
+    expect(row2.enthusiasticStudent).toMatchObject({ status: "computed", finalPoints: 31.25 });
+
+    // Todos los participantes aplicables quedan con fila: el grupo puede quedar Cargado.
+    expect(await testDb.studentWeeklyEntry.count({ where: { splitWeekId: week.id } })).toBe(2);
+    const status = await getStudentLoadStatus(testDb, split.id, week.id, 1);
+    expect(status.status).toBe("LOADED");
+  });
 });
 
 describe("Estados manuales: pendiente con cobertura incompleta, cargado con el conjunto completo", () => {

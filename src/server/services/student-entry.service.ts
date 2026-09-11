@@ -10,7 +10,7 @@ import {
   type EnthusiasticStudentOutcomeView,
 } from "@/domain/kpis/student";
 import type { LoadCoverageStatus } from "@/domain/kpis/loadGroups";
-import { parseRequiredNonNegativeNumber, ManualEntryValidationError, type ManualEntryFieldError } from "@/server/validation/manual-entry";
+import { parseNonNegativeNumberDefaultZero, ManualEntryValidationError, type ManualEntryFieldError } from "@/server/validation/manual-entry";
 
 /**
  * Entrada manual semanal de Estudiante entusiasta
@@ -66,7 +66,7 @@ export async function saveStudentEntries(db: PrismaClient, splitId: string, week
   const fieldErrors: ManualEntryFieldError[] = [];
   const rows: { splitParticipantId: string; dedicatedHours: number }[] = [];
   for (const participant of participants) {
-    const result = parseRequiredNonNegativeNumber(formData, "dedicatedHours", "Horas dedicadas", participant.id);
+    const result = parseNonNegativeNumberDefaultZero(formData, "dedicatedHours", "Horas dedicadas", participant.id);
     if (!result.ok) {
       fieldErrors.push(result.error);
       continue;

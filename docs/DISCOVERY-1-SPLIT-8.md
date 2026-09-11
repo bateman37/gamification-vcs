@@ -165,6 +165,21 @@ actual. Reglas confirmadas (sin datos personales reales):
 
 Referencia completa: `docs/MANUAL_KPI_ENTRY.md`.
 
+## 3.bis. Puntos por posicion semanal (tabla historica confirmada)
+
+La hoja `Guia!B57:C71` del Excel de Split 8 auditado contiene la tabla
+exacta de puntos por posicion semanal (posicion 1 a 15):
+
+`1→15, 2→11, 3→8, 4→5, 5→3, 6→2, 7..15→1`
+
+Desde `BUGFIX-1 / UX-SPLIT-1` (`0.5.1`) esta tabla es el valor
+predeterminado de la nueva configuracion "Puntos por posicion semanal" de
+cada split (`SplitPositionPointRule`, ver
+`docs/POSITION_POINTS_CONFIGURATION.md`). Esta entrega **solo guarda la
+configuracion**: no calcula posiciones semanales ni reparte estos puntos
+todavia; eso queda para cuando se implemente la clasificacion semanal
+(`MVP-1C`, punto 9 del flujo funcional siguiente).
+
 ## 4. Flujo funcional completo (a construir por incrementos)
 
 1. Crear split y participantes — **`MVP-1A`, implementado**.

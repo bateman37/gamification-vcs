@@ -16,7 +16,9 @@ Fuente de verdad en codigo:
   helpers compartidos en `src/server/services/shared/manual-entries.ts`, y el
   contador semanal en `src/server/services/kpi-load-summary.service.ts`.
 - Acciones de servidor: `src/server/actions/{stability,chronomancy,writer,student,apprentice}.actions.ts`.
-- Pantallas: `src/app/splits/[id]/weeks/[weekId]/kpis/{estabilidad,cronomagia,articulos,dedicacion,formaciones}/{introducir,comprobar}`.
+- Pantallas: `src/app/splits/[id]/weeks/[weekId]/kpis/{estabilidad,cronomagia,articulos,dedicacion,formaciones}/{introducir,comprobar}`,
+  con el bloque de exito compartido en
+  `src/app/splits/[id]/weeks/[weekId]/kpis/ManualEntrySuccessPanel.tsx`.
 
 ## 1. Hotfix: cero implicito de Domador de Escaladas
 
@@ -84,12 +86,21 @@ ruta bajo `.../kpis/<slug>/{introducir,comprobar}`:
 No hay Excel, previsualizacion ni paso de "Analizar": una unica accion de
 servidor valida y guarda (o sustituye) el conjunto completo. Si ya existen
 datos guardados, la pantalla los precarga y el boton final dice
-`Actualizar datos`; si no, `Guardar datos`.
+`Actualizar datos`; si no, `Guardar datos`. El enlace "Volver a introducir
+datos" de la pantalla de exito usa una navegacion HTML completa (no
+`next/link`), para forzar la recarga del Server Component y volver a
+mostrar el formulario precargado en vez de quedarse en la pantalla de
+exito (bug corregido en `BUGFIX-1 / UX-SPLIT-1`, ver `docs/DECISIONS.md`).
 
 ### Reglas comunes
 
 - Todos los campos visibles son obligatorios para poder guardar el conjunto
-  semanal completo. Un campo vacio nunca se convierte en cero.
+  semanal completo, **salvo las tres excepciones explicitas de
+  `BUGFIX-1 / UX-SPLIT-1`**: en Redactor estrella, Estudiante entusiasta y
+  Aprendiz experto, un campo vacio o solo con espacios se interpreta y
+  persiste como `0` (ver sus secciones especificas mas abajo). En Guardian
+  de la Estabilidad y Cronomagia laboral un campo vacio sigue sin
+  convertirse en cero: se rechaza como obligatorio.
 - Se acepta coma o punto como separador decimal en los campos que admiten
   decimales.
 - Todos los errores detectables se devuelven en una sola respuesta,
@@ -186,7 +197,13 @@ error); `0 / 0` -> `VAC`.
 **Campos:** `Articulos entregados`, `Articulos no entregados` y `Articulos
 propuestos` — tres conteos enteros mayores o iguales que cero. Los no
 entregados se escriben como un conteo **positivo**: el calculo aplica la
-resta. Los tres ceros son una entrada valida y completa.
+resta. Los tres ceros son una entrada valida y completa. **Desde
+`BUGFIX-1 / UX-SPLIT-1`**: cualquiera de los tres campos, vacio o con solo
+espacios, se interpreta y persiste como `0` (`parseNonNegativeNumberDefaultZero`,
+ver `docs/DECISIONS.md`); una pantalla con combinaciones de campos rellenos
+y vacios se guarda sin mensajes de "es obligatorio". Se mantienen las
+reglas de solo enteros, no negativos y guardado atomico; un texto no
+numerico o un valor negativo siguen siendo un error.
 
 **Formula** (`src/domain/kpis/writer.ts`):
 
@@ -207,7 +224,12 @@ valores `10/10/5`, multiplicador `2` -> `1x10x2 - 1x10 + 2x5 = 20`).
 **Participantes:** todos los aplicables.
 
 **Campo:** `Horas dedicadas` — decimal mayor o igual que cero. El cero es
-valido y completo.
+valido y completo. **Desde `BUGFIX-1 / UX-SPLIT-1`**: el campo vacio o con
+solo espacios tambien se interpreta y persiste como `0`, conservando el
+parseo decimal con coma o punto y el rechazo de valores negativos o no
+numericos. Una vez guardado el formulario completo, todos los
+participantes aplicables quedan con fila (incluidos los que se dejaron en
+blanco), y el grupo puede quedar `Cargado`.
 
 **Formula** (`src/domain/kpis/student.ts`):
 
@@ -221,9 +243,15 @@ puntos finales = minimo(puntos sin limite, baseMax)
 **Participantes:** todos los aplicables.
 
 **Campo:** `Formaciones completadas` — entero mayor o igual que cero, con
-ayuda visible "Maximo configurado: `targetValue`". El valor no puede
-superar `targetValue` (validado en servidor, no solo con el atributo `max`
-del campo). El cero es valido.
+ayuda visible "**Máximo configurado**: `targetValue`" (con tilde, ver
+`docs/DECISIONS.md`). El valor no puede superar `targetValue`
+**de forma inclusiva**: si `targetValue = 15`, los valores de `0` a `15`
+son validos y solo un valor `> 15` se rechaza (validado en servidor, no
+solo con el atributo `max` del campo). El cero, explicito o por campo
+vacio, es valido: **desde `BUGFIX-1 / UX-SPLIT-1`** un campo vacio o con
+solo espacios se interpreta y persiste como `0`
+(`parseNonNegativeNumberDefaultZero`), y un `0` escrito explicitamente
+nunca se confunde con ausencia por ser un valor falsy.
 
 Si `targetValue` cambia despues de guardar una entrada y un valor
 historico queda por encima del nuevo maximo, la pantalla de introduccion

@@ -45,7 +45,7 @@ function MultiplierField({
         defaultValue={value === null ? "" : formatNumber(value)}
         placeholder="No aplica"
         disabled={disabled}
-        className="mt-1 w-28 rounded-md border border-slate-300 px-2 py-1 text-sm disabled:bg-slate-100"
+        className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1 text-sm disabled:bg-slate-100"
       />
       <FieldError message={error} />
     </div>
@@ -122,7 +122,7 @@ export function KpiConfigCard({
           </label>
           <FieldError message={state.fieldErrors?.isActive} />
 
-          <div className="flex flex-wrap gap-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <div>
               <label htmlFor={`${kpiCode}-baseMax`} className="block text-xs font-medium text-slate-600">
                 Maximo base
@@ -134,7 +134,7 @@ export function KpiConfigCard({
                 inputMode="decimal"
                 defaultValue={formatNumber(config.baseMax)}
                 required
-                className="mt-1 w-28 rounded-md border border-slate-300 px-2 py-1 text-sm"
+                className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
               />
               <FieldError message={state.fieldErrors?.baseMax} />
             </div>
@@ -158,7 +158,7 @@ export function KpiConfigCard({
           {parameterDefs.length > 0 && (
             <div>
               <h4 className="text-xs font-semibold uppercase text-slate-500">Parametros del calculo</h4>
-              <div className="mt-2 flex flex-wrap gap-4">
+              <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-4">
                 {parameterDefs.map((parameter) => (
                   <div key={parameter.key}>
                     <label
@@ -174,7 +174,7 @@ export function KpiConfigCard({
                       inputMode="decimal"
                       defaultValue={formatNumber(config.parameters[parameter.key] ?? parameter.defaultValue)}
                       required
-                      className="mt-1 w-28 rounded-md border border-slate-300 px-2 py-1 text-sm"
+                      className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
                     />
                     <FieldError message={state.fieldErrors?.[`parameters.${parameter.key}`]} />
                   </div>

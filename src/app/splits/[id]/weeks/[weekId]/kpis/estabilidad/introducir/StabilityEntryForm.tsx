@@ -1,13 +1,13 @@
 "use client";
 
-import Link from "next/link";
 import { useFormState, useFormStatus } from "react-dom";
 import { saveStabilityEntriesAction } from "@/server/actions/stability.actions";
 import {
   initialManualEntryActionState,
   type ManualEntryActionState,
 } from "@/server/actions/manual-entry-action-state";
-import { ErrorMessage, FieldError, SuccessMessage } from "@/components/ui";
+import { ErrorMessage, FieldError } from "@/components/ui";
+import { ManualEntrySuccessPanel } from "../../ManualEntrySuccessPanel";
 import type { StabilityFormView } from "@/server/services/stability-entry.service";
 
 function SaveButton({ label }: { label: string }) {
@@ -45,20 +45,12 @@ export function StabilityEntryForm({
 
   if (state.ok && state.saved) {
     return (
-      <div className="space-y-3">
-        <SuccessMessage>Datos de Guardian de la Estabilidad guardados correctamente.</SuccessMessage>
-        <div className="flex flex-wrap gap-4 text-sm">
-          <Link href={comprobarHref} className="underline hover:text-slate-900">
-            Ir a Comprobar
-          </Link>
-          <Link href={introducirHref} className="underline hover:text-slate-900">
-            Volver a introducir datos
-          </Link>
-          <Link href={backHref} className="underline hover:text-slate-900">
-            Volver a las cargas de la semana
-          </Link>
-        </div>
-      </div>
+      <ManualEntrySuccessPanel
+        message="Datos de Guardian de la Estabilidad guardados correctamente."
+        introducirHref={introducirHref}
+        comprobarHref={comprobarHref}
+        backHref={backHref}
+      />
     );
   }
 

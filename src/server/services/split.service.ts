@@ -3,6 +3,7 @@ import { DomainError } from "@/lib/errors";
 import { generateSplitWeeks, parseCalendarDate } from "@/lib/dates";
 import type { CreateSplitInput, UpdateSplitDraftInput } from "@/server/validation/split";
 import { countActiveKpiConfigs, createDefaultKpiConfigs } from "@/server/services/kpi.service";
+import { createDefaultPositionPointRules } from "@/server/services/position-points.service";
 
 type Db = PrismaClient | Prisma.TransactionClient;
 
@@ -39,6 +40,7 @@ export async function createSplitWithWeeks(db: PrismaClient, input: CreateSplitI
     });
 
     await createDefaultKpiConfigs(tx, split.id);
+    await createDefaultPositionPointRules(tx, split.id);
 
     return split;
   });

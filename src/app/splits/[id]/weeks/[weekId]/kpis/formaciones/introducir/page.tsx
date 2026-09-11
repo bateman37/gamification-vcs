@@ -26,7 +26,7 @@ export default async function ApprenticeEntryPage({ params }: { params: { id: st
           {formatCalendarDate(week.endDate)})
         </p>
         <p className="mt-2 text-sm text-slate-600">
-          Formaciones completadas. El valor <strong>0</strong> es valido; no puede superar el maximo configurado
+          Formaciones completadas. El valor <strong>0</strong> es válido; no puede superar el máximo configurado
           para el split.
         </p>
         <Link

@@ -208,6 +208,16 @@ un participante **y** al menos un KPI activo. Esta regla se protege en el
 servicio de dominio (`activateSplit`, en
 `src/server/services/split.service.ts`), no solo en la interfaz.
 
+## Puntos por posicion semanal: configuracion aparte, no un KPI
+
+Desde `BUGFIX-1 / UX-SPLIT-1` (`0.5.1`), cada split tiene ademas una
+configuracion de "Puntos por posicion semanal" (`SplitPositionPointRule`),
+con los quince valores de posicion `1..15` que se usaran cuando exista la
+clasificacion semanal (`MVP-1C`). No es un KPI: no aparece en el catalogo
+cerrado de esta pagina, no se guarda en `SplitKpiConfig` y no cuenta como
+"KPI cargado" en el calendario de semanas. Referencia completa:
+[`docs/POSITION_POINTS_CONFIGURATION.md`](POSITION_POINTS_CONFIGURATION.md).
+
 ## Ejemplo: dos splits con configuraciones distintas (datos ficticios)
 
 **Split "Temporada de prueba A"**: Cazador de soluciones activo, maximo
