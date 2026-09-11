@@ -1,4 +1,4 @@
-# Modelo de datos — MVP-1A a MVP-1C.3 / INPUT-1C
+# Modelo de datos — MVP-1A a `0.6.0` / MVP-1C
 
 Fuente de verdad: `prisma/schema.prisma` y las migraciones
 `prisma/migrations/20260910133815_init/migration.sql` (MVP-1A),
@@ -7,12 +7,16 @@ Fuente de verdad: `prisma/schema.prisma` y las migraciones
 `prisma/migrations/20260911082446_add_productivity_import/migration.sql`
 (IMPORT-1A / MVP-1C.1),
 `prisma/migrations/20260911100002_add_escalations_quality_voice_import/migration.sql`
-(MVP-1C.2 / IMPORT-1B) y
+(MVP-1C.2 / IMPORT-1B),
 `prisma/migrations/20260911111623_add_manual_kpi_entries/migration.sql`
-(MVP-1C.3 / INPUT-1C) y
+(MVP-1C.3 / INPUT-1C),
 `prisma/migrations/20260911140000_add_position_points/migration.sql`
-(`BUGFIX-1 / UX-SPLIT-1`). Este documento describe y explica ese esquema;
-en caso de discrepancia, el esquema real manda.
+(`BUGFIX-1 / UX-SPLIT-1`),
+`prisma/migrations/20260911154959_add_results_publication_and_auth/migration.sql`
+y
+`prisma/migrations/20260911155500_add_publication_check_constraints/migration.sql`
+(`0.6.0` / MVP-1C). Este documento describe y explica ese esquema; en caso
+de discrepancia, el esquema real manda.
 
 ## Diagrama entidad-relacion
 
@@ -46,6 +50,66 @@ erDiagram
     SplitParticipant ||--o{ StudentWeeklyEntry : "tiene fila en"
     SplitWeek ||--o{ ApprenticeWeeklyEntry : "tiene entrada"
     SplitParticipant ||--o{ ApprenticeWeeklyEntry : "tiene fila en"
+    Person ||--o| User : "tiene cuenta"
+    SplitWeek ||--o| WeekPublication : "tiene publicacion"
+    User ||--o{ WeekPublication : "publica"
+    WeekPublication ||--o{ PublishedParticipantWeeklyResult : "contiene"
+    Split ||--o{ PublishedParticipantWeeklyResult : "contiene (desnormalizado)"
+    SplitParticipant ||--o{ PublishedParticipantWeeklyResult : "tiene resultado en"
+    Person ||--o{ PublishedParticipantWeeklyResult : "tiene resultado en"
+    PublishedParticipantWeeklyResult ||--o{ PublishedKpiResult : "contiene"
+
+    User {
+        string id PK
+        string email "unico, normalizado"
+        string passwordHash "bcrypt, nunca en claro"
+        enum role "ADMIN, PARTICIPANT"
+        string personId FK "opcional, unico"
+        boolean isActive
+        boolean mustChangePassword
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    WeekPublication {
+        string id PK
+        string splitWeekId FK "unico: una publicacion por semana"
+        datetime publishedAt
+        string publishedByUserId FK "opcional"
+        datetime createdAt
+    }
+
+    PublishedParticipantWeeklyResult {
+        string id PK
+        string publicationId FK
+        string splitId FK "desnormalizado, para consultas por split"
+        string splitParticipantId FK
+        string personId FK
+        string fullNameSnapshot
+        string aliasSnapshot
+        enum levelSnapshot "N0, N1, N2"
+        decimal totalKpiPoints "puede ser negativo"
+        decimal applicableMaxPoints "opcional"
+        int weeklyRank "mayor o igual que 1"
+        int positionPoints "no negativo"
+        int rankedParticipantCount "mayor o igual que 1"
+        datetime createdAt
+    }
+
+    PublishedKpiResult {
+        string id PK
+        string participantWeeklyResultId FK
+        enum kpiCode "catalogo cerrado"
+        string kpiNameSnapshot
+        enum outcomeStatus "COMPUTED, VAC, NOT_APPLICABLE"
+        decimal rawPoints "opcional"
+        decimal finalPoints "opcional, puede ser negativo"
+        decimal baseMax "opcional, mayor que cero"
+        boolean capped
+        int kpiRank "opcional, mayor o igual que 1"
+        int rankedParticipantCount "opcional"
+        datetime createdAt
+    }
 
     Person {
         string id PK
@@ -503,6 +567,70 @@ Split 8 para cada split existente y creacion automatica de las quince
 reglas al crear un split nuevo, dentro de la misma transaccion que crea el
 split, sus semanas y su configuracion de KPI.
 
+### `User` (`0.6.0` / MVP-1C)
+
+Cuenta de acceso local (ver `docs/AUTHENTICATION.md`).
+
+- `id`: UUID, clave primaria.
+- `email`: normalizado, unico (`User_email_key`).
+- `passwordHash`: hash `bcrypt`; nunca se guarda la contrasena en claro ni
+  con cifrado reversible.
+- `role`: enum `UserRole` (`ADMIN`, `PARTICIPANT`).
+- `personId`: referencia opcional y **unica** a `Person`
+  (`User_personId_key`), `onDelete: Restrict`. Un `PARTICIPANT` debe
+  quedar vinculado uno a uno con una persona; un `ADMIN` puede no estarlo.
+- `isActive`: si la cuenta puede iniciar sesion.
+- `mustChangePassword`: obliga a cambiar la contrasena en el proximo
+  acceso (activado al crear la cuenta o al restablecer la contrasena
+  temporal).
+
+### `WeekPublication` (`0.6.0` / MVP-1C)
+
+Publicacion de una semana: operacion de dominio irreversible que crea una
+instantanea inmutable y bloquea cualquier modificacion posterior de las
+entradas de esa semana (ver `docs/RESULTS_PUBLICATION.md`).
+
+- `id`: UUID, clave primaria.
+- `splitWeekId`: referencia unica a `SplitWeek` (`onDelete: Restrict`): como
+  mucho una publicacion por semana.
+- `publishedAt`: fecha/hora de la publicacion.
+- `publishedByUserId`: referencia opcional a `User` (`onDelete: SetNull`),
+  para conservar el historial de quien publico cuando sea posible.
+
+`WeekPublication` es la unica fuente de verdad de que una semana esta
+publicada: no se mezcla con `SplitStatus.CLOSED`, que sigue cerrando el
+split completo. No existe "despublicar" ni "reabrir" en esta entrega.
+
+### `PublishedParticipantWeeklyResult` y `PublishedKpiResult` (`0.6.0` / MVP-1C)
+
+Instantanea congelada de un participante en una semana publicada: nombre,
+alias, nivel, totales, ranking, puntos por posicion y el detalle de cada
+KPI, tal como eran en el momento de publicar. Un cambio posterior en
+`SplitParticipant`, `Person`, `SplitKpiConfig` o `SplitPositionPointRule`
+nunca modifica estas filas.
+
+- `PublishedParticipantWeeklyResult.splitId` esta **desnormalizado** desde
+  `splitParticipant`/`publication.splitWeek.split` para poder consultar la
+  clasificacion de un split completo indexando directamente por `splitId`
+  (`PublishedParticipantWeeklyResult_splitId_idx`), sin recorrer esa
+  cadena de relaciones por cada fila (ver `docs/DECISIONS.md`).
+- `totalKpiPoints` y `PublishedKpiResult.finalPoints`/`rawPoints` son
+  `Decimal` y **pueden ser negativos** (sin restriccion de base de datos
+  en ese sentido); `weeklyRank`, `positionPoints`, `rankedParticipantCount`
+  y `kpiRank` tienen restricciones de no negatividad/minimo `1` donde
+  corresponde (`add_publication_check_constraints`).
+- `PublishedKpiResult.outcomeStatus`: enum `PublishedKpiOutcomeStatus`
+  (`COMPUTED`, `VAC`, `NOT_APPLICABLE`).
+- Indices unicos: un solo resultado por participante y publicacion
+  (`@@unique([publicationId, splitParticipantId])`) y un solo resultado por
+  KPI y participante publicado (`@@unique([participantWeeklyResultId,
+  kpiCode])`).
+- `onDelete: Cascade` desde `WeekPublication` hacia
+  `PublishedParticipantWeeklyResult`, y desde ahi hacia
+  `PublishedKpiResult`; `onDelete: Restrict` hacia `Split`,
+  `SplitParticipant` y `Person` (una fila publicada nunca desaparece por
+  borrar accidentalmente la entidad viva a la que hace referencia).
+
 ## Decisiones sobre fechas
 
 - Todas las fechas de negocio (`Split.startDate`, `SplitWeek.startDate`,
@@ -534,16 +662,18 @@ Estas entidades aparecen en el contexto funcional del producto pero
 **no** se han creado todavia. Se documentan para que una futura entrega no
 tenga que redescubrirlas:
 
-- Cierre irreversible o publicacion de una semana o split (`MVP-1C`).
-- Clasificacion general y su calculo acumulado (`MVP-1C`).
-- Vista individual del resultado de cada participante (`MVP-1C`).
-- Usuarios, autenticacion y sesiones.
+- Despublicar/reabrir una semana ya publicada, o cierre irreversible de un
+  split completo (`SplitStatus.CLOSED` ya existe, pero no se activa
+  automaticamente).
 - Facciones, profesiones, localizaciones, objetos, economia de creditos y
   renombre.
 
-Con `MVP-1C.3 / INPUT-1C`, los diez KPI de Split 8 tienen ya su propio
-origen de datos funcional: `ProductivityImport`/`ProductivityWeeklyRow`,
+Con `0.6.0` / MVP-1C, ademas de los diez origenes de datos de KPI
+(`ProductivityImport`/`ProductivityWeeklyRow`,
 `EscalationImport`/`EscalationWeeklyRow`, `QualityImport`/`QualityWeeklyRow`,
-`VoiceImport`/`VoiceWeeklyRow` y las cinco entradas manuales
-(`StabilityWeeklyEntry`, `ChronomancyWeeklyEntry`, `WriterWeeklyEntry`,
-`StudentWeeklyEntry`, `ApprenticeWeeklyEntry`).
+`VoiceImport`/`VoiceWeeklyRow` y las cinco entradas manuales), el modelo
+incluye autenticacion (`User`) y el ciclo completo de resultados
+(`WeekPublication`, `PublishedParticipantWeeklyResult`,
+`PublishedKpiResult`). La clasificacion general y la vista individual se
+calculan en servicio a partir de estas tablas publicadas, sin tablas
+propias adicionales (ver `docs/RESULTS_PUBLICATION.md`).

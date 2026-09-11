@@ -1,18 +1,52 @@
 import Link from "next/link";
+import { getCurrentSession } from "@/lib/session";
+import { LogoutButton } from "@/components/LogoutButton";
 
-export function Nav() {
+/**
+ * Navegacion superior segun sesion (ver docs/AUTHENTICATION.md):
+ * administrador ve `Personas`, `Splits` y `Resultados`; participante solo
+ * ve `Resultados`; sin sesion, solo se muestra el enlace a `Login`. La
+ * decision real de acceso vive en el middleware y en cada pagina: esta
+ * navegacion solo refleja lo que ya es cierto en servidor.
+ */
+export async function Nav() {
+  const session = await getCurrentSession();
+
   return (
     <header className="border-b border-slate-200 bg-white">
-      <div className="mx-auto flex max-w-screen-2xl items-center gap-6 px-4 py-3 sm:px-6 lg:px-8">
+      <div className="mx-auto flex max-w-screen-2xl flex-wrap items-center gap-4 px-4 py-3 sm:px-6 lg:px-8">
         <span className="text-lg font-semibold text-slate-800">Gamification VCS</span>
-        <nav className="flex gap-4 text-sm font-medium text-slate-600">
-          <Link href="/personas" className="hover:text-slate-900">
-            Personas
-          </Link>
-          <Link href="/splits" className="hover:text-slate-900">
-            Splits
-          </Link>
+        <nav className="flex flex-wrap gap-4 text-sm font-medium text-slate-600">
+          {session?.user.role === "ADMIN" && (
+            <>
+              <Link href="/personas" className="hover:text-slate-900">
+                Personas
+              </Link>
+              <Link href="/splits" className="hover:text-slate-900">
+                Splits
+              </Link>
+            </>
+          )}
+          {session?.user && (
+            <Link href="/resultados" className="hover:text-slate-900">
+              Resultados
+            </Link>
+          )}
         </nav>
+        <div className="ml-auto flex items-center gap-4 text-sm">
+          {session?.user ? (
+            <>
+              <Link href="/cuenta/cambiar-contrasena" className="text-slate-600 hover:text-slate-900">
+                Mi cuenta
+              </Link>
+              <LogoutButton />
+            </>
+          ) : (
+            <Link href="/login" className="text-slate-600 hover:text-slate-900">
+              Login
+            </Link>
+          )}
+        </div>
       </div>
     </header>
   );

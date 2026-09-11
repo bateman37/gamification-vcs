@@ -154,21 +154,44 @@ satisfactorias.
 
 ## MVP-1C — Resultados agregados, publicacion y clasificacion
 
-**Estado: pendiente.**
+**Estado: completado.**
 
-- Apertura y cierre formal de una semana o split (mas alla de las cargas
-  ya implementadas de los diez KPI, que no incluyen publicacion).
-- Panel de administracion para revisar los resultados antes de
-  publicarlos.
-- Vista individual del resultado de cada participante.
-- Clasificacion general acumulada, basada en los puntos KPI (sin capas de
-  juego adicionales todavia).
+- Bugfixes previos: Guardian de la Estabilidad y Cronomagia laboral
+  aceptan ya un campo vacio como `0`, igual que los otros tres KPI
+  manuales (ver `docs/DECISIONS.md`).
+- Motor agregado de resultados semanales (`weekly-results.service.ts`),
+  que reutiliza los resolvers existentes de `src/domain/kpis/*` sin
+  duplicar formulas, con tres estados funcionales (`COMPUTED`, `VAC`,
+  `NOT_APPLICABLE`), ranking de competicion semanal y por KPI, y puntos
+  por posicion leidos de `SplitPositionPointRule`.
+- Previsualizacion en vivo (`/splits/[id]/weeks/[weekId]/resultados`) con
+  tabla, mapa de calor accesible por porcentaje del maximo y boton
+  `Publicar semana` con confirmacion explicita.
+- Publicacion inmutable (`WeekPublication`, `PublishedParticipantWeeklyResult`,
+  `PublishedKpiResult`): recalcula en servidor dentro de una transaccion
+  serializable, bloquea cualquier modificacion posterior de las entradas
+  de esa semana (`assertWeekIsEditable`, aplicada a los nueve servicios de
+  escritura semanal) y no permite anadir un participante que empiece en
+  una semana ya publicada.
+- Autenticacion local (Auth.js/NextAuth con credenciales + `bcryptjs`),
+  con administrador y participante, cuentas vinculadas uno a uno con una
+  `Person`, cambio de contrasena obligatorio en el primer acceso y
+  proteccion de rutas en `src/middleware.ts`.
+- Vista individual `/resultados` (subvistas `Por split` e `Historico
+  general`, con filtros de ano/split/agrupacion), y clasificacion general
+  del split (resumen bajo el calendario, vista detallada para
+  administrador y version limitada dentro de `/resultados` para
+  participante).
+- Detalle completo en `docs/RESULTS_PUBLICATION.md` y
+  `docs/AUTHENTICATION.md`.
+- Fuera de alcance en esta entrega: despublicar/reabrir una semana,
+  exportacion Excel/PDF, medallas y cualquier capa de juego adicional
+  (facciones, profesiones, economia...).
 
 ## Capas posteriores (fuera de alcance por ahora)
 
 **Estado: pendiente**, documentadas unicamente para no perder contexto:
 
-- Autenticacion y cuentas (administrador y participante).
 - Facciones y clasificacion de faccion (basada en el promedio de los tres
   mejores renombres semanales del equipo).
 - Profesiones, con bonus sobre pares de KPI.

@@ -14,6 +14,8 @@ import { getStudentLoadStatus } from "@/server/services/student-entry.service";
 import { getApprenticeLoadStatus } from "@/server/services/apprentice-entry.service";
 import { KPI_CATALOG_LIST } from "@/domain/kpis/catalog";
 import { buildWeeklyLoadGroups, type LoadCoverageStatus, type LoadOrigin } from "@/domain/kpis/loadGroups";
+import { getWeeklyKpiLoadSummary } from "@/server/services/kpi-load-summary.service";
+import { requireAdminSession } from "@/lib/session";
 import { formatCalendarDate } from "@/lib/dates";
 import { StatusIndicator } from "./StatusIndicator";
 
@@ -22,10 +24,19 @@ export default async function WeeklyKpisPage({
 }: {
   params: { id: string; weekId: string };
 }) {
+  await requireAdminSession();
   const split = await getSplitById(prisma, params.id);
   if (!split) notFound();
   const week = await getSplitWeek(prisma, params.id, params.weekId);
   if (!week) notFound();
+
+  const [loadSummaryByWeek, publication] = await Promise.all([
+    getWeeklyKpiLoadSummary(prisma, split.id, [week]),
+    prisma.weekPublication.findUnique({ where: { splitWeekId: week.id } }),
+  ]);
+  const loadSummary = loadSummaryByWeek.get(week.id) ?? { loadedCount: 0, totalActiveCount: 0 };
+  const isWeekComplete = loadSummary.totalActiveCount > 0 && loadSummary.loadedCount === loadSummary.totalActiveCount;
+  const resultsHref = `/splits/${split.id}/weeks/${week.id}/resultados`;
 
   const kpiConfigs = await listKpiConfigsForSplit(prisma, split.id);
   const activeCatalogEntries = KPI_CATALOG_LIST.filter((entry) =>
@@ -86,6 +97,11 @@ export default async function WeeklyKpisPage({
         {split.status === "CLOSED" && (
           <p className="mt-2 text-sm text-slate-500">El split esta cerrado: solo puedes consultar los KPI.</p>
         )}
+        {publication && (
+          <p className="mt-2 text-sm font-medium text-sky-700">
+            Semana publicada: los datos estan bloqueados y no se pueden modificar.
+          </p>
+        )}
       </div>
 
       {activeCatalogEntries.length === 0 ? (
@@ -95,7 +111,7 @@ export default async function WeeklyKpisPage({
       ) : (
         <ul className="space-y-3">
           {groups.map((group) => {
-            const canLoad = group.implemented && split.status === "ACTIVE";
+            const canLoad = group.implemented && split.status === "ACTIVE" && !publication;
             const canCheck = group.implemented && group.status !== "PENDING";
             const loadAction = group.mode === "MANUAL" ? "introducir" : "cargar";
             const loadLabel = group.mode === "MANUAL" ? "Introducir datos" : "Cargar";
@@ -164,6 +180,40 @@ export default async function WeeklyKpisPage({
             );
           })}
         </ul>
+      )}
+
+      {activeCatalogEntries.length > 0 && (
+        <section className="rounded-lg border border-slate-200 bg-white p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm font-medium text-slate-700">
+              KPI cargados: {loadSummary.loadedCount}/{loadSummary.totalActiveCount}
+            </p>
+            {publication ? (
+              <div className="flex items-center gap-2">
+                <span className="rounded-full bg-sky-100 px-2 py-0.5 text-xs font-medium text-sky-800">Semana publicada</span>
+                <Link href={resultsHref} className="text-sm font-medium text-slate-700 underline hover:text-slate-900">
+                  Ver resultados
+                </Link>
+              </div>
+            ) : isWeekComplete ? (
+              <Link
+                href={resultsHref}
+                className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700"
+              >
+                Ver resultados de la semana
+              </Link>
+            ) : (
+              <div className="text-right">
+                <button type="button" disabled className="rounded-md bg-slate-200 px-4 py-2 text-sm font-medium text-slate-400">
+                  Ver resultados de la semana
+                </button>
+                <p className="mt-1 text-xs text-slate-500">
+                  Completa los {loadSummary.totalActiveCount} KPI activos para poder ver los resultados.
+                </p>
+              </div>
+            )}
+          </div>
+        </section>
       )}
     </div>
   );

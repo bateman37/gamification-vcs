@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import type { ParticipantLevel, PrismaClient } from "@prisma/client";
 import { DomainError } from "@/lib/errors";
-import { loadWeekContext, assertSplitAcceptsLoads } from "@/server/services/shared/week-context";
+import { loadWeekContext, assertSplitAcceptsLoads, assertWeekIsEditable } from "@/server/services/shared/week-context";
 import { listApplicableParticipantsForWeek } from "@/server/services/participant.service";
 import { listKpiConfigsForSplit } from "@/server/services/kpi.service";
 import { getProductivityUpdatesByParticipant } from "@/server/services/productivity-import.service";
@@ -160,6 +160,7 @@ export async function confirmEscalationImport(
 ): Promise<void> {
   const { split, weekId: resolvedWeekId, weekSequenceNumber } = await loadWeekContext(db, splitId, weekId);
   assertSplitAcceptsLoads(split, "Escalados");
+  await assertWeekIsEditable(db, resolvedWeekId);
 
   const [readResult, applicableParticipants] = await Promise.all([
     readEscalationWorkbook(file.buffer),

@@ -1,11 +1,18 @@
 import { prisma } from "@/lib/prisma";
 import { listPersonsWithParticipationCount } from "@/server/services/person.service";
+import { listPersonsWithAccount } from "@/server/services/auth.service";
+import { requireAdminSession } from "@/lib/session";
 import { EmptyState } from "@/components/ui";
 import { PersonCreateForm } from "./PersonCreateForm";
 import { PersonEditRow } from "./PersonEditRow";
 
 export default async function PersonasPage() {
-  const people = await listPersonsWithParticipationCount(prisma);
+  await requireAdminSession();
+  const [people, peopleWithAccount] = await Promise.all([
+    listPersonsWithParticipationCount(prisma),
+    listPersonsWithAccount(prisma),
+  ]);
+  const accountByPersonId = new Map(peopleWithAccount.map((person) => [person.id, person.account]));
 
   return (
     <div className="space-y-6">
@@ -25,12 +32,13 @@ export default async function PersonasPage() {
               <th className="px-3 py-2 font-medium">Nombre</th>
               <th className="px-3 py-2 font-medium">Correo</th>
               <th className="px-3 py-2 text-center font-medium">Splits</th>
+              <th className="px-3 py-2 font-medium">Cuenta</th>
               <th className="px-3 py-2" />
             </tr>
           </thead>
           <tbody>
             {people.map((person) => (
-              <PersonEditRow key={person.id} person={person} />
+              <PersonEditRow key={person.id} person={person} account={accountByPersonId.get(person.id) ?? null} />
             ))}
           </tbody>
         </table>

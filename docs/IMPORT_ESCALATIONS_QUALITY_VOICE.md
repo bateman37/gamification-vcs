@@ -283,6 +283,18 @@ esta cobertura: se reserva para la dependencia de Domador (ver arriba).
 | Excel con una persona ajena al split | `Ignorado` en previsualizacion; no se persiste |
 | Nombre que coincide con mas de un participante aplicable | `Ambiguo`; bloquea confirmacion |
 
+Esta tabla describe los estados de `resolveEscalationTamerOutcome` (sin
+cambios en esta entrega). El motor agregado de resultados semanales
+(`0.6.0` / MVP-1C, ver `docs/RESULTS_PUBLICATION.md`) interpreta
+"Actualizaciones es 0" como `COMPUTED` con ratio `0` y "Falta
+Productividad" como `VAC` que **bloquea la publicacion** hasta resolverse;
+estas pantallas de `Comprobar`/previsualizacion de carga no cambian.
+
+**Semana publicada (`0.6.0` / MVP-1C):** confirmar o sustituir una carga de
+Escalados, Calidad o Llamadas se rechaza en servidor
+(`assertWeekIsEditable`) si la semana ya tiene una publicacion, aunque el
+split siga `ACTIVE`; analizar y `Comprobar` siguen disponibles.
+
 ## Recorrido de prueba manual
 
 Con la migracion aplicada y la aplicacion en marcha, en un split `ACTIVE`

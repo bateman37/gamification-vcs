@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { Nav } from "@/components/Nav";
+import { Providers } from "./providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -12,8 +13,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="es">
       <body>
-        <Nav />
-        <main className="mx-auto max-w-screen-2xl px-4 py-8 sm:px-6 lg:px-8">{children}</main>
+        <Providers>
+          <Nav />
+          <main className="mx-auto max-w-screen-2xl px-4 py-8 sm:px-6 lg:px-8">{children}</main>
+        </Providers>
       </body>
     </html>
   );

@@ -17,7 +17,9 @@ function formatOutcome(outcome: WorkChronomancyOutcomeView | null): string {
 }
 
 function formatOccupancy(outcome: WorkChronomancyOutcomeView | null): string {
-  if (!outcome || outcome.status !== "computed" || outcome.occupancy === undefined) return "-";
+  if (!outcome) return "-";
+  if (outcome.status === "vac") return "0 %";
+  if (outcome.status !== "computed" || outcome.occupancy === undefined) return "-";
   return `${formatPoints(outcome.occupancy * 100)} %`;
 }
 

@@ -1,5 +1,5 @@
 import type { ParticipantLevel, PrismaClient } from "@prisma/client";
-import { loadWeekContext } from "@/server/services/shared/week-context";
+import { loadWeekContext, assertWeekIsEditable } from "@/server/services/shared/week-context";
 import { assertSplitAcceptsManualEntries, computeManualEntryStatus } from "@/server/services/shared/manual-entries";
 import { listApplicableParticipantsForWeek } from "@/server/services/participant.service";
 import { listKpiConfigsForSplit } from "@/server/services/kpi.service";
@@ -60,6 +60,7 @@ export async function getStudentFormView(db: PrismaClient, splitId: string, week
 export async function saveStudentEntries(db: PrismaClient, splitId: string, weekId: string, formData: FormData): Promise<void> {
   const { split, weekId: resolvedWeekId, weekSequenceNumber } = await loadWeekContext(db, splitId, weekId);
   assertSplitAcceptsManualEntries(split, "Estudiante entusiasta");
+  await assertWeekIsEditable(db, resolvedWeekId);
 
   const participants = await listApplicableParticipantsForWeek(db, splitId, weekSequenceNumber);
 

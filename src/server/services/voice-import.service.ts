@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import type { ParticipantLevel, Prisma, PrismaClient } from "@prisma/client";
 import { DomainError } from "@/lib/errors";
-import { loadWeekContext, assertSplitAcceptsLoads } from "@/server/services/shared/week-context";
+import { loadWeekContext, assertSplitAcceptsLoads, assertWeekIsEditable } from "@/server/services/shared/week-context";
 import { listApplicableParticipantsForWeek } from "@/server/services/participant.service";
 import { listKpiConfigsForSplit } from "@/server/services/kpi.service";
 import { toKpiConfigView, type KpiConfigView } from "@/domain/kpis/mapping";
@@ -164,6 +164,7 @@ export async function previewVoiceImport(db: PrismaClient, splitId: string, week
 export async function confirmVoiceImport(db: PrismaClient, splitId: string, weekId: string, file: VoiceFileInput): Promise<void> {
   const { split, weekId: resolvedWeekId, weekSequenceNumber } = await loadWeekContext(db, splitId, weekId);
   assertSplitAcceptsLoads(split, "Llamadas");
+  await assertWeekIsEditable(db, resolvedWeekId);
 
   const [readResult, applicableParticipants] = await Promise.all([
     readVoiceWorkbook(file.buffer),

@@ -37,6 +37,17 @@ export async function addParticipant(
     );
   }
 
+  const startWeek = await db.splitWeek.findUnique({
+    where: { splitId_sequenceNumber: { splitId, sequenceNumber: input.startWeekSequenceNumber } },
+    include: { publication: true },
+  });
+  if (startWeek?.publication) {
+    throw new DomainError(
+      "No se puede anadir un participante con semana inicial en una semana ya publicada. Elige una semana futura no publicada.",
+      "startWeekSequenceNumber",
+    );
+  }
+
   const aliasNormalized = normalizeAlias(input.alias);
 
   try {

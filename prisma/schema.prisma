@@ -48,7 +48,36 @@ model Person {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  participations SplitParticipant[]
+  participations   SplitParticipant[]
+  user             User?
+  publishedResults PublishedParticipantWeeklyResult[]
+}
+
+enum UserRole {
+  ADMIN
+  PARTICIPANT
+}
+
+/// Cuenta de acceso local (`0.6.0` / MVP-1C, ver docs/AUTHENTICATION.md).
+/// Un administrador puede no estar vinculado a ninguna persona; un
+/// participante debe estar vinculado uno a uno con una `Person` para poder
+/// ver su propio detalle. La contrasena nunca se guarda en claro ni con
+/// cifrado reversible: solo su hash (bcrypt).
+model User {
+  id                 String   @id @default(uuid())
+  /// Correo normalizado (minusculas, sin espacios), usado para iniciar sesion.
+  email              String   @unique
+  passwordHash       String
+  role               UserRole
+  personId           String?  @unique
+  isActive           Boolean  @default(true)
+  /// Obliga a cambiar la contrasena temporal en el primer acceso.
+  mustChangePassword Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  person       Person?           @relation(fields: [personId], references: [id], onDelete: Restrict)
+  publications WeekPublication[]
 }
 
 /// Split: una edicion de la gamificacion periodica.
@@ -69,6 +98,7 @@ model Split {
   participants       SplitParticipant[]
   kpiConfigs         SplitKpiConfig[]
   positionPointRules SplitPositionPointRule[]
+  publishedResults   PublishedParticipantWeeklyResult[]
 }
 
 /// Semana de un split. La identidad funcional es splitId + sequenceNumber,
@@ -83,8 +113,8 @@ model SplitWeek {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  split                    Split               @relation(fields: [splitId], references: [id], onDelete: Cascade)
-  participantsStartingHere SplitParticipant[]  @relation("ParticipantStartWeek")
+  split                    Split                    @relation(fields: [splitId], references: [id], onDelete: Cascade)
+  participantsStartingHere SplitParticipant[]       @relation("ParticipantStartWeek")
   productivityImport       ProductivityImport?
   escalationImport         EscalationImport?
   qualityImport            QualityImport?
@@ -94,6 +124,7 @@ model SplitWeek {
   writerEntries            WriterWeeklyEntry[]
   studentEntries           StudentWeeklyEntry[]
   apprenticeEntries        ApprenticeWeeklyEntry[]
+  publication              WeekPublication?
 
   @@unique([splitId, sequenceNumber])
 }
@@ -101,35 +132,36 @@ model SplitWeek {
 /// Participante: relacion entre una persona y un split, con alias y nivel
 /// propios de ese split.
 model SplitParticipant {
-  id        String           @id @default(uuid())
-  splitId   String
-  personId  String
+  id                      String           @id @default(uuid())
+  splitId                 String
+  personId                String
   /// Alias tal como lo escribe el administrador.
-  alias     String
+  alias                   String
   /// Alias normalizado (minusculas, sin espacios exteriores colapsados)
   /// usado exclusivamente para garantizar unicidad dentro del split.
-  aliasNormalized String
-  level     ParticipantLevel
+  aliasNormalized         String
+  level                   ParticipantLevel
   /// Numero de semana (dentro de este split) desde la que participa.
   startWeekSequenceNumber Int
   /// Preparado para el futuro cierre de participacion. No se usa todavia.
   endWeekSequenceNumber   Int?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt               DateTime         @default(now())
+  updatedAt               DateTime         @updatedAt
 
   split     Split     @relation(fields: [splitId], references: [id], onDelete: Cascade)
   person    Person    @relation(fields: [personId], references: [id])
   startWeek SplitWeek @relation("ParticipantStartWeek", fields: [splitId, startWeekSequenceNumber], references: [splitId, sequenceNumber])
 
-  productivityRows ProductivityWeeklyRow[]
-  escalationRows   EscalationWeeklyRow[]
-  qualityRows      QualityWeeklyRow[]
-  voiceRows        VoiceWeeklyRow[]
-  stabilityEntries    StabilityWeeklyEntry[]
-  chronomancyEntries  ChronomancyWeeklyEntry[]
-  writerEntries       WriterWeeklyEntry[]
-  studentEntries      StudentWeeklyEntry[]
-  apprenticeEntries   ApprenticeWeeklyEntry[]
+  productivityRows   ProductivityWeeklyRow[]
+  escalationRows     EscalationWeeklyRow[]
+  qualityRows        QualityWeeklyRow[]
+  voiceRows          VoiceWeeklyRow[]
+  stabilityEntries   StabilityWeeklyEntry[]
+  chronomancyEntries ChronomancyWeeklyEntry[]
+  writerEntries      WriterWeeklyEntry[]
+  studentEntries     StudentWeeklyEntry[]
+  apprenticeEntries  ApprenticeWeeklyEntry[]
+  publishedResults   PublishedParticipantWeeklyResult[]
 
   // Una persona solo puede aparecer una vez en un mismo split.
   @@unique([splitId, personId])
@@ -142,12 +174,12 @@ model SplitParticipant {
 /// predeterminados del catalogo no modifica silenciosamente la
 /// configuracion de splits ya creados.
 model SplitKpiConfig {
-  id       String  @id @default(uuid())
-  splitId  String
-  kpiCode  KpiCode
-  isActive Boolean @default(false)
+  id           String   @id @default(uuid())
+  splitId      String
+  kpiCode      KpiCode
+  isActive     Boolean  @default(false)
   /// Maximo base del KPI. Siempre mayor que cero.
-  baseMax  Decimal @db.Decimal(12, 4)
+  baseMax      Decimal  @db.Decimal(12, 4)
   /// Multiplicador aplicado a participantes de nivel N0. `null` significa
   /// que el nivel no es aplicable para este KPI, no que el multiplicador
   /// sea cero.
@@ -158,9 +190,9 @@ model SplitKpiConfig {
   /// src/domain/kpis/catalog.ts). Nunca se acepta tal cual desde el
   /// navegador: se construye a partir de campos conocidos y se valida
   /// segun `kpiCode` antes de guardarse.
-  parameters Json
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  parameters   Json
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   split Split @relation(fields: [splitId], references: [id], onDelete: Cascade)
 
@@ -184,7 +216,7 @@ model ProductivityImport {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
-  splitWeek SplitWeek                @relation(fields: [splitWeekId], references: [id], onDelete: Cascade)
+  splitWeek SplitWeek               @relation(fields: [splitWeekId], references: [id], onDelete: Cascade)
   rows      ProductivityWeeklyRow[]
 }
 
@@ -193,22 +225,22 @@ model ProductivityImport {
 /// puntos de Cazador de soluciones y Explorador de datos no se guardan
 /// aqui, se calculan al consultar (ver docs/DECISIONS.md).
 model ProductivityWeeklyRow {
-  id                         String   @id @default(uuid())
-  productivityImportId       String
-  splitParticipantId         String
+  id                        String   @id @default(uuid())
+  productivityImportId      String
+  splitParticipantId        String
   /// Nombre tal como aparecia en la columna "Nombre del actualizador" del
   /// Excel, conservado para trazabilidad.
-  sourceAgentName            String
+  sourceAgentName           String
   /// Conservado para el futuro calculo de Domador de Escaladas.
-  updates                    Int
-  comments                   Int
-  publicComments             Int
-  internalComments           Int
-  ticketsUpdatedWithComment  Int
-  ticketsResolved            Int
-  ticketsCreated             Int
-  createdAt                  DateTime @default(now())
-  updatedAt                  DateTime @updatedAt
+  updates                   Int
+  comments                  Int
+  publicComments            Int
+  internalComments          Int
+  ticketsUpdatedWithComment Int
+  ticketsResolved           Int
+  ticketsCreated            Int
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
 
   productivityImport ProductivityImport @relation(fields: [productivityImportId], references: [id], onDelete: Cascade)
   // Restrict: una fila de productividad nunca debe desaparecer por borrar
@@ -234,7 +266,7 @@ model EscalationImport {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
-  splitWeek SplitWeek              @relation(fields: [splitWeekId], references: [id], onDelete: Cascade)
+  splitWeek SplitWeek             @relation(fields: [splitWeekId], references: [id], onDelete: Cascade)
   rows      EscalationWeeklyRow[]
 }
 
@@ -242,14 +274,14 @@ model EscalationImport {
 /// El numerador de Domador de Escaladas; el denominador (`updates`) se lee
 /// de `ProductivityWeeklyRow` de la misma semana, no se duplica aqui.
 model EscalationWeeklyRow {
-  id                  String   @id @default(uuid())
-  escalationImportId  String
-  splitParticipantId  String
+  id                 String   @id @default(uuid())
+  escalationImportId String
+  splitParticipantId String
   /// Nombre tal como aparecia en la columna "Nombre del actualizador".
-  sourceAgentName     String
-  groupReassignments  Int
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  sourceAgentName    String
+  groupReassignments Int
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   escalationImport EscalationImport @relation(fields: [escalationImportId], references: [id], onDelete: Cascade)
   splitParticipant SplitParticipant @relation(fields: [splitParticipantId], references: [id], onDelete: Restrict)
@@ -270,21 +302,21 @@ model QualityImport {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
-  splitWeek SplitWeek         @relation(fields: [splitWeekId], references: [id], onDelete: Cascade)
+  splitWeek SplitWeek          @relation(fields: [splitWeekId], references: [id], onDelete: Cascade)
   rows      QualityWeeklyRow[]
 }
 
 /// Fila de Calidad de un participante encontrado en la carga semanal.
 model QualityWeeklyRow {
-  id                       String   @id @default(uuid())
-  qualityImportId          String
-  splitParticipantId       String
+  id                      String   @id @default(uuid())
+  qualityImportId         String
+  splitParticipantId      String
   /// Nombre tal como aparecia en la columna "Nombre del agente asignado".
-  sourceAgentName          String
-  goodSatisfactionTickets  Int
-  badSatisfactionTickets   Int
-  createdAt                DateTime @default(now())
-  updatedAt                DateTime @updatedAt
+  sourceAgentName         String
+  goodSatisfactionTickets Int
+  badSatisfactionTickets  Int
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
 
   qualityImport    QualityImport    @relation(fields: [qualityImportId], references: [id], onDelete: Cascade)
   splitParticipant SplitParticipant @relation(fields: [splitParticipantId], references: [id], onDelete: Restrict)
@@ -305,7 +337,7 @@ model VoiceImport {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
-  splitWeek SplitWeek       @relation(fields: [splitWeekId], references: [id], onDelete: Cascade)
+  splitWeek SplitWeek        @relation(fields: [splitWeekId], references: [id], onDelete: Cascade)
   rows      VoiceWeeklyRow[]
 }
 
@@ -314,22 +346,22 @@ model VoiceImport {
 /// se conservan solo para trazabilidad (ver
 /// docs/IMPORT_ESCALATIONS_QUALITY_VOICE.md).
 model VoiceWeeklyRow {
-  id                     String   @id @default(uuid())
-  voiceImportId          String
-  splitParticipantId     String
+  id                       String   @id @default(uuid())
+  voiceImportId            String
+  splitParticipantId       String
   /// Nombre tal como aparecia en la columna "Agente del segmento - Nombre".
-  sourceAgentName        String
-  acceptedCallSegments   Int
-  rejectedCallSegments   Int
-  unattendedCallSegments Int
-  outboundCalls          Int
-  segmentDurationHours      Decimal @db.Decimal(14, 6)
-  segmentTalkTimeHours      Decimal @db.Decimal(14, 6)
-  segmentWrapUpTimeHours    Decimal @db.Decimal(14, 6)
-  segmentTalkTimeMinutes    Decimal @db.Decimal(14, 6)
-  segmentWrapUpTimeMinutes  Decimal @db.Decimal(14, 6)
-  createdAt              DateTime @default(now())
-  updatedAt              DateTime @updatedAt
+  sourceAgentName          String
+  acceptedCallSegments     Int
+  rejectedCallSegments     Int
+  unattendedCallSegments   Int
+  outboundCalls            Int
+  segmentDurationHours     Decimal  @db.Decimal(14, 6)
+  segmentTalkTimeHours     Decimal  @db.Decimal(14, 6)
+  segmentWrapUpTimeHours   Decimal  @db.Decimal(14, 6)
+  segmentTalkTimeMinutes   Decimal  @db.Decimal(14, 6)
+  segmentWrapUpTimeMinutes Decimal  @db.Decimal(14, 6)
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
 
   voiceImport      VoiceImport      @relation(fields: [voiceImportId], references: [id], onDelete: Cascade)
   splitParticipant SplitParticipant @relation(fields: [splitParticipantId], references: [id], onDelete: Restrict)
@@ -438,15 +470,102 @@ model SplitPositionPointRule {
 /// `SplitKpiConfig`) se valida en el servicio, no en la base de datos: el
 /// valor configurado puede cambiar despues de guardar una entrada.
 model ApprenticeWeeklyEntry {
-  id                  String   @id @default(uuid())
-  splitWeekId         String
-  splitParticipantId  String
-  completedTrainings  Int
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  id                 String   @id @default(uuid())
+  splitWeekId        String
+  splitParticipantId String
+  completedTrainings Int
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   splitWeek        SplitWeek        @relation(fields: [splitWeekId], references: [id], onDelete: Cascade)
   splitParticipant SplitParticipant @relation(fields: [splitParticipantId], references: [id], onDelete: Restrict)
 
   @@unique([splitWeekId, splitParticipantId])
+}
+
+enum PublishedKpiOutcomeStatus {
+  COMPUTED
+  VAC
+  NOT_APPLICABLE
+}
+
+/// Publicacion de una semana (`0.6.0` / MVP-1C, ver
+/// docs/RESULTS_PUBLICATION.md): operacion de dominio irreversible que crea
+/// una instantanea inmutable de los resultados y bloquea cualquier
+/// modificacion posterior de las entradas de esa semana. Es la unica fuente
+/// de verdad de que una semana esta publicada; no se mezcla con
+/// `SplitStatus.CLOSED`, que cierra el split completo. No existe
+/// despublicar, reabrir ni borrar una publicacion en esta entrega.
+model WeekPublication {
+  id                String   @id @default(uuid())
+  /// Como mucho una publicacion por semana.
+  splitWeekId       String   @unique
+  publishedAt       DateTime @default(now())
+  publishedByUserId String?
+  createdAt         DateTime @default(now())
+
+  splitWeek          SplitWeek                          @relation(fields: [splitWeekId], references: [id], onDelete: Restrict)
+  publishedByUser    User?                              @relation(fields: [publishedByUserId], references: [id])
+  participantResults PublishedParticipantWeeklyResult[]
+}
+
+/// Fila congelada de un participante en una semana publicada: nombre,
+/// alias, nivel, totales, ranking y puntos por posicion tal como eran en el
+/// momento de publicar. Un cambio posterior en `SplitParticipant`,
+/// `Person`, `SplitKpiConfig` o `SplitPositionPointRule` nunca modifica
+/// esta fila. `splitId` esta desnormalizado desde `splitParticipant` para
+/// poder consultar la clasificacion de un split con un numero acotado de
+/// consultas, sin recorrer `publication -> splitWeek -> split` por fila.
+model PublishedParticipantWeeklyResult {
+  id                     String           @id @default(uuid())
+  publicationId          String
+  splitId                String
+  splitParticipantId     String
+  personId               String
+  fullNameSnapshot       String
+  aliasSnapshot          String
+  levelSnapshot          ParticipantLevel
+  /// Suma de `finalPoints` de los KPI activos de la semana. Puede ser negativa.
+  totalKpiPoints         Decimal          @db.Decimal(14, 4)
+  /// Suma de `baseMax` de los KPI en estado `COMPUTED`. `null` si ninguno lo estuvo.
+  applicableMaxPoints    Decimal?         @db.Decimal(14, 4)
+  weeklyRank             Int
+  positionPoints         Int
+  /// Numero total de participantes que entraron en el ranking semanal (denominador de "x de n").
+  rankedParticipantCount Int
+  createdAt              DateTime         @default(now())
+
+  publication      WeekPublication      @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  split            Split                @relation(fields: [splitId], references: [id], onDelete: Restrict)
+  splitParticipant SplitParticipant     @relation(fields: [splitParticipantId], references: [id], onDelete: Restrict)
+  person           Person               @relation(fields: [personId], references: [id], onDelete: Restrict)
+  kpiResults       PublishedKpiResult[]
+
+  // Un solo resultado por participante y publicacion (equivale a una vez por semana, ya que la publicacion es unica por semana).
+  @@unique([publicationId, splitParticipantId])
+  @@index([personId])
+  @@index([splitId])
+  @@index([splitParticipantId])
+}
+
+/// Resultado congelado de un KPI para un participante publicado: estado
+/// funcional, puntos y ranking dentro de ese KPI tal como eran al publicar.
+model PublishedKpiResult {
+  id                        String                    @id @default(uuid())
+  participantWeeklyResultId String
+  kpiCode                   KpiCode
+  kpiNameSnapshot           String
+  outcomeStatus             PublishedKpiOutcomeStatus
+  rawPoints                 Decimal?                  @db.Decimal(14, 4)
+  finalPoints               Decimal?                  @db.Decimal(14, 4)
+  baseMax                   Decimal?                  @db.Decimal(14, 4)
+  capped                    Boolean                   @default(false)
+  kpiRank                   Int?
+  rankedParticipantCount    Int?
+  createdAt                 DateTime                  @default(now())
+
+  participantWeeklyResult PublishedParticipantWeeklyResult @relation(fields: [participantWeeklyResultId], references: [id], onDelete: Cascade)
+
+  // Un solo resultado por KPI y participante publicado.
+  @@unique([participantWeeklyResultId, kpiCode])
 }

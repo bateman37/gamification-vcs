@@ -12,9 +12,10 @@ resultados y clasificacion.
 configuracion**, **IMPORT-1A / MVP-1C.1 — Carga semanal de
 Productividad**, **MVP-1C.2 / IMPORT-1B — Carga semanal de Escalados,
 Calidad y Llamadas**, **MVP-1C.3 / INPUT-1C — Cargas manuales y
-completitud semanal** y **BUGFIX-1 / UX-SPLIT-1 — Correcciones de
-formularios manuales y configuracion compacta del split** (ver
-`docs/ROADMAP.md`). Version actual: `0.5.1`.
+completitud semanal**, **BUGFIX-1 / UX-SPLIT-1 — Correcciones de
+formularios manuales y configuracion compacta del split** y **`0.6.0` /
+MVP-1C — Resultados, publicacion y clasificacion** (ver `docs/ROADMAP.md`).
+Version actual: `0.6.0`.
 
 Estas entregas implementan:
 
@@ -56,10 +57,21 @@ Estas entregas implementan:
   mejora responsive del detalle del split (`BUGFIX-1 / UX-SPLIT-1`, ver
   mas abajo).
 
-Todavia **no** incluye cierre irreversible ni publicacion de semana,
-clasificacion general, vista individual, autenticacion ni ninguna capa de
-juego adicional (facciones, profesiones, objetos, economia, renombre...).
-Consulta `docs/ROADMAP.md` para el plan completo.
+- Motor agregado de resultados semanales, previsualizacion en vivo con
+  mapa de calor, publicacion irreversible de una semana (instantanea
+  inmutable) y bloqueo real de las cargas/entradas de una semana
+  publicada.
+- Autenticacion local (administrador y participante), con gestion de
+  cuentas integrada en Personas y cambio de contrasena obligatorio en el
+  primer acceso.
+- Vista individual `/resultados` (por split e historico general) y
+  clasificacion general del split (resumen, vista detallada y version
+  limitada para participante).
+
+Todavia **no** incluye despublicar/reabrir una semana, exportacion
+Excel/PDF de resultados, ni ninguna capa de juego adicional (facciones,
+profesiones, objetos, economia, renombre...). Consulta `docs/ROADMAP.md`
+para el plan completo.
 
 ## Pila tecnologica
 
@@ -98,12 +110,17 @@ cp .env.example .env
 ```
 
 El archivo `.env` no debe subirse nunca al repositorio (ya esta excluido
-en `.gitignore`) y no debe contener contrasenas reales compartidas. La
-variable relevante es `DATABASE_URL`, con el formato:
+en `.gitignore`) y no debe contener contrasenas reales compartidas. Las
+variables relevantes son `DATABASE_URL`:
 
 ```
 postgresql://USUARIO:CONTRASENA@HOST:PUERTO/BASE_DE_DATOS?schema=public
 ```
+
+y `AUTH_SECRET` (`0.6.0` / MVP-1C, ver `docs/AUTHENTICATION.md`), el
+secreto que firma la sesion. Genera uno propio por entorno, por ejemplo con
+`npx auth secret` (PowerShell) u `openssl rand -base64 32`
+(Linux/macOS/WSL); no reutilices el valor de ejemplo del archivo.
 
 ## 2. Preparar PostgreSQL
 
@@ -161,13 +178,28 @@ modificas `prisma/schema.prisma`, usa en su lugar:
 npm run db:migrate
 ```
 
-## 5. Ejecutar la aplicacion en modo desarrollo
+## 5. Crear el primer administrador (`0.6.0` / MVP-1C)
+
+Con las migraciones ya aplicadas, crea la cuenta de administrador inicial
+(ver `docs/AUTHENTICATION.md`):
+
+```powershell
+$env:ADMIN_EMAIL = "admin@ejemplo.com"
+$env:ADMIN_PASSWORD = "una-contrasena-temporal-segura"
+npm run db:create-admin
+```
+
+No hace nada si ya existe algun administrador. La cuenta creada exige
+cambiar la contrasena en el primer acceso.
+
+## 6. Ejecutar la aplicacion en modo desarrollo
 
 ```powershell
 npm run dev
 ```
 
-La aplicacion queda disponible en <http://localhost:3000>.
+La aplicacion queda disponible en <http://localhost:3000>. Inicia sesion en
+`/login` con el administrador creado en el paso anterior.
 
 ## Comandos disponibles
 
@@ -183,6 +215,7 @@ La aplicacion queda disponible en <http://localhost:3000>.
 | `npm run db:migrate:deploy` | Aplica las migraciones existentes sin crear ninguna nueva (uso en un entorno limpio o en despliegue). |
 | `npm run db:generate` | Regenera el cliente de Prisma. |
 | `npm run db:studio` | Abre Prisma Studio para inspeccionar los datos. |
+| `npm run db:create-admin` | Crea el primer administrador a partir de `ADMIN_EMAIL`/`ADMIN_PASSWORD` (`0.6.0` / MVP-1C). |
 
 ## Ejecutar las pruebas
 
@@ -412,6 +445,62 @@ resultados, publicacion ni clasificacion:
    aproximadamente debe aparecer el indice lateral y los KPI en rejilla de
    dos columnas.
 
+## Resultados, publicacion, clasificacion y autenticacion (`0.6.0` / MVP-1C)
+
+Cierra el ciclo semanal completo. Detalle funcional exhaustivo en
+[`docs/RESULTS_PUBLICATION.md`](docs/RESULTS_PUBLICATION.md) y
+[`docs/AUTHENTICATION.md`](docs/AUTHENTICATION.md).
+
+- Cuando una semana esta `n/n` completa, la pantalla de cargas y el
+  calendario de semanas ofrecen `Ver resultados de la semana` /
+  `Mostrar resultados`, que abre una previsualizacion en vivo con tabla,
+  mapa de calor y leyenda.
+- `Publicar semana` (con confirmacion) crea una instantanea inmutable y
+  bloquea cualquier modificacion posterior de las cargas/entradas de esa
+  semana; una semana publicada se identifica con un badge y no admite
+  formularios editables.
+- Bajo el calendario de cada split aparece la `Clasificacion general`
+  (solo puntos por posicion de semanas publicadas), con enlace a la vista
+  detallada (`/splits/[id]/clasificacion`).
+- `Resultados` en la navegacion superior abre `/resultados`: el
+  administrador elige una persona; el participante ve siempre la suya,
+  con subvistas `Por split` e `Historico general`.
+- Autenticacion local con administrador y participante (ver seccion "5.
+  Crear el primer administrador" mas arriba).
+
+### Comprobar manualmente
+
+1. Crea el primer administrador (`npm run db:create-admin`) e inicia
+   sesion en `/login`; comprueba que te fuerza a `/cuenta/cambiar-contrasena`
+   antes de dejarte navegar.
+2. En un split activo, deja una semana con Guardian de la Estabilidad y
+   Cronomagia laboral activos; comprueba que un campo vacio de ambos se
+   guarda como `0` (Cronomagia ambos vacios: `VAC`, `0 %`).
+3. Completa todos los KPI activos de una semana y abre
+   `Ver resultados de la semana`: revisa la tabla, el heatmap y un
+   empate (dos participantes con el mismo total reciben la misma
+   posicion y los mismos puntos por posicion).
+4. Publica la semana con el boton de confirmacion; intenta modificar una
+   carga manual y una de Excel de esa semana y comprueba que ambas se
+   rechazan; cambia la configuracion de un KPI y verifica que la
+   instantanea publicada no cambia.
+5. Intenta anadir un participante con semana inicial en la semana recien
+   publicada (debe rechazarse) y con semana inicial en una semana futura
+   (debe aceptarse).
+6. Desde `/personas`, crea una cuenta de participante vinculada a una
+   persona con resultados publicados, con una contrasena temporal;
+   cierra sesion e inicia con esa cuenta, comprobando que te obliga a
+   cambiar la contrasena.
+7. Como participante, entra en `/resultados`: comprueba tu propio detalle
+   (`Por split` e `Historico general`) y la clasificacion limitada
+   (sin nombres reales ni KPI ajenos); intenta acceder a `/personas` o
+   `/splits` y comprueba que te redirige.
+8. Como administrador, entra en `/resultados`, selecciona distintas
+   personas, y revisa `/splits/[id]/clasificacion` con sus filtros.
+9. Reduce la ventana del navegador a unos 360 px en las tablas de
+   resultados y clasificacion: deben mantenerse legibles con scroll
+   horizontal contenido, sin desbordar la pagina.
+
 ## Documentos del proyecto
 
 - [`docs/PROJECT_CONTEXT.md`](docs/PROJECT_CONTEXT.md) — objetivo del
@@ -432,8 +521,13 @@ resultados, publicacion ni clasificacion:
   implicito de Domador de Escaladas, entrada manual de los cinco KPI
   restantes y el contador `KPI cargados` del calendario de semanas.
 - [`docs/POSITION_POINTS_CONFIGURATION.md`](docs/POSITION_POINTS_CONFIGURATION.md)
-  — configuracion "Puntos por posicion semanal" por split (`BUGFIX-1 /
-  UX-SPLIT-1`), todavia sin aplicar a ningun resultado.
+  — configuracion "Puntos por posicion semanal" por split, consumida al
+  publicar desde `0.6.0` / MVP-1C.
+- [`docs/RESULTS_PUBLICATION.md`](docs/RESULTS_PUBLICATION.md) — motor
+  agregado de resultados semanales, previsualizacion, publicacion
+  inmutable, vista individual y clasificacion general (`0.6.0` / MVP-1C).
+- [`docs/AUTHENTICATION.md`](docs/AUTHENTICATION.md) — autenticacion
+  local, ciclo de cuenta y matriz de permisos (`0.6.0` / MVP-1C).
 - [`docs/DECISIONS.md`](docs/DECISIONS.md) — decisiones tecnicas y de
   producto registradas.
 - [`CHANGELOG.md`](CHANGELOG.md) — historial de cambios.

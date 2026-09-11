@@ -1,28 +1,33 @@
-# Puntos por posicion semanal — BUGFIX-1 / UX-SPLIT-1 (0.5.1)
+# Puntos por posicion semanal — BUGFIX-1 / UX-SPLIT-1 (0.5.1), consumida desde 0.6.0 / MVP-1C
 
 Referencia unica de la configuracion "Puntos por posicion semanal" anadida
-en `0.5.1`. Pensada para que otra sesion futura no tenga que redescubrir
-esta tabla ni confundirla con un KPI o con una clasificacion ya
-implementada.
+en `0.5.1`. Desde `0.6.0` / MVP-1C, estos valores se **consumen** al
+publicar una semana; el detalle completo de como se usan vive en
+`docs/RESULTS_PUBLICATION.md`.
 
-## Que es y que no es todavia
+## Que es y que consume desde `0.6.0`
 
-Cada split tiene una tabla propia con los puntos que recibira cada
-posicion semanal (1 a 15) cuando exista la clasificacion semanal. Esta
-entrega **solo guarda esos quince valores**:
+Cada split tiene una tabla propia con los puntos que recibe cada posicion
+del ranking de competicion semanal (1 a 15). Desde `0.6.0` / MVP-1C:
 
-- No calcula ninguna posicion semanal (no hay motor de clasificacion
-  todavia, ver `docs/ROADMAP.md`).
-- No reparte ni asigna estos puntos a ningun participante.
-- No es un KPI: no aparece en `docs/KPI_CONFIGURATION.md`, no se mezcla
-  con `SplitKpiConfig` y no cuenta para el contador "KPI cargados" del
-  calendario de semanas.
-- No es una clasificacion, ranking, sistema de creditos, renombre ni
-  ninguna otra capa de juego.
-
-Cuando `MVP-1C` implemente la clasificacion semanal, ese motor leera esta
-tabla para saber cuantos puntos otorgar a cada posicion; hasta entonces,
-esta seccion es exclusivamente configuracion en espera.
+- El motor agregado de resultados semanales
+  (`src/server/services/weekly-results.service.ts`) lee esta tabla para
+  asignar `positionPoints` a cada participante segun su posicion en el
+  ranking semanal (`rankByScoreDescending`, ver
+  `docs/RESULTS_PUBLICATION.md`).
+- Si el ranking produce una posicion sin regla configurada (por ejemplo,
+  mas de quince participantes en una misma semana), la previsualizacion y
+  la publicacion se bloquean con un mensaje que indica exactamente que
+  posicion falta: nunca se concede `0` en silencio.
+- Al publicar, el `positionPoints` de cada participante queda **congelado**
+  en `PublishedParticipantWeeklyResult`: un cambio posterior de esta
+  configuracion nunca altera una semana ya publicada.
+- Sigue sin ser un KPI: no aparece en `docs/KPI_CONFIGURATION.md`, no se
+  mezcla con `SplitKpiConfig` y no cuenta para el contador "KPI cargados"
+  del calendario de semanas.
+- Editar esta configuracion sigue permitido para semanas futuras no
+  publicadas; la interfaz debe advertir que no recalcula publicaciones
+  existentes.
 
 ## Valores predeterminados: la tabla exacta de Split 8
 
