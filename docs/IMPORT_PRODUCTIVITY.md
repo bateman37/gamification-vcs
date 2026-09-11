@@ -85,14 +85,36 @@ se reunen en una sola respuesta, en vez de exigir corregirlos uno a uno.
 - El indicador de estado muestra **un solo** color y texto a la vez (nunca
   los tres juntos):
   - `Pendiente` (rojo): no existe `ProductivityImport` para esa semana.
-  - `Carga parcial` (ambar): existe la carga, pero falta al menos un
-    participante aplicable.
-  - `Cargado` (verde): existe la carga y todos los participantes
-    aplicables tienen fila persistida.
+  - `Cargado` (verde): existe una carga confirmada, **aunque falten
+    participantes aplicables**. Si falta alguno, se muestra ademas el
+    contador `n VAC` (ver "Correccion de cobertura" mas abajo).
   El estado se calcula siempre al consultar (no se guarda una copia que
-  pueda desincronizarse), y solo tiene en cuenta si existen filas por
-  participante aplicable, no si Cazador o Explorador esta activo
-  individualmente.
+  pueda desincronizarse), y solo tiene en cuenta si existe una carga
+  vigente, no si Cazador o Explorador esta activo individualmente. El
+  amarillo (`Carga parcial`) no se usa para Productividad: desde
+  `MVP-1C.2 / IMPORT-1B` queda reservado para Domador de Escaladas (ver
+  `docs/IMPORT_ESCALATIONS_QUALITY_VOICE.md`).
+
+### Correccion de cobertura (`MVP-1C.2 / IMPORT-1B`)
+
+`IMPORT-1A / MVP-1C.1` interpretaba una carga confirmada que no cubria a
+todos los participantes aplicables como `Carga parcial` (amarillo). Esa
+interpretacion era incorrecta: una persona puede no aparecer en el Excel
+por vacaciones, baja o simplemente por no haber tenido actividad esa
+semana, sin que eso invalide la carga. Desde esta entrega:
+
+- una carga confirmada es siempre **verde — `Cargado`**, aunque no incluya
+  a todos los participantes aplicables;
+- los participantes ausentes del fichero siguen como **`Sin dato`**: nunca
+  reciben cero de forma automatica;
+- junto al verde se muestra `n VAC` (`getProductivityLoadStatus` en
+  `src/server/services/productivity-import.service.ts`) cuando ese numero
+  es mayor que cero, calculado al consultar contra los participantes
+  aplicables de la semana;
+- `VAC` es solo una abreviatura visual de "participantes sin datos en este
+  fichero; posible vacaciones o baja" y no persiste ninguna ausencia real
+  (ver `docs/DECISIONS.md` y `docs/IMPORT_ESCALATIONS_QUALITY_VOICE.md`,
+  donde se aplica la misma regla a Calidad y Llamadas).
 - `Comprobar` esta deshabilitado en `Pendiente` y se habilita en `Carga
   parcial` o `Cargado`.
 
@@ -232,13 +254,14 @@ Estos tres estados se distinguen siempre, nunca se confunden con cero:
 
 ## Limitaciones de esta entrega
 
-- Solo Productividad (Cazador de soluciones y Explorador de datos) tiene
-  carga y comprobacion funcional. El resto de KPI activos se muestran como
-  `Pendiente` y deshabilitados.
+- Desde `MVP-1C.2 / IMPORT-1B`, Domador de Escaladas, Maestro Artesano y
+  Embajador de voz tambien tienen carga y comprobacion funcional (ver
+  `docs/IMPORT_ESCALATIONS_QUALITY_VOICE.md`). El resto de KPI activos
+  siguen mostrandose como `Pendiente` y deshabilitados.
 - No hay mapeo manual de nombres: una ambiguedad bloquea la confirmacion
   hasta corregir los datos de origen (split o Excel).
 - No hay historial de versiones de una misma carga (solo la vigente).
-- No se implementan Domador de Escaladas, clasificacion general, vista
-  individual, publicacion/cierre semanal, autenticacion, ni ningun otro
-  origen de carga (Calidad, Llamadas, Articulos, Formaciones...): siguen
-  pendientes en `docs/ROADMAP.md`.
+- No se implementan clasificacion general, vista individual,
+  publicacion/cierre semanal, autenticacion, ni el resto de origenes de
+  carga (Estabilidad, Cronomagia, Articulos, Dedicacion, Formaciones):
+  siguen pendientes en `docs/ROADMAP.md`.

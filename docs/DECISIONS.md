@@ -337,6 +337,85 @@ ejemplo, un participante que sencillamente no tiene fila esa semana frente
 a uno cuyo nivel no participa en ese KPI), un error observado como riesgo
 explicito en la auditoria de Split 8 (ver `docs/DISCOVERY-1-SPLIT-8.md`).
 
+## Cobertura de personas separada del estado de carga (correccion de `MVP-1C.1`)
+
+**Decision:** el color/texto de un grupo de carga (Productividad, Calidad,
+Llamadas) depende exclusivamente de si existe una carga confirmada para
+esa semana, no de cuantos participantes aplicables tiene una fila. Una
+carga confirmada es siempre verde (`Cargado`), aunque falten
+participantes.
+
+**Motivo:** `IMPORT-1A / MVP-1C.1` trataba la cobertura incompleta como
+`Carga parcial` (amarillo), lo cual es incorrecto: una persona puede faltar
+en el Excel por vacaciones, baja o simplemente por no haber tenido
+actividad esa semana, sin que eso invalide la carga ni la deje "a medias".
+Mezclar "cobertura de personas" con "estado de la carga" ocultaba
+informacion real detras de un color pensado para otra cosa.
+
+## `n VAC` como senal informativa calculada, nunca una ausencia persistida
+
+**Decision:** cuando una carga confirmada (Productividad, Escalados,
+Calidad o Llamadas) no cubre a todos los participantes aplicables, la
+interfaz muestra `n VAC` junto al verde, calculado siempre al consultar
+(participantes aplicables menos participantes con fila). No se guarda
+ningun campo de vacaciones, baja o ausencia, y `VAC` nunca afirma que la
+ausencia este confirmada: es solo una abreviatura visual con un `title`
+explicativo.
+
+**Motivo:** el encargo pide explicitamente no disenar todavia un estado
+real de vacaciones/bajas, pero tampoco ocultar que faltan datos de
+alguien. Un contador calculado, no persistido, informa sin comprometerse a
+una interpretacion que el sistema no puede confirmar por si solo.
+
+## El amarillo (`Carga parcial`) queda reservado para una dependencia de carga incompleta
+
+**Decision:** desde `MVP-1C.2 / IMPORT-1B`, el unico grupo que puede
+mostrar `Carga parcial` (amarillo) es Domador de Escaladas, cuando existe
+exactamente uno de sus dos origenes (Excel de Escalados o Productividad de
+la misma semana). Productividad, Calidad y Llamadas nunca usan ese color.
+
+**Motivo:** el amarillo debe significar siempre lo mismo en toda la
+pantalla semanal: una dependencia de carga realmente pendiente, no una
+cobertura de personas incompleta (ver decision anterior). Domador es el
+unico KPI de esta entrega que depende de dos archivos distintos para
+calcularse.
+
+## Domador de Escaladas se une a Productividad por semana y participante, nunca por archivo
+
+**Decision:** el calculo de Domador de Escaladas lee
+`ProductivityWeeklyRow.updates` de la misma `splitWeekId` y el mismo
+`splitParticipantId` que la fila de Escalados, en el momento de calcular
+(preview, confirmacion o comprobacion). Analizar o confirmar el Excel de
+Escalados nunca crea, modifica ni exige modificar Productividad.
+
+**Motivo:** es el comportamiento auditado en Split 8 (Escalados se
+comparaba contra las actualizaciones de Productividad de la misma
+persona y semana) y evita construir una copia redundante de `updates`
+dentro de `EscalationWeeklyRow`, que quedaria desincronizada si
+Productividad se sustituye despues.
+
+## Helpers compartidos de lectura y emparejamiento, sin motor generico
+
+**Decision:** los tres nuevos lectores de Excel (Escalados, Calidad,
+Llamadas) comparten el recorrido seguro de bajo nivel (limite de tamano,
+carga de la primera hoja, resolucion de encabezados, recorte de filas
+vacias finales, parseo de celdas numericas y decimales, deteccion de
+nombres duplicados) mediante `src/server/services/shared/xlsx.ts`, y los
+cuatro origenes de carga comparten el algoritmo de emparejamiento por
+nombre real mediante `src/server/services/shared/matching.ts`. El lector y
+el emparejamiento de Productividad, ya validados manualmente, no se han
+tocado: siguen con su propia copia equivalente para no arriesgar una
+regresion en codigo que ya funciona.
+
+**Motivo:** el encargo permite extraer helpers pequenos y puros cuando
+eliminan duplicacion real, pero prohibe explicitamente construir un motor
+generico de Excel o de reglas. La auditoria de los tres Excel confirmo que
+comparten exactamente esa estructura de bajo nivel (formato, cabecera en
+fila 1, orden libre, limites de tamano); factorizar solo esa capa, dejando
+las columnas, mensajes y reglas de negocio de cada origen en su propio
+lector y servicio, evita triplicar ~150 lineas casi identicas sin caer en
+un constructor generico de importaciones.
+
 ## Reglas criticas protegidas en servidor y en base de datos
 
 **Decision:** ademas de la validacion en los servicios de dominio
@@ -345,8 +424,10 @@ con restricciones de base de datos: unicidad de correo, unicidad de
 persona por split, unicidad de alias normalizado por split, semana
 inicial perteneciente al mismo split (clave foranea compuesta), lunes de
 inicio de split y de semana, domingo de fin de semana, rango de numero
-de semanas (1-52), y (desde `IMPORT-1A / MVP-1C.1`) que los siete conteos
-de `ProductivityWeeklyRow` y los contadores de `ProductivityImport` sean
+de semanas (1-52), y (desde `IMPORT-1A / MVP-1C.1`, ampliado en
+`MVP-1C.2 / IMPORT-1B`) que los conteos y metricas de tiempo de
+`ProductivityWeeklyRow`, `EscalationWeeklyRow`, `QualityWeeklyRow` y
+`VoiceWeeklyRow`, y los contadores de sus cuatro cabeceras de carga, sean
 siempre no negativos.
 
 **Motivo:** el encargo pide explicitamente proteger las reglas criticas

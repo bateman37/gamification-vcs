@@ -82,7 +82,7 @@ seccion se conserva tal cual se audito, como contexto historico.
 | Fuente historica | Forma de introduccion |
 |---|---|
 | Productividad | Excel; alimenta Cazador, Explorador y el denominador de Escalados |
-| Escalados | Dato manual, cruzado con Productividad |
+| Escalados | Excel, cruzado con Productividad (confirmado en `MVP-1C.2 / IMPORT-1B`; la hipotesis inicial de dato manual no se confirmo) |
 | Calidad | Excel |
 | Llamadas | Excel |
 | Estabilidad | Manual |
@@ -115,6 +115,30 @@ fija siempre la pantalla de carga, nunca el nombre del archivo ni su
 contenido. Referencia completa, con el contrato exacto de columnas, las
 reglas de validacion y las formulas ya implementadas:
 `docs/IMPORT_PRODUCTIVITY.md`.
+
+### Auditoria confirmada: Escalados, Calidad y Llamadas (`MVP-1C.2 / IMPORT-1B`)
+
+Tambien auditados y con su carga ya implementada. Mismo formato `.xlsx`,
+una hoja por libro (su nombre no es un contrato), encabezados en la fila 1
+(orden libre, columnas adicionales permitidas), una fila por agente, sin
+fecha ni semana en ninguno de los tres archivos:
+
+- **Escalados**: 18 filas de datos en la muestra, dos columnas
+  (`Nombre del actualizador`, `Reasignaciones de grupo`). El segundo
+  numerador del calculo de Domador de Escaladas, "tickets gestionados", no
+  viene en este Excel: se lee de `ProductivityWeeklyRow.updates` de la
+  misma semana y participante.
+- **Calidad**: 13 filas de datos en la muestra, tres columnas
+  (`Nombre del agente asignado`, `Tickets con satisfacción buena`,
+  `Tickets con satisfacción mala`).
+- **Llamadas**: 9 filas de datos en la muestra, diez columnas
+  (`Agente del segmento - Nombre` mas cuatro conteos que puntuan y cinco
+  metricas de tiempo conservadas solo para trazabilidad).
+
+Ninguno de los tres presentaba vacios, duplicados, negativos ni decimales
+donde se exigia un entero en la muestra auditada, pero los tres lectores
+igualmente rechazan esos casos (ver contrato completo, formulas y reglas
+de validacion en `docs/IMPORT_ESCALATIONS_QUALITY_VOICE.md`).
 
 ## 4. Flujo funcional completo (a construir por incrementos)
 
@@ -153,13 +177,14 @@ tambien `docs/ROADMAP.md`):
 
 ## 6. Cuestiones pendientes de los Excel de entrada
 
-Estas preguntas ya se resolvieron para Productividad (ver la auditoria
-confirmada arriba y `docs/IMPORT_PRODUCTIVITY.md`) y quedan explicitamente
-abiertas para el resto de fuentes hasta que el usuario aporte sus Excel
-originales en `IMPORT-1`:
+Estas preguntas ya se resolvieron para Productividad, Escalados, Calidad y
+Llamadas (ver las auditorias confirmadas arriba,
+`docs/IMPORT_PRODUCTIVITY.md` y `docs/IMPORT_ESCALATIONS_QUALITY_VOICE.md`)
+y quedan explicitamente abiertas para el resto de fuentes hasta que el
+usuario aporte sus Excel originales en `IMPORT-1`:
 
 - Estructura exacta de columnas y encabezados de cada fuente restante
-  (Calidad, Llamadas, Articulos, Formaciones).
+  (Articulos, Formaciones).
 - Como se identifica a cada persona en esos ficheros (nombre, alias,
   identificador propio del origen) y como se cruza con `Person` o con
   `SplitParticipant`.

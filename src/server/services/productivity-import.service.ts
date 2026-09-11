@@ -11,7 +11,7 @@ import {
   toProductivityKpiOutcomeView,
   type ProductivityKpiOutcomeView,
 } from "@/domain/kpis/productivity";
-import type { LoadGroupStatus } from "@/domain/kpis/loadGroups";
+import type { LoadCoverageStatus } from "@/domain/kpis/loadGroups";
 import {
   readProductivityWorkbook,
   type ProductivityRowError,
@@ -264,25 +264,41 @@ export async function confirmProductivityImport(
 
 /**
  * Estado unico y visible del grupo de Productividad para una semana:
- * `PENDING` si no existe carga, `PARTIAL` si existe pero falta algun
- * participante aplicable, `LOADED` si todos tienen fila persistida.
+ * `PENDING` si no existe carga confirmada, `LOADED` si existe, con
+ * `vacCount` de participantes aplicables sin fila en el fichero (ausencia
+ * que no se convierte en cero: puede deberse a vacaciones, baja o
+ * sencillamente falta de actividad, ver docs/DECISIONS.md). Una carga
+ * confirmada nunca queda en `PARTIAL`: ese color se reserva para una
+ * dependencia de carga realmente pendiente (Domador de Escaladas).
  */
 export async function getProductivityLoadStatus(
   db: PrismaClient,
   splitId: string,
   weekId: string,
   weekSequenceNumber: number,
-): Promise<LoadGroupStatus> {
+): Promise<LoadCoverageStatus> {
   const existing = await db.productivityImport.findUnique({
     where: { splitWeekId: weekId },
     include: { rows: true },
   });
-  if (!existing) return "PENDING";
+  if (!existing) return { status: "PENDING", vacCount: 0 };
 
   const applicableParticipants = await listApplicableParticipantsForWeek(db, splitId, weekSequenceNumber);
   const coveredParticipantIds = new Set(existing.rows.map((row) => row.splitParticipantId));
-  const allCovered = applicableParticipants.every((participant) => coveredParticipantIds.has(participant.id));
-  return allCovered ? "LOADED" : "PARTIAL";
+  const vacCount = applicableParticipants.filter((participant) => !coveredParticipantIds.has(participant.id)).length;
+  return { status: "LOADED", vacCount };
+}
+
+/**
+ * Mapa `splitParticipantId -> updates` de la carga de Productividad vigente
+ * de una semana. Usado por Domador de Escaladas (ver
+ * docs/IMPORT_ESCALATIONS_QUALITY_VOICE.md) como denominador; nunca crea ni
+ * modifica Productividad.
+ */
+export async function getProductivityUpdatesByParticipant(db: PrismaClient, weekId: string): Promise<Map<string, number>> {
+  const existing = await db.productivityImport.findUnique({ where: { splitWeekId: weekId }, include: { rows: true } });
+  if (!existing) return new Map();
+  return new Map(existing.rows.map((row) => [row.splitParticipantId, row.updates]));
 }
 
 export interface ProductivityCheckRow {

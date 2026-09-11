@@ -9,8 +9,9 @@ resultados y clasificacion.
 ## Estado actual
 
 **MVP-1A — Personas y creacion de splits**, **MVP-1B — KPI activos y
-configuracion** e **IMPORT-1A / MVP-1C.1 — Carga semanal de
-Productividad** (ver `docs/ROADMAP.md`).
+configuracion**, **IMPORT-1A / MVP-1C.1 — Carga semanal de
+Productividad** y **MVP-1C.2 / IMPORT-1B — Carga semanal de Escalados,
+Calidad y Llamadas** (ver `docs/ROADMAP.md`).
 
 Estas entregas implementan:
 
@@ -29,12 +30,18 @@ Estas entregas implementan:
   real, calculo administrativo de Cazador de soluciones y Explorador de
   datos, y sustitucion explicita de una carga anterior (ver
   `docs/IMPORT_PRODUCTIVITY.md`).
+- Carga semanal de los Excel de Escalados, Calidad y Llamadas, con calculo
+  administrativo de Domador de Escaladas (cruzado con Productividad de la
+  misma semana), Maestro Artesano y Embajador de voz. Cada carga confirmada
+  queda verde aunque falten participantes (`n VAC`); el amarillo queda
+  reservado para la dependencia de Domador (ver
+  `docs/IMPORT_ESCALATIONS_QUALITY_VOICE.md`).
 
-Todavia **no** incluye el resto de origenes de carga (Escalados, Calidad,
-Llamadas, Estabilidad, Cronomagia, Articulos, Dedicacion, Formaciones),
-clasificacion, vista individual, autenticacion ni ninguna capa de juego
-adicional (facciones, profesiones, objetos, economia, renombre...).
-Consulta `docs/ROADMAP.md` para el plan completo.
+Todavia **no** incluye el resto de origenes de carga (Estabilidad,
+Cronomagia, Articulos, Dedicacion, Formaciones), clasificacion, vista
+individual, autenticacion ni ninguna capa de juego adicional (facciones,
+profesiones, objetos, economia, renombre...). Consulta `docs/ROADMAP.md`
+para el plan completo.
 
 ## Pila tecnologica
 
@@ -237,6 +244,19 @@ de datos ya calculados. Detalle completo, contrato exacto del Excel y
 reglas de emparejamiento:
 [`docs/IMPORT_PRODUCTIVITY.md`](docs/IMPORT_PRODUCTIVITY.md).
 
+## Carga semanal de Escalados, Calidad y Llamadas (MVP-1C.2 / IMPORT-1B)
+
+En la misma pantalla semanal, tres grupos adicionales -- `Domador de
+Escaladas`, `Maestro Artesano` y `Embajador de voz` -- permiten cargar,
+analizar, confirmar y sustituir sus propios Excel (Escalados, Calidad y
+Llamadas respectivamente) y comprobar sus resultados calculados. Domador
+depende ademas de la Productividad ya cargada de la misma semana
+(`ProductivityWeeklyRow.updates`); si falta, la pantalla ofrece un enlace
+directo a cargarla, incluso si Cazador de soluciones y Explorador de datos
+estan inactivos. Detalle completo, contrato exacto de los tres Excel y
+reglas de calculo:
+[`docs/IMPORT_ESCALATIONS_QUALITY_VOICE.md`](docs/IMPORT_ESCALATIONS_QUALITY_VOICE.md).
+
 ## Comprobar la carga de Productividad manualmente
 
 Con la migracion aplicada (`npm run db:migrate:deploy`) y la aplicacion en
@@ -265,6 +285,31 @@ marcha (`npm run dev`):
 12. Comprueba que un split cerrado permite `Ver KPI` y `Comprobar`, pero
     no `Cargar`.
 
+## Comprobar la carga de Escalados, Calidad y Llamadas manualmente
+
+Con Domador de Escaladas, Maestro Artesano y Embajador de voz activos en un
+split activo, en la misma semana usada para Productividad:
+
+1. Antes de cargar nada, `Domador de Escaladas` debe verse en amarillo
+   (`Carga parcial`) si falta uno de sus dos origenes (Escalados o
+   Productividad) y en rojo (`Pendiente`) si faltan ambos.
+2. Carga Escalados (`Cargar`). Si Productividad de esa semana todavia no
+   existe, la previsualizacion debe mostrar `Falta Productividad` en vez
+   de puntos.
+3. Carga Productividad de esa semana (el enlace de la pantalla lo permite
+   aunque Cazador de soluciones y Explorador de datos esten inactivos).
+   Domador debe pasar a verde y mostrar los puntos calculados.
+4. Carga Calidad y Llamadas de la misma semana: Maestro Artesano y
+   Embajador de voz deben quedar en verde con sus puntos.
+5. Deja un participante aplicable sin fila en alguno de los tres ficheros:
+   el grupo correspondiente debe seguir en verde, con el contador `n VAC`.
+6. Sustituye cada origen una vez (`Sustituir carga`) y comprueba que los
+   otros dos, y Productividad, permanecen intactos.
+7. Comprueba un cero real, un participante `Sin dato`, un `No aplica` y un
+   caso `Actualizaciones es 0` en Domador.
+8. Cierra el split y verifica que `Comprobar` sigue disponible en los tres
+   grupos, pero `Cargar` queda deshabilitado.
+
 ## Documentos del proyecto
 
 - [`docs/PROJECT_CONTEXT.md`](docs/PROJECT_CONTEXT.md) — objetivo del
@@ -278,6 +323,9 @@ marcha (`npm run dev`):
 - [`docs/IMPORT_PRODUCTIVITY.md`](docs/IMPORT_PRODUCTIVITY.md) — carga
   semanal del Excel de Productividad y calculo de Cazador de soluciones y
   Explorador de datos.
+- [`docs/IMPORT_ESCALATIONS_QUALITY_VOICE.md`](docs/IMPORT_ESCALATIONS_QUALITY_VOICE.md)
+  — carga semanal de los Excel de Escalados, Calidad y Llamadas, y calculo
+  de Domador de Escaladas, Maestro Artesano y Embajador de voz.
 - [`docs/DECISIONS.md`](docs/DECISIONS.md) — decisiones tecnicas y de
   producto registradas.
 - [`CHANGELOG.md`](CHANGELOG.md) — historial de cambios.

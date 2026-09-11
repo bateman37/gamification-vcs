@@ -4,6 +4,81 @@ Formato inspirado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/)
 Este proyecto usa versionado `0.x` mientras se construye el nucleo
 funcional; la primera version publicada es `0.1.0`.
 
+## [0.4.0] - MVP-1C.2 / IMPORT-1B — Escaladas, Calidad y Llamadas
+
+### Anadido
+
+- Carga semanal de los Excel de **Escalados**, **Calidad** y **Llamadas**
+  en la misma pantalla de KPI de una semana, con el mismo recorrido de
+  Productividad (analizar sin guardar, confirmar con revalidacion en
+  servidor, sustitucion atomica e independiente por origen) y rutas
+  propias (`.../kpis/escalados`, `.../kpis/calidad`, `.../kpis/llamadas`).
+- Calculo administrativo, con funciones puras y aritmetica decimal, de
+  **Domador de Escaladas** (`ESCALATION_TAMER`, cruzando
+  `groupReassignments` del Excel de Escalados con
+  `ProductivityWeeklyRow.updates` de la misma semana y participante),
+  **Maestro Artesano** (`MASTER_CRAFTSMAN`) y **Embajador de voz**
+  (`VOICE_AMBASSADOR`, con las llamadas salientes sumadas siempre despues
+  del multiplicador de nivel). Los tres respetan el maximo base como techo
+  unico, sin suelo de cero, usando la configuracion ya existente de
+  `MVP-1B` sin cambiar sus valores predeterminados.
+- Nuevas entidades `EscalationImport`/`EscalationWeeklyRow`,
+  `QualityImport`/`QualityWeeklyRow` y `VoiceImport`/`VoiceWeeklyRow`
+  (migracion `add_escalations_quality_voice_import`), con la misma forma
+  que `ProductivityImport`/`ProductivityWeeklyRow`: una carga vigente por
+  origen y semana, sin guardar el binario del Excel, con restricciones de
+  base de datos para que todos los conteos y metricas de tiempo sean no
+  negativos. La migracion preserva integramente los datos existentes.
+- Dependencia visible de Domador de Escaladas: la pantalla semanal y su
+  `Comprobar` muestran por separado si Escalados y Productividad de esa
+  semana estan cargados, con un enlace directo para cargar Productividad
+  si falta, incluso cuando Cazador de soluciones y Explorador de datos
+  estan inactivos.
+- Helpers compartidos y puros (no un motor generico) para el recorrido
+  seguro de lectura de `.xlsx` (`src/server/services/shared/xlsx.ts`) y el
+  emparejamiento por nombre real (`src/server/services/shared/matching.ts`),
+  reutilizados por los tres nuevos origenes; el lector y el emparejamiento
+  de Productividad, ya validados manualmente, no se han tocado.
+- Documentacion: `docs/IMPORT_ESCALATIONS_QUALITY_VOICE.md` (referencia
+  principal), y actualizacion de `README.md`, `docs/ROADMAP.md`,
+  `docs/DATA_MODEL.md`, `docs/DECISIONS.md`, `docs/KPI_CONFIGURATION.md`,
+  `docs/DISCOVERY-1-SPLIT-8.md`, `docs/IMPORT_PRODUCTIVITY.md` y
+  `CLAUDE.md`.
+- Pruebas de servicio (Vitest) sobre las reglas criticas de esta entrega:
+  lectura de los tres formatos sinteticos con columnas reordenadas y una
+  columna extra; validaciones parametrizadas del lector de Escalados
+  (encabezado ausente, vacio, negativo, decimal donde se exige entero,
+  formula, nombre duplicado, cero conservado); validacion y persistencia
+  decimal de las metricas de tiempo de Llamadas con `Prisma.Decimal`;
+  calculos de los tres KPI (maximo aplicado, sin suelo de cero, orden de
+  llamadas salientes); union de Domador con Productividad por semana y
+  participante (dependencia ausente en ambos sentidos, denominador cero);
+  matriz de estados de Domador (rojo, amarillo, verde); confirmacion y
+  sustitucion atomica e independiente de cada origen conservando la carga
+  anterior ante un fallo; y restricciones de estado del split y la semana
+  para los tres origenes nuevos.
+
+### Corregido
+
+- **Estado de cobertura de Productividad (introducido en `0.3.0`):** una
+  carga confirmada de Productividad, Calidad o Llamadas ahora es siempre
+  verde (`Cargado`), aunque falten participantes aplicables; antes se
+  mostraba como `Carga parcial` (amarillo), lo cual sugeria incorrectamente
+  que la carga estaba incompleta. La ausencia de un participante se
+  expresa ahora con un contador informativo `n VAC` (nunca persistido, sin
+  afirmar vacaciones o baja reales). El amarillo queda reservado
+  exclusivamente para Domador de Escaladas, cuando falta uno de sus dos
+  origenes.
+
+### Fuera de alcance en esta entrega
+
+El resto de origenes de `IMPORT-1` (Estabilidad, Cronomagia, Articulos,
+Dedicacion, Formaciones), clasificacion general, vista individual,
+publicacion/cierre de semana, autenticacion, mapeo manual persistente de
+nombres, historial de versiones de una misma carga, estado real de
+vacaciones o bajas, motor generico de importaciones o de reglas, y
+actualizacion general de dependencias. Ver `docs/ROADMAP.md`.
+
 ## [0.3.0] - IMPORT-1A / MVP-1C.1 — Carga semanal de Productividad
 
 ### Anadido

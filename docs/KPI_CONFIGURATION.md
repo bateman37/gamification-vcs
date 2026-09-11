@@ -21,9 +21,19 @@ Cazador de soluciones (`SOLUTION_HUNTER`) y Explorador de datos
 (`DATA_EXPLORER`), ya estan implementados de verdad a partir de la carga
 semanal del Excel de Productividad. La implementacion (funciones puras,
 reglas de "No aplica"/"Sin dato" y la pantalla administrativa de carga y
-comprobacion) esta documentada en `docs/IMPORT_PRODUCTIVITY.md`. Los otros
-ocho KPI de este documento siguen siendo solo configuracion: su calculo
-sigue pendiente de `IMPORT-1` y `MVP-1C`.
+comprobacion) esta documentada en `docs/IMPORT_PRODUCTIVITY.md`.
+
+**Actualizacion (`MVP-1C.2 / IMPORT-1B`):** otros tres calculos, Domador
+de Escaladas (`ESCALATION_TAMER`), Maestro Artesano
+(`MASTER_CRAFTSMAN`) y Embajador de voz (`VOICE_AMBASSADOR`), tambien
+estan implementados de verdad a partir de las cargas semanales de
+Escalados, Calidad y Llamadas respectivamente. Domador cruza, ademas, la
+Productividad ya persistida de la misma semana y participante
+(`ProductivityWeeklyRow.updates`). Documentado en
+`docs/IMPORT_ESCALATIONS_QUALITY_VOICE.md`. Los cinco KPI restantes
+(Guardian de la Estabilidad, Cronomagia laboral, Redactor estrella,
+Estudiante entusiasta, Aprendiz experto) siguen siendo solo
+configuracion: su calculo sigue pendiente de `IMPORT-1` y `MVP-1C`.
 
 ## El catalogo cerrado
 
@@ -50,21 +60,25 @@ Estos son los valores predeterminados de Split 8, usados al crear la
 configuracion inicial de cada split. Cada split conserva su propia copia y
 puede modificarla sin afectar a los demas.
 
-## Forma fija de cada calculo (todavia no implementado)
+## Forma fija de cada calculo
 
-### Cazador de soluciones (`SOLUTION_HUNTER`)
+Cinco de los diez ya estan implementados de verdad (marcados abajo); los
+otros cinco describen la forma que tendra su futuro calculo, todavia sin
+implementar.
+
+### Cazador de soluciones (`SOLUTION_HUNTER`) — implementado
 
 `tickets resueltos x pointsPerResolvedTicket x multiplicador del nivel`
 
 Parametro: `pointsPerResolvedTicket` (predeterminado `1`).
 
-### Explorador de datos (`DATA_EXPLORER`)
+### Explorador de datos (`DATA_EXPLORER`) — implementado
 
 `tickets actualizados con comentario x pointsPerCommentedTicket x multiplicador del nivel`
 
 Parametro: `pointsPerCommentedTicket` (predeterminado `1`).
 
-### Embajador de voz (`VOICE_AMBASSADOR`)
+### Embajador de voz (`VOICE_AMBASSADOR`) — implementado
 
 `(aceptadas x acceptedWeight - rechazadas x rejectedPenalty - no atendidas x unattendedPenalty) x multiplicador del nivel + salientes x outboundPoints`
 
@@ -74,14 +88,14 @@ salientes (posicion fija en la formula).
 Parametros: `acceptedWeight`, `rejectedPenalty`, `unattendedPenalty`,
 `outboundPoints` (todos predeterminados a `1`).
 
-### Maestro Artesano (`MASTER_CRAFTSMAN`)
+### Maestro Artesano (`MASTER_CRAFTSMAN`) — implementado
 
 `(positivas x positiveWeight - negativas x negativePenalty) x scale x multiplicador del nivel`
 
 Parametros: `positiveWeight` (`1`), `negativePenalty` (`4`), `scale`
 (`10`).
 
-### Domador de Escaladas (`ESCALATION_TAMER`)
+### Domador de Escaladas (`ESCALATION_TAMER`) — implementado
 
 `(basePoints - (escalados / tickets gestionados) x ratioPenaltyFactor) x multiplicador del nivel`
 
