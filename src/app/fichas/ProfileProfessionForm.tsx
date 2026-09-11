@@ -64,7 +64,7 @@ export function ProfileProfessionForm({
       <div className="space-y-2">
         {profession ? <ProfessionDetails profession={profession} /> : <p className="text-sm text-slate-500">Sin profesion elegida.</p>}
         <p className="text-sm text-amber-700">
-          {locked ? "Profesion bloqueada desde la publicacion de la primera semana." : "El split esta cerrado: la ficha es de solo lectura."}
+          {locked ? "Profesión bloqueada desde la publicación de la primera semana." : "El split esta cerrado: la ficha es de solo lectura."}
         </p>
       </div>
     );

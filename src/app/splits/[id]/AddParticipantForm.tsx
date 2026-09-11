@@ -150,7 +150,7 @@ export function AddParticipantForm({
         {professions.length > 0 && (
           <div className="w-full sm:w-64">
             <label htmlFor="professionId" className="block text-sm font-medium text-slate-700">
-              {professionRequired ? "Profesion *" : "Profesion (opcional hasta publicar)"}
+              {professionRequired ? "Profesión *" : "Profesión (opcional hasta publicar)"}
             </label>
             <select
               id="professionId"

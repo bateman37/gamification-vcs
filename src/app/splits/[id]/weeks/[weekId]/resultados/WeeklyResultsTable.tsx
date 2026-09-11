@@ -50,9 +50,9 @@ export function formatProfessionBreakdown(cell: ResultKpiCell): string | null {
   if (!cell.professionApplied || cell.basePointsBeforeProfession === null || cell.professionBonusPoints === null) {
     return null;
   }
-  const name = cell.professionName ?? "profesion";
+  const name = cell.professionName ?? "profesión";
   return [
-    `Resultado tras maximo: ${formatPoints(cell.basePointsBeforeProfession)}`,
+    `Resultado tras máximo: ${formatPoints(cell.basePointsBeforeProfession)}`,
     `Bonus ${name} (+${PROFESSION_BONUS_PERCENT} %): +${formatPoints(cell.professionBonusPoints)}`,
     `Resultado final: ${formatPoints(cell.finalPoints ?? 0)}`,
   ].join(" | ");

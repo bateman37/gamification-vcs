@@ -1,4 +1,4 @@
-# Modelo de datos — MVP-1A a `0.6.0` / MVP-1C
+# Modelo de datos — MVP-1A a `0.8.0` / MVP-2B
 
 Fuente de verdad: `prisma/schema.prisma` y las migraciones
 `prisma/migrations/20260910133815_init/migration.sql` (MVP-1A),
@@ -16,7 +16,9 @@ Fuente de verdad: `prisma/schema.prisma` y las migraciones
 `prisma/migrations/20260911155500_add_publication_check_constraints/migration.sql`
 (`0.6.0` / MVP-1C) y
 `prisma/migrations/20260911205212_add_factions/migration.sql`
-(`0.7.0` / MVP-2A). Este documento describe y explica ese esquema; en caso
+(`0.7.0` / MVP-2A) y
+`prisma/migrations/20260911222334_add_professions_and_participant_profiles/migration.sql`
+(`0.8.0` / MVP-2B). Este documento describe y explica ese esquema; en caso
 de discrepancia, el esquema real manda.
 
 ## Diagrama entidad-relacion
@@ -31,6 +33,10 @@ erDiagram
     Split ||--o{ SplitFaction : "tiene"
     SplitFaction ||--o{ SplitParticipant : "agrupa"
     SplitFaction ||--o{ PublishedParticipantWeeklyResult : "tiene resultado en (snapshot)"
+    Split ||--o{ SplitProfession : "tiene"
+    SplitProfession ||--o{ SplitParticipant : "es profesion de"
+    SplitProfession ||--o{ PublishedParticipantWeeklyResult : "tiene resultado en (snapshot)"
+    SplitParticipant ||--o| SplitParticipantAvatar : "tiene avatar"
     SplitWeek ||--o{ SplitParticipant : "es semana inicial de"
     SplitWeek ||--o| ProductivityImport : "tiene carga vigente"
     ProductivityImport ||--o{ ProductivityWeeklyRow : "contiene"
@@ -100,6 +106,12 @@ erDiagram
         string factionId FK "opcional; null si el split no usa facciones o es anterior a 0.7.0"
         string factionNameSnapshot "opcional, congelado al publicar"
         string factionColorSnapshot "opcional, congelado al publicar"
+        string professionId FK "opcional; null si el split no usa profesiones o es anterior a 0.8.0"
+        string professionNameSnapshot "opcional, congelado al publicar"
+        enum professionKpiCodeA "opcional, congelado al publicar"
+        enum professionKpiCodeB "opcional, congelado al publicar"
+        int professionBonusPercent "opcional; siempre 20 cuando hay profesion"
+        boolean splitUsedProfessions "false en publicaciones anteriores a 0.8.0"
         datetime createdAt
     }
 
@@ -110,9 +122,13 @@ erDiagram
         string kpiNameSnapshot
         enum outcomeStatus "COMPUTED, VAC, NOT_APPLICABLE"
         decimal rawPoints "opcional"
-        decimal finalPoints "opcional, puede ser negativo"
+        decimal finalPoints "opcional, puede ser negativo; incluye el bonus desde 0.8.0"
         decimal baseMax "opcional, mayor que cero"
         boolean capped
+        decimal basePointsBeforeProfession "opcional; tras el maximo y antes del bonus"
+        decimal professionBonusPoints "opcional; puntos anadidos por la profesion"
+        boolean professionApplied "si el bonus se aplico realmente a este KPI"
+        string professionNameSnapshot "opcional, congelado al publicar"
         int kpiRank "opcional, mayor o igual que 1"
         int rankedParticipantCount "opcional"
         datetime createdAt
@@ -157,6 +173,31 @@ erDiagram
         int startWeekSequenceNumber "FK compuesta a SplitWeek"
         int endWeekSequenceNumber "opcional, sin usar todavia"
         string factionId FK "opcional, ver SplitFaction"
+        string professionId FK "opcional, ver SplitProfession"
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    SplitProfession {
+        string id PK
+        string splitId FK
+        string name
+        string nameNormalized "minusculas, sin espacios exteriores; unico por split"
+        enum kpiCodeA "catalogo cerrado; distinto de kpiCodeB"
+        enum kpiCodeB "catalogo cerrado"
+        boolean availableN0
+        boolean availableN1
+        boolean availableN2 "al menos uno de los tres es true"
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    SplitParticipantAvatar {
+        string splitParticipantId PK "clave primaria y unica"
+        bytes imageData "imagen ya procesada (WebP)"
+        string mimeType "MIME final real"
+        int byteSize "positivo; coincide con octet_length(imageData)"
+        string sha256 "version estable para cache/ETag"
         datetime createdAt
         datetime updatedAt
     }
@@ -419,6 +460,61 @@ participacion.
   migrar de forma segura splits existentes y splits que no usan facciones;
   los servicios exigen una asignacion completa antes de activar o publicar
   un split que ya tiene alguna faccion creada. Indice `SplitParticipant_factionId_idx`.
+- `professionId` (`0.8.0` / MVP-2B, ver `docs/PROFESSIONS_AND_PROFILES.md`):
+  referencia opcional a `SplitProfession` con `onDelete: Restrict` (una
+  profesion con participantes asignados nunca se borra fisicamente).
+  Nullable: `null` mientras el split no usa profesiones o mientras la
+  persona todavia no ha elegido antes de la primera publicacion. Una
+  persona tiene como mucho **una** profesion en cada split; la relacion
+  pertenece a la participacion, nunca a `Person`. Indice
+  `SplitParticipant_professionId_idx`.
+
+### `SplitProfession` (`0.8.0` / MVP-2B)
+
+Profesion de un split (ver `docs/PROFESSIONS_AND_PROFILES.md`). Es una capa
+opcional: un split sin ninguna profesion creada se comporta exactamente
+como en `0.7.0`.
+
+- `id`: UUID, clave primaria.
+- `splitId`: referencia a `Split` (borrado en cascada si se borra el split).
+- `name`, `nameNormalized` (minusculas, sin espacios exteriores, con
+  restriccion `SplitProfession_nameNormalized_not_blank_check`). Indice
+  unico `SplitProfession_splitId_nameNormalized_key`: unico dentro del
+  split, puede repetirse en otro split.
+- `kpiCodeA` / `kpiCodeB`: dos codigos del enum `KpiCode`, con la
+  restriccion de base de datos `SplitProfession_distinct_kpis_check` que
+  exige que sean **distintos**. No se guardan formulas, expresiones ni JSON
+  libre: solo dos codigos del catalogo cerrado.
+- `availableN0` / `availableN1` / `availableN2`: booleanos, con la
+  restriccion `SplitProfession_at_least_one_level_check` que exige que al
+  menos uno sea `true`.
+- El porcentaje del bonus **no** es una columna: es una constante unica y
+  tipada del dominio (`PROFESSION_BONUS_PERCENT`,
+  `src/domain/profession-bonus.ts`), siempre `20`.
+- No se borra fisicamente una profesion referenciada por
+  `SplitParticipant.professionId` ni por
+  `PublishedParticipantWeeklyResult.professionId` (`onDelete: Restrict`);
+  el servicio comprueba ademas explicitamente que no tenga participantes
+  asignados y que el split no tenga publicaciones.
+
+### `SplitParticipantAvatar` (`0.8.0` / MVP-2B)
+
+Avatar de una participacion de split. Entidad **uno-a-uno separada** a
+proposito, para no cargar los bytes en las consultas normales de
+participantes, fichas o resultados (ver `docs/PROFESSIONS_AND_PROFILES.md`,
+seccion 13).
+
+- `splitParticipantId`: clave primaria **y** unica, con `onDelete: Cascade`
+  desde `SplitParticipant` (el avatar no tiene sentido sin su ficha).
+- `imageData`: `Bytes` (`bytea`) con la imagen **ya procesada**: WebP,
+  maximo 512 px por lado, sin EXIF ni metadatos del original. El archivo
+  original subido nunca se guarda.
+- `mimeType`: MIME final real de `imageData` (siempre `image/webp` en esta
+  entrega).
+- `byteSize`: `Int`, con dos restricciones de base de datos que exigen que
+  sea positivo y que coincida con `octet_length("imageData")`.
+- `sha256`: hash de `imageData`, usado como version estable de cache
+  (`ETag`) y para construir la URL de la imagen sin cargar los bytes.
 
 ### `SplitFaction` (`0.7.0` / MVP-2A)
 
@@ -683,6 +779,24 @@ nunca modifica estas filas.
   No existe un "renombre" ni un total de faccion persistido: la
   clasificacion de facciones se calcula siempre al consultar a partir de
   estos snapshots y de `positionPoints` (`faction-classification.service.ts`).
+- `professionId`, `professionNameSnapshot`, `professionKpiCodeA`,
+  `professionKpiCodeB`, `professionBonusPercent` y `splitUsedProfessions`
+  (`0.8.0` / MVP-2B, ver `docs/PROFESSIONS_AND_PROFILES.md`): profesion del
+  participante congelada al publicar. Los cinco primeros son opcionales
+  (`null` cuando el split no usa profesiones o en publicaciones anteriores
+  a esta version, que nunca se completan retroactivamente);
+  `splitUsedProfessions` es `Boolean` con valor predeterminado `false` y
+  distingue "el split no usaba profesiones" de "publicacion anterior a
+  `0.8.0`". Restriccion
+  `PublishedParticipantWeeklyResult_professionBonusPercent_check`
+  (`NULL` o mayor que cero) e indice
+  `PublishedParticipantWeeklyResult_professionId_idx`.
+- `PublishedKpiResult.basePointsBeforeProfession`,
+  `professionBonusPoints`, `professionApplied` y `professionNameSnapshot`
+  (`0.8.0` / MVP-2B): desglose congelado del bonus de cada KPI.
+  `finalPoints` sigue siendo el valor definitivo y desde `0.8.0` ya incluye
+  el bonus; en publicaciones anteriores coincide con los puntos tras el
+  maximo base, porque entonces no existia ningun bonus.
 
 ## Decisiones sobre fechas
 
@@ -718,10 +832,11 @@ tenga que redescubrirlas:
 - Despublicar/reabrir una semana ya publicada, o cierre irreversible de un
   split completo (`SplitStatus.CLOSED` ya existe, pero no se activa
   automaticamente).
-- Profesiones, localizaciones, objetos y economia de creditos. Las
-  facciones se implementaron en `0.7.0` / MVP-2A (`SplitFaction`, ver
-  `docs/FACTIONS.md`); "renombre" no es una entidad propia, es
-  `positionPoints` ya existente.
+- Localizaciones, objetos y economia de creditos. Las facciones se
+  implementaron en `0.7.0` / MVP-2A (`SplitFaction`, ver
+  `docs/FACTIONS.md`) y las profesiones en `0.8.0` / MVP-2B
+  (`SplitProfession`, ver `docs/PROFESSIONS_AND_PROFILES.md`); "renombre"
+  no es una entidad propia, es `positionPoints` ya existente.
 
 Con `0.6.0` / MVP-1C, ademas de los diez origenes de datos de KPI
 (`ProductivityImport`/`ProductivityWeeklyRow`,
@@ -738,3 +853,11 @@ Con `0.7.0` / MVP-2A se anade `SplitFaction` y su relacion opcional desde
 La clasificacion de facciones tampoco anade tablas propias: se calcula en
 servicio a partir de estos snapshots y de `positionPoints` (ver
 `docs/FACTIONS.md`).
+
+Con `0.8.0` / MVP-2B se anaden `SplitProfession` (con su relacion opcional
+desde `SplitParticipant` y su snapshot en
+`PublishedParticipantWeeklyResult`), el desglose del bonus en
+`PublishedKpiResult` y `SplitParticipantAvatar`. El bonus no tiene tabla
+propia ni contador persistido: es una funcion pura aplicada en el momento
+de calcular la semana y congelada despues en la instantanea publicada (ver
+`docs/PROFESSIONS_AND_PROFILES.md`).

@@ -48,15 +48,31 @@ cuando se navega desde la interfaz:
   previsualizacion de resultados y la clasificacion detallada) exigen
   `role = ADMIN`; si un `PARTICIPANT` lo intenta, se redirige a
   `/resultados`;
-- `/resultados/*` y `/cuenta/*` son para cualquier usuario autenticado.
+- `/resultados/*`, `/fichas/*` (`0.8.0` / MVP-2B) y `/cuenta/*` son para
+  cualquier usuario autenticado.
 
 Dentro de paginas y acciones de servidor, `src/lib/session.ts`
 (`requireSession`, `requireAdminSession`) es la segunda capa de defensa: se
 llama explicitamente en cada pagina y accion sensible, sin depender solo
 del middleware. Ninguna pagina ni accion acepta un `personId` recibido del
-navegador para decidir que ve un participante: siempre se usa
+navegador para decidir que ve **o edita** un participante: siempre se usa
 `session.user.personId`, resuelto en servidor a partir del JWT (ver
-`docs/RESULTS_PUBLICATION.md`, seccion "Privacidad de `/resultados`").
+`docs/RESULTS_PUBLICATION.md`, seccion "Privacidad de `/resultados`", y
+`docs/PROFESSIONS_AND_PROFILES.md`, secciones 12 a 14).
+
+Desde `0.8.0` / MVP-2B, las Server Actions administrativas de participante
+y de profesion vuelven a exigir `requireAdminSession()` dentro de la propia
+accion, porque una Server Action es una ruta invocable directamente y no
+solo el destino de un formulario ya renderizado por una pagina protegida.
+Las operaciones de autoservicio de la ficha (`alias propio`, `profesion
+propia`, `avatar propio`) son operaciones separadas y de intencion minima:
+no pueden cambiar nivel, faccion, persona ni semana inicial.
+
+La ruta `GET /api/fichas/[splitParticipantId]/avatar` exige sesion y
+autoriza por ella: un `PARTICIPANT` solo puede leer la ficha vinculada a su
+propio `personId`, un `ADMIN` puede leer cualquiera, y un intento de leer
+una ficha ajena devuelve `404` igual que una ficha inexistente (no se
+revela si existe).
 
 ## Ciclo de cuenta
 
@@ -105,12 +121,21 @@ esta entrega: el administrador es quien fija la contrasena temporal.
 | Ver su propio detalle publicado | Si | Si |
 | Ver detalle privado de otro participante | Si | No |
 | Ver clasificacion limitada por alias | Si | Si |
+| Crear, editar o eliminar profesiones de un split | Si | No |
+| Asignar la profesion de un participante | Si | No |
+| Ver sus propias fichas (`/fichas`) | Si (si esta vinculado a una persona) | Si |
+| Ver o editar la ficha de otra persona | No | No |
+| Editar su propio alias por split | Si (su propia ficha) | Si |
+| Escoger su propia profesion (antes de publicar) | Si (su propia ficha) | Si |
+| Subir, reemplazar o eliminar su propio avatar | Si (su propia ficha) | Si |
+| Leer el avatar de otra persona | Si | No |
+| Gestionar el avatar de otra persona | No (fuera de alcance) | No |
 
 ## Navegacion segun sesion
 
-- **Administrador:** `Personas`, `Splits`, `Resultados`, gestion de
-  cuenta/sesion.
-- **Participante:** `Resultados`, gestion de cuenta/sesion.
+- **Administrador:** `Personas`, `Splits`, `Resultados`, `Fichas` (solo si
+  su cuenta esta vinculada a una persona), gestion de cuenta/sesion.
+- **Participante:** `Resultados`, `Fichas`, gestion de cuenta/sesion.
 - **Sin autenticar:** solo `Login`.
 
 ## Limitaciones conocidas de esta entrega

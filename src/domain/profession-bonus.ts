@@ -30,8 +30,12 @@ export const PROFESSION_BONUS_PERCENT = 20;
 /** Factor decimal equivalente (`0,20`). Se calcula a partir del porcentaje, nunca se escribe a mano. */
 export const PROFESSION_BONUS_RATE = new Prisma.Decimal(PROFESSION_BONUS_PERCENT).div(100);
 
-/** Texto canonico del bonus, usado en toda la interfaz para no repetir el porcentaje literal. */
-export const PROFESSION_BONUS_LABEL = `+${PROFESSION_BONUS_PERCENT} % despues del maximo base`;
+/**
+ * Texto canonico del bonus, usado en toda la interfaz para no repetir el
+ * porcentaje literal. Es uno de los pocos textos con tildes del proyecto
+ * porque el encargo lo fija palabra por palabra.
+ */
+export const PROFESSION_BONUS_LABEL = `+${PROFESSION_BONUS_PERCENT} % después del máximo base`;
 
 /** Datos minimos de una profesion necesarios para decidir y explicar el bonus. */
 export interface ApplicableProfession {

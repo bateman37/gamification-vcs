@@ -14,9 +14,10 @@ Productividad**, **MVP-1C.2 / IMPORT-1B — Carga semanal de Escalados,
 Calidad y Llamadas**, **MVP-1C.3 / INPUT-1C — Cargas manuales y
 completitud semanal**, **BUGFIX-1 / UX-SPLIT-1 — Correcciones de
 formularios manuales y configuracion compacta del split**, **`0.6.0` /
-MVP-1C — Resultados, publicacion y clasificacion** y **`0.7.0` / MVP-2A —
-Facciones, clasificacion de facciones y consolidacion de UX** (ver
-`docs/ROADMAP.md`). Version actual: `0.7.0`.
+MVP-1C — Resultados, publicacion y clasificacion**, **`0.7.0` / MVP-2A —
+Facciones, clasificacion de facciones y consolidacion de UX** y **`0.8.0` /
+MVP-2B — Profesiones, bonus de KPI y fichas de participante** (ver
+`docs/ROADMAP.md`). Version actual: `0.8.0`.
 
 Estas entregas implementan:
 
@@ -92,9 +93,23 @@ Estas entregas implementan:
   denominador unico "x de n" en todos los resultados del split, e
   historico general con columnas KPI compactas.
 
+- Segunda capa de juego: **profesiones configurables por split**
+  (opcionales, con exactamente dos KPI distintos y disponibilidad por
+  nivel), **bonus fijo del `+20 %` despues del maximo base** aplicado por
+  una unica funcion pura del dominio, bloqueo de profesiones y asignaciones
+  desde la primera publicacion, e instantanea publicada que congela la
+  profesion y el desglose del bonus. Ver
+  `docs/PROFESSIONS_AND_PROFILES.md`.
+- **Fichas privadas de participante (`/fichas`)**: una ficha por
+  participacion de split con avatar propio (guardado en PostgreSQL,
+  validado y normalizado con `sharp`), alias editable y eleccion de la
+  propia profesion mientras el split no tenga publicaciones.
+- Correccion del rotulo semanal del historico general: fecha de inicio real
+  de la semana en vez de `Semana N`.
+
 Todavia **no** incluye despublicar/reabrir una semana, exportacion
-Excel/PDF de resultados, ni profesiones, localizaciones, objetos o
-economia de creditos. Consulta `docs/ROADMAP.md` para el plan completo.
+Excel/PDF de resultados, ni localizaciones, objetos o economia de
+creditos. Consulta `docs/ROADMAP.md` para el plan completo.
 
 ## Pila tecnologica
 
@@ -589,6 +604,69 @@ funcional exhaustivo en [`docs/FACTIONS.md`](docs/FACTIONS.md).
     px): el contenido debe aprovechar el ancho disponible sin scroll
     horizontal de pagina.
 
+## Profesiones, bonus de KPI y fichas de participante (`0.8.0` / MVP-2B)
+
+Segunda capa de juego. Detalle funcional exhaustivo en
+[`docs/PROFESSIONS_AND_PROFILES.md`](docs/PROFESSIONS_AND_PROFILES.md).
+
+- **Profesiones opcionales por split** (`Profesiones del split` en
+  `/splits/[id]`): nombre, niveles disponibles (`N0`/`N1`/`N2`) y
+  exactamente dos KPI distintos. Un split sin ninguna profesion creada
+  funciona exactamente igual que en `0.7.0`.
+- **Bonus fijo `+20 % después del máximo base`**, ineditable, aplicado solo
+  a los dos KPI de la profesion y solo cuando el resultado tras el maximo
+  es estrictamente positivo. El maximo no se vuelve a aplicar: un KPI
+  limitado a `70` puede terminar en `84`.
+- **Bloqueo desde la primera publicacion:** profesiones y asignaciones
+  quedan congeladas; un alta posterior exige profesion en el propio
+  formulario.
+- **`Fichas`** junto a `Resultados` en la navegacion: una ficha por split
+  con avatar, alias editable, profesion y datos de solo lectura (nivel y
+  faccion).
+- **Avatar por split** guardado en PostgreSQL, validado y normalizado en
+  servidor (JPEG/PNG/WebP, maximo 5 MB, EXIF corregido, 512 px como maximo
+  por lado, salida WebP).
+- **Historico semanal por fecha**: `07/09/2026` en vez de `Semana 1`.
+
+### Comprobar manualmente
+
+1. Crea un split **sin** profesiones y comprueba que todo funciona igual
+   que en `0.7.0` (sin selectores de profesion ni avisos nuevos).
+2. Crea otro split y anade varias profesiones con distintas combinaciones
+   de niveles y KPI.
+3. Comprueba que no se aceptan dos KPI iguales ni una profesion sin ningun
+   nivel marcado.
+4. Anade participantes dejando a alguno sin profesion.
+5. Entra como participante y abre `Fichas` junto a `Resultados`.
+6. Cambia el alias y comprueba que no puedes repetir el de otro
+   participante del mismo split.
+7. Sube, reemplaza y elimina un avatar (prueba tambien un archivo de mas de
+   5 MB, un `.svg` y un archivo corrupto: los tres deben rechazarse con un
+   mensaje claro).
+8. Elige una profesion compatible y comprueba el resumen con sus dos KPI y
+   el texto del bonus.
+9. Intenta abrir o modificar la ficha de otra persona manipulando la URL o
+   el formulario: debe rechazarse.
+10. Completa la primera semana y verifica que la falta de profesion bloquea
+    la publicacion, con el alias afectado en el mensaje.
+11. Corrige la asignacion y revisa la previsualizacion: las celdas con
+    bonus llevan borde y badge, ademas del color.
+12. Valida a mano `70 + 14 = 84` en un KPI limitado a `70`.
+13. Publica la primera semana.
+14. Comprueba que profesiones y asignaciones quedan bloqueadas tanto para
+    el administrador como para el participante.
+15. Comprueba que alias y avatar siguen siendo editables en el split
+    activo.
+16. Revisa el bonus y su desglose en resultados publicados e historico.
+17. Comprueba que rankings, puntos por posicion y clasificacion de
+    facciones reflejan el resultado final con bonus, sin duplicarlo.
+18. Anade un participante con semana inicial futura despues de publicar:
+    el alta debe exigir profesion.
+19. Abre el historico semanal y verifica que muestra fechas como
+    `07/09/2026`, no `Semana 1`.
+20. Prueba `Fichas` y resultados en movil (~360 px), a 1366 px y en
+    pantalla panoramica.
+
 ## Reinicio opcional y destructivo del entorno local
 
 **Solo para una base de datos local ficticia.** Este comando **borra
@@ -643,6 +721,9 @@ estan excluidos en `.gitignore`).
   local, ciclo de cuenta y matriz de permisos (`0.6.0` / MVP-1C).
 - [`docs/FACTIONS.md`](docs/FACTIONS.md) — facciones, clasificacion de
   facciones y bloqueo de configuracion (`0.7.0` / MVP-2A).
+- [`docs/PROFESSIONS_AND_PROFILES.md`](docs/PROFESSIONS_AND_PROFILES.md) —
+  profesiones configurables por split, bonus del `+20 %`, fichas privadas,
+  avatar por split y rotulo semanal del historico (`0.8.0` / MVP-2B).
 - [`docs/DECISIONS.md`](docs/DECISIONS.md) — decisiones tecnicas y de
   producto registradas.
 - [`CHANGELOG.md`](CHANGELOG.md) — historial de cambios.

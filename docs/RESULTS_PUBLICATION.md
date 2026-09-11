@@ -68,16 +68,39 @@ individuales, que no cambian):
   afectada — no se ocultan como cero, y **impiden publicar** hasta
   resolverse (ver `docs/DECISIONS.md`).
 
+### 2.1.bis Bonus de profesion (`0.8.0` / MVP-2B)
+
+Sobre un resultado ya `COMPUTED` y ya limitado por su maximo base, el motor
+agregado aplica el bonus de profesion mediante una unica funcion pura
+(`applyProfessionBonus`, ver `docs/PROFESSIONS_AND_PROFILES.md`). Ninguna
+formula de KPI cambia: el bonus es una capa estrictamente **posterior** al
+maximo.
+
+```text
+baseFinalPoints -> +20 % si corresponde -> finalPoints
+```
+
+Solo se aplica cuando el split usa profesiones, el participante tiene una
+profesion valida para su nivel, el KPI es uno de los dos que potencia y los
+puntos tras el maximo son **estrictamente positivos**. `VAC`,
+`NOT_APPLICABLE`, cero y negativos nunca reciben bonus. El maximo **no** se
+vuelve a aplicar despues, asi que un resultado puede superar su maximo base
+hasta un 20 % (`70 -> 84`).
+
 ### 2.2 Totales de la fila
 
 Para cada participante:
 
 - `totalKpiPoints`: suma de `finalPoints` de los KPI `COMPUTED` (puede ser
   negativo; `VAC` y `NOT_APPLICABLE` aportan `0` pero conservan su
-  etiqueta, nunca se convierten visualmente en el mismo cero);
+  etiqueta, nunca se convierten visualmente en el mismo cero). Desde
+  `0.8.0`, ese `finalPoints` ya incluye el bonus de profesion.
 - `applicableMaxPoints`: suma de `baseMax` solo de los KPI `COMPUTED`
   (`NOT_APPLICABLE` no infla el denominador; si ninguno esta `COMPUTED`,
-  es `null`, mostrado como `—`, nunca `NaN`).
+  es `null`, mostrado como `—`, nunca `NaN`). Sigue sumando **maximos
+  base**, nunca maximos inflados por profesion: por eso el porcentaje
+  mostrado puede superar el `100 %` cuando hubo bonus, lo que es un
+  resultado valido (`0.8.0` / MVP-2B).
 
 No existe una columna de "medallas": el Excel historico la tenia, pero no
 es un concepto configurado en la aplicacion.
@@ -250,7 +273,14 @@ funcional:
   cuenta `COMPUTED` y `VAC`; `NOT_APPLICABLE` sigue excluido por completo);
   no se muestra ya un recuento `VAC` en pantalla. El mes y el ano se
   asignan por `SplitWeek.startDate` como fecha de calendario UTC (nunca
-  hora local).
+  hora local). **Desde `0.8.0` / MVP-2B**, la agrupacion `Semana` identifica
+  el periodo por la **fecha de inicio real** de esa semana (`07/09/2026`),
+  no por `Semana 1`; el orden es cronologico descendente por esa fecha y,
+  con varios splits en el filtro, el nombre del split aparece como texto
+  secundario. Cada celda por KPI anade `+N por profesion` cuando el periodo
+  tuvo bonus, sumando exclusivamente los `professionBonusPoints`
+  **publicados** (nunca se recalculan con la profesion actual). `Mes` y
+  `Año` no cambian.
 
 Toda lectura de participante viene exclusivamente de tablas publicadas
 (`PublishedParticipantWeeklyResult`/`PublishedKpiResult`): nunca se
@@ -335,5 +365,8 @@ Excel/PDF de resultados; medallas; API publica; facciones, profesiones,
 economia, tienda, objetos o recompensas.
 
 Las facciones se implementaron en `0.7.0` / MVP-2A (ver
-`docs/FACTIONS.md`) sin tocar ninguna de las formulas ni reglas descritas
-en este documento; el resto de la lista sigue fuera de alcance.
+`docs/FACTIONS.md`) y las profesiones con su bonus del `+20 %` en `0.8.0` /
+MVP-2B (ver `docs/PROFESSIONS_AND_PROFILES.md`), sin tocar ninguna de las
+formulas de KPI descritas en este documento: el bonus es una capa posterior
+al maximo base, aplicada una sola vez y congelada al publicar. El resto de
+la lista sigue fuera de alcance.

@@ -143,8 +143,8 @@ export async function PorSplitSection({
                       const bonusApplied =
                         cell.professionApplied && cell.basePointsBeforeProfession !== null && cell.professionBonusPoints !== null;
                       const breakdown = bonusApplied
-                        ? `Resultado tras maximo: ${formatPoints(cell.basePointsBeforeProfession!)} | Bonus ${
-                            cell.professionName ?? "profesion"
+                        ? `Resultado tras máximo: ${formatPoints(cell.basePointsBeforeProfession!)} | Bonus ${
+                            cell.professionName ?? "profesión"
                           } (+${PROFESSION_BONUS_PERCENT} %): +${formatPoints(cell.professionBonusPoints!)} | Resultado final: ${formatPoints(cellPoints)}`
                         : undefined;
                       return (

@@ -218,14 +218,60 @@ satisfactorias.
   correctos, denominador unico "x de n" (total de participantes del
   split) y rediseno del historico general con columnas KPI compactas.
 - Detalle completo en `docs/FACTIONS.md`.
-- Fuera de alcance: profesiones, localizaciones, objetos, economia de
-  creditos y misiones (ver mas abajo).
+- Fuera de alcance: profesiones (implementadas en `0.8.0` / MVP-2B),
+  localizaciones, objetos, economia de creditos y misiones (ver mas abajo).
+
+## `0.8.0` / MVP-2B — Profesiones, bonus de KPI y fichas de participante
+
+**Estado: completado.**
+
+- **Profesiones configurables por split** (`SplitProfession`), opcionales
+  igual que las facciones: un split sin ninguna profesion creada se
+  comporta exactamente como en `0.7.0`. Cada profesion tiene nombre unico
+  dentro del split, exactamente dos KPI **distintos** del catalogo cerrado
+  y disponibilidad por nivel `N0`/`N1`/`N2`. No se implementan las reglas
+  historicas de Mecanico, Arreglador, Mercenario, Cientifico ni Piloto del
+  antiguo Split 8 (ver `docs/DECISIONS.md`).
+- **Bonus fijo del `+20 %` despues del maximo base**, en una unica funcion
+  pura del dominio (`applyProfessionBonus`,
+  `src/domain/profession-bonus.ts`): se aplica solo a resultados
+  `COMPUTED` estrictamente positivos de los dos KPI de la profesion, con
+  `Prisma.Decimal` y sin redondeo prematuro, y el maximo no se vuelve a
+  aplicar despues (`70 -> 84`). Nunca se aplica a `VAC`/`AVISO`,
+  `No aplica`, cero ni negativos. `applicableMaxPoints` sigue sumando
+  maximos base, por lo que el porcentaje mostrado puede superar el 100 %.
+- **Asignacion y bloqueo:** el administrador asigna la profesion al anadir
+  o editar un participante y el propio participante puede elegirla desde su
+  ficha, siempre antes de la primera publicacion. Desde esa primera
+  publicacion, definiciones y asignaciones quedan bloqueadas, y un alta
+  posterior exige profesion en el propio formulario.
+- **Instantanea publicada ampliada:** profesion congelada por participante
+  (`professionId`, nombre, sus dos KPI, porcentaje y
+  `splitUsedProfessions`) y desglose del bonus por KPI
+  (`basePointsBeforeProfession`, `professionBonusPoints`,
+  `professionApplied`, `professionNameSnapshot`). Ninguna publicacion
+  anterior se recalcula.
+- **Fichas privadas (`/fichas`)**, junto a `Resultados` en la navegacion:
+  una ficha por participacion de split con avatar, alias editable,
+  profesion, nivel y faccion de solo lectura. Operaciones de autoservicio
+  de intencion limitada, resueltas siempre desde `session.user.personId`.
+- **Avatar por split** (`SplitParticipantAvatar`) guardado en PostgreSQL en
+  una entidad separada, validado y normalizado en servidor con `sharp`
+  (JPEG/PNG/WebP comprobados sobre el contenido real, maximo 5 MB,
+  correccion EXIF, 512 px maximo por lado, salida WebP sin metadatos), con
+  ruta de servicio autorizada por sesion.
+- **Correccion del rotulo semanal del historico general:** fecha de inicio
+  real de la semana (`07/09/2026`) en vez de `Semana 1`, con orden
+  cronologico y nombre del split como texto secundario cuando el filtro
+  incluye varios. `Mes` y `Año` no cambian.
+- Detalle completo en `docs/PROFESSIONS_AND_PROFILES.md`.
+- Fuera de alcance: localizaciones, objetos, economia de creditos,
+  misiones, fichas en PDF y cualquier otra capa de juego (ver mas abajo).
 
 ## Capas posteriores (fuera de alcance por ahora)
 
 **Estado: pendiente**, documentadas unicamente para no perder contexto:
 
-- Profesiones, con bonus sobre pares de KPI.
 - Localizaciones, con bonus semanales.
 - Objetos permanentes y efectos acumulables.
 - Economia: creditos equivalentes a puntos KPI, compras y saldo.
