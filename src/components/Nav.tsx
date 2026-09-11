@@ -4,8 +4,10 @@ import { LogoutButton } from "@/components/LogoutButton";
 
 /**
  * Navegacion superior segun sesion (ver docs/AUTHENTICATION.md):
- * administrador ve `Personas`, `Splits` y `Resultados`; participante solo
- * ve `Resultados`; sin sesion, solo se muestra el enlace a `Login`. La
+ * administrador ve `Personas`, `Splits` y `Resultados`; participante ve
+ * `Resultados` y `Fichas` (`0.8.0` / MVP-2B); sin sesion, solo se muestra el
+ * enlace a `Login`. `Fichas` tambien aparece para un administrador vinculado
+ * a una persona, porque entonces tiene fichas propias que consultar. La
  * decision real de acceso vive en el middleware y en cada pagina: esta
  * navegacion solo refleja lo que ya es cierto en servidor.
  */
@@ -30,6 +32,11 @@ export async function Nav() {
           {session?.user && (
             <Link href="/resultados" className="hover:text-slate-900">
               Resultados
+            </Link>
+          )}
+          {session?.user && (session.user.role === "PARTICIPANT" || session.user.personId) && (
+            <Link href="/fichas" className="hover:text-slate-900">
+              Fichas
             </Link>
           )}
         </nav>

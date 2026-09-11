@@ -7,10 +7,11 @@ import { NextResponse } from "next/server";
  * mano o un enlace directo, no solo cuando se navega desde la interfaz.
  * `Personas` y `Splits` (y todo lo que cuelga de ellos, incluidas las
  * cargas de KPI, la previsualizacion de resultados y la clasificacion
- * detallada) son exclusivos de administrador; `Resultados` y `Cuenta` son
- * para cualquier usuario autenticado (la autorizacion fina dentro de
- * `Resultados`, como que persona ve cada uno, se resuelve en servidor a
- * partir de la sesion, nunca de un parametro del navegador).
+ * detallada) son exclusivos de administrador; `Resultados`, `Fichas`
+ * (`0.8.0` / MVP-2B) y `Cuenta` son para cualquier usuario autenticado (la
+ * autorizacion fina dentro de `Resultados` y `Fichas`, como que persona ve o
+ * edita cada uno, se resuelve en servidor a partir de la sesion, nunca de un
+ * parametro del navegador).
  */
 export default withAuth(
   function middleware(req) {
@@ -37,5 +38,5 @@ export default withAuth(
 );
 
 export const config = {
-  matcher: ["/personas/:path*", "/splits/:path*", "/resultados/:path*", "/cuenta/:path*"],
+  matcher: ["/personas/:path*", "/splits/:path*", "/resultados/:path*", "/fichas/:path*", "/cuenta/:path*"],
 };
