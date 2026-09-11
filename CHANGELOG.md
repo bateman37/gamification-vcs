@@ -4,6 +4,79 @@ Formato inspirado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/)
 Este proyecto usa versionado `0.x` mientras se construye el nucleo
 funcional; la primera version publicada es `0.1.0`.
 
+## [0.3.0] - IMPORT-1A / MVP-1C.1 — Carga semanal de Productividad
+
+### Anadido
+
+- Pantalla independiente de cargas de KPI para cada semana de un split
+  (`/splits/[id]/weeks/[weekId]/kpis`), accesible desde una accion
+  `Introducir KPI` (o `Ver KPI` en splits cerrados) anadida al calendario
+  de semanas del detalle del split. La semana se identifica siempre por su
+  `id` real, y el servidor comprueba que pertenece al split indicado.
+- Lectura y validacion en servidor, en memoria y sin guardar el binario,
+  del Excel real de Productividad (`.xlsx`, ocho encabezados fijos, orden
+  libre, hasta 500 filas y 50 columnas), con previsualizacion sin
+  persistencia (`Analizar archivo`) que reune todos los errores
+  detectables en una sola respuesta.
+- Emparejamiento por nombre real (`Person.fullName`, normalizado sin
+  distinguir mayusculas, espacios ni diacriticos), nunca por alias, contra
+  los participantes aplicables de la semana segun
+  `startWeekSequenceNumber`/`endWeekSequenceNumber`; distingue encontrado,
+  ignorado, sin dato y ambiguo (esto ultimo bloquea la confirmacion).
+- Calculo administrativo, con funciones puras y aritmetica decimal, de
+  **Cazador de soluciones** (`SOLUTION_HUNTER`) y **Explorador de datos**
+  (`DATA_EXPLORER`) a partir de la productividad cargada, aplicando el
+  parametro propio, el multiplicador de nivel y el maximo base de
+  `SplitKpiConfig` (`MVP-1B`); los puntos se calculan siempre al consultar
+  y distinguen "cero real" de "Sin dato" (sin fila importada) y "No
+  aplica" (multiplicador de nivel vacio).
+- Nuevas entidades `ProductivityImport` (cabecera: una carga vigente por
+  semana, sin guardar el binario del Excel) y `ProductivityWeeklyRow`
+  (fila por participante encontrado, con los siete conteos fuente
+  incluida `updates`, conservada para el futuro calculo de Domador de
+  Escaladas). Migracion `add_productivity_import`, compatible con los
+  datos existentes de `MVP-1A`/`MVP-1B`, con restricciones de base de
+  datos para que los conteos sean siempre no negativos.
+- Sustitucion explicita (`Sustituir carga`) de una carga anterior de la
+  misma semana, atomica dentro de una unica transaccion: si algo falla, la
+  carga anterior queda intacta y no se duplican filas.
+- Pantalla semanal con los KPI activos agrupados por origen de carga
+  (`src/domain/kpis/loadGroups.ts`): el grupo `Productividad` reune
+  Cazador de soluciones y Explorador de datos con un unico boton `Cargar`,
+  un unico `Comprobar` y un unico indicador de estado (`Pendiente` /
+  `Carga parcial` / `Cargado`, calculado al consultar); el resto de KPI
+  activos aparecen pendientes y deshabilitados con el texto "Carga
+  todavia no implementada".
+- Accion `Comprobar`: muestra todos los participantes aplicables de la
+  semana (incluidos los que no tienen fila, como "Sin dato"), con su
+  alias, nombre real, nivel y los valores y puntos de los KPI activos.
+- Documentacion: `docs/IMPORT_PRODUCTIVITY.md` (referencia principal), y
+  actualizacion de `README.md`, `docs/ROADMAP.md` (marca `MVP-1B` como
+  validado manualmente y esta entrega como completada), `docs/DATA_MODEL.md`,
+  `docs/DECISIONS.md`, `docs/KPI_CONFIGURATION.md`,
+  `docs/DISCOVERY-1-SPLIT-8.md` y `CLAUDE.md`.
+- Dependencia anadida: `exceljs` (lectura de `.xlsx` en servidor).
+- Pruebas de servicio (Vitest) sobre las reglas criticas de esta entrega:
+  lectura de un `.xlsx` sintetico con columnas reordenadas y una columna
+  extra; validacion parametrizada (cero conservado, encabezado ausente,
+  vacio, negativo, decimal, formula y nombre duplicado normalizado);
+  emparejamiento (encontrado, ignorado, sin dato, ambiguo); calculo de los
+  dos KPI con parametro, multiplicador, maximo y "No aplica"/"Sin dato";
+  confirmacion de una carga valida y transicion de estado; sustitucion sin
+  duplicar datos y conservacion de la carga anterior ante un fallo; y
+  restricciones de estado del split (`DRAFT`, `CLOSED`, semana de otro
+  split) frente a `ACTIVE`.
+
+### Fuera de alcance en esta entrega
+
+El resto de origenes de `IMPORT-1` (Escalados, Calidad, Llamadas,
+Estabilidad, Cronomagia, Articulos, Dedicacion, Formaciones),
+clasificacion general, vista individual, publicacion/cierre de semana,
+autenticacion, mapeo manual persistente de nombres, historial de versiones
+de una misma carga, motor generico de importaciones o de reglas,
+actualizacion general de dependencias y cualquier capa de juego adicional.
+Ver `docs/ROADMAP.md`.
+
 ## [0.2.0] - MVP-1B — KPI activos y configuracion
 
 ### Anadido

@@ -209,6 +209,134 @@ mayusculas y minusculas ni espacios exteriores"). Ampliar la
 normalizacion mas alla de eso seria una decision de producto no pedida
 todavia.
 
+## Acceso a la carga semanal desde el calendario, no desde un selector propio
+
+**Decision:** la pantalla de cargas de KPI de una semana
+(`/splits/[id]/weeks/[weekId]/kpis`) no incluye un selector de semana. Se
+accede desde la fila correspondiente del "Calendario de semanas" del
+detalle del split, que identifica la semana por su `id` real (nunca por un
+numero aceptado sin validar), y el servidor vuelve a comprobar que esa
+semana pertenece al split indicado.
+
+**Motivo:** evita que el administrador elija una semana incorrecta a mano
+y evita aceptar un `splitWeekId` arbitrario sin verificar su relacion con
+el split, un requisito explicito de seguridad de esta entrega.
+
+## Pantalla de cargas separada de la configuracion de KPI
+
+**Decision:** la carga y comprobacion de datos de KPI vive en una pantalla
+independiente (`/splits/[id]/weeks/[weekId]/kpis`), distinta de la seccion
+"KPI del split" del detalle del split, que sigue siendo la unica que
+permite editar maximos, multiplicadores, parametros y activacion.
+
+**Motivo:** mantiene separadas dos responsabilidades distintas
+(configurar el calculo frente a introducir y consultar datos de una semana
+concreta) y evita que la pantalla de cargas se convierta en un segundo
+lugar desde el que cambiar la configuracion.
+
+## Agrupacion de KPI activos por origen de carga
+
+**Decision:** la pantalla semanal agrupa los KPI activos por origen de
+carga (`src/domain/kpis/loadGroups.ts`), no uno por fila independiente. El
+grupo `Productividad` reune Cazador de soluciones y Explorador de datos
+mientras esten activos; el resto de KPI activos aparecen, de momento, uno
+por grupo, hasta que se audite que comparten origen con otro.
+
+**Motivo:** un unico Excel de Productividad alimenta dos KPI a la vez;
+mostrarlos como cargas independientes obligaria a subir el mismo archivo
+dos veces y duplicaria el estado de cobertura.
+
+## Un unico indicador de estado por grupo de carga
+
+**Decision:** cada grupo de carga muestra un unico indicador (`Pendiente`,
+`Carga parcial` o `Cargado`), nunca los tres colores a la vez, calculado
+siempre al consultar (no se guarda una copia que pueda desincronizarse).
+
+**Motivo:** el encargo pide explicitamente que el color no sea la unica
+forma de transmitir el estado y que no se construya un semaforo con tres
+luces simultaneas; calcularlo al vuelo evita un estado redundante que
+pudiera quedar desactualizado tras cambiar la configuracion de KPI o los
+participantes.
+
+## Un unico Excel de Productividad alimenta dos KPI
+
+**Decision:** una sola confirmacion del Excel de Productividad guarda los
+datos fuente necesarios para Cazador de soluciones y Explorador de datos a
+la vez (`ProductivityWeeklyRow` conserva los siete conteos completos,
+aunque solo dos se usen en los calculos de esta entrega).
+
+**Motivo:** el archivo real solo existe una vez por semana; pedirlo dos
+veces (una por KPI) seria una carga redundante para el administrador y
+podria producir datos inconsistentes entre ambos KPI de la misma semana.
+
+## Emparejamiento por nombre real, nunca por alias
+
+**Decision:** el Excel de Productividad se empareja con los participantes
+usando `Person.fullName` normalizado (`normalizeForMatching`: recorte,
+colapso de espacios, minusculas y eliminacion de diacriticos), nunca el
+alias del split. Una ambiguedad (mas de un participante aplicable con el
+mismo nombre normalizado) bloquea la confirmacion; no se introduce todavia
+una pantalla de mapeo manual.
+
+**Motivo:** el alias es un dato de juego pensado para mostrarse, no una
+identidad estable; el Excel de origen solo conoce el nombre real de la
+persona. Bloquear en caso de ambiguedad, en lugar de adivinar, evita
+asignar datos de productividad a la persona equivocada.
+
+## Los puntos de Productividad se calculan al consultar, no se guardan
+
+**Decision:** `ProductivityWeeklyRow` guarda unicamente los conteos fuente
+del Excel (tickets, comentarios, actualizaciones...). Los puntos de
+Cazador de soluciones y Explorador de datos no se persisten: se calculan
+en el momento de mostrarlos, a partir de esos conteos, el nivel del
+participante y `SplitKpiConfig`.
+
+**Motivo:** en este MVP los puntos no son una instantanea historica. Un
+cambio permitido en la configuracion del KPI o en el nivel del participante
+debe reflejarse automaticamente sin reimportar el Excel. Esta decision
+puede revisarse cuando exista publicacion/cierre de semana (`MVP-1C`), que
+podria requerir congelar un resultado en el momento de publicarlo.
+
+## Una unica carga de Productividad vigente por semana
+
+**Decision:** `ProductivityImport` tiene un indice unico sobre
+`splitWeekId`: como mucho existe una carga vigente por semana. Corregir un
+archivo exige una sustitucion explicita (`Sustituir carga`) que borra la
+carga anterior y sus filas y crea la nueva dentro de una unica transaccion;
+no se conserva el historial de versiones sustituidas en esta entrega.
+
+**Motivo:** simplifica el modelo y la interfaz (un unico estado por
+semana, sin tener que elegir "la carga vigente" entre varias). El encargo
+pide explicitamente sustitucion atomica y explicita, no un historial de
+versiones todavia.
+
+## El binario del Excel nunca se guarda
+
+**Decision:** el Excel de Productividad se procesa unicamente en memoria y
+en servidor. Ni el archivo original ni ninguna copia se guardan en disco,
+`public`, PostgreSQL ni Git. `ProductivityImport.fileSha256` identifica el
+archivo procesado (util para depuracion administrativa), pero no permite
+reconstruirlo ni se usa para deducir la semana.
+
+**Motivo:** requisito explicito de privacidad y seguridad del encargo:
+evita acumular archivos con datos personales reales fuera de su ciclo de
+vida natural (la carga puntual de la semana).
+
+## Cero, sin dato y no aplica quedan siempre diferenciados
+
+**Decision:** el calculo de Cazador de soluciones y Explorador de datos
+distingue explicitamente tres estados que nunca se convierten en el mismo
+"cero": un valor fuente `0` real (el KPI aplica y el resultado es `0`),
+"Sin dato" (`no_data`, no existe fila importada para ese participante en
+esa semana) y "No aplica" (`not_applicable`, el multiplicador de ese nivel
+esta vacio en la configuracion del KPI). "No aplica" tiene prioridad sobre
+"Sin dato" cuando ambas condiciones coinciden.
+
+**Motivo:** confundir estos estados ocultaria informacion real (por
+ejemplo, un participante que sencillamente no tiene fila esa semana frente
+a uno cuyo nivel no participa en ese KPI), un error observado como riesgo
+explicito en la auditoria de Split 8 (ver `docs/DISCOVERY-1-SPLIT-8.md`).
+
 ## Reglas criticas protegidas en servidor y en base de datos
 
 **Decision:** ademas de la validacion en los servicios de dominio
@@ -216,8 +344,10 @@ todavia.
 con restricciones de base de datos: unicidad de correo, unicidad de
 persona por split, unicidad de alias normalizado por split, semana
 inicial perteneciente al mismo split (clave foranea compuesta), lunes de
-inicio de split y de semana, domingo de fin de semana, y rango de numero
-de semanas (1-52).
+inicio de split y de semana, domingo de fin de semana, rango de numero
+de semanas (1-52), y (desde `IMPORT-1A / MVP-1C.1`) que los siete conteos
+de `ProductivityWeeklyRow` y los contadores de `ProductivityImport` sean
+siempre no negativos.
 
 **Motivo:** el encargo pide explicitamente proteger las reglas criticas
 tambien mediante restricciones de base de datos "cuando sea viable". Esto

@@ -100,8 +100,21 @@ partir de las hojas ya transformadas del libro Excel historico. El
 usuario proporcionara ejemplos de los Excel **originales**, tal como
 llegan hoy, momento en el que se definiran columnas, encabezados,
 variaciones de nombres, duplicados, celdas vacias, ceros, correcciones y
-la previsualizacion antes de guardar. Esta auditoria queda pendiente y no
-se debe suponer su estructura de antemano.
+la previsualizacion antes de guardar. Esta auditoria queda pendiente para
+el resto de origenes y no se debe suponer su estructura de antemano.
+
+### Auditoria confirmada: Productividad (`IMPORT-1A / MVP-1C.1`)
+
+A diferencia del resto de origenes, el Excel original de Productividad ya
+se audito y su carga ya esta implementada. Resultado de la auditoria:
+formato `.xlsx`, una hoja (su nombre no es un contrato), encabezados en la
+fila 1 con ocho columnas fijas (orden libre, pueden existir columnas
+adicionales), una fila por agente, conteos enteros no negativos donde cero
+es un valor valido, y **sin fecha ni semana en el archivo**: la semana la
+fija siempre la pantalla de carga, nunca el nombre del archivo ni su
+contenido. Referencia completa, con el contrato exacto de columnas, las
+reglas de validacion y las formulas ya implementadas:
+`docs/IMPORT_PRODUCTIVITY.md`.
 
 ## 4. Flujo funcional completo (a construir por incrementos)
 
@@ -140,11 +153,13 @@ tambien `docs/ROADMAP.md`):
 
 ## 6. Cuestiones pendientes de los Excel de entrada
 
-Estas preguntas quedan explicitamente abiertas hasta que el usuario
-aporte los Excel originales en `IMPORT-1`:
+Estas preguntas ya se resolvieron para Productividad (ver la auditoria
+confirmada arriba y `docs/IMPORT_PRODUCTIVITY.md`) y quedan explicitamente
+abiertas para el resto de fuentes hasta que el usuario aporte sus Excel
+originales en `IMPORT-1`:
 
-- Estructura exacta de columnas y encabezados de cada fuente
-  (Productividad, Calidad, Llamadas, Articulos, Formaciones).
+- Estructura exacta de columnas y encabezados de cada fuente restante
+  (Calidad, Llamadas, Articulos, Formaciones).
 - Como se identifica a cada persona en esos ficheros (nombre, alias,
   identificador propio del origen) y como se cruza con `Person` o con
   `SplitParticipant`.

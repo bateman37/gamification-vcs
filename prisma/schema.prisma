@@ -82,8 +82,9 @@ model SplitWeek {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  split                    Split              @relation(fields: [splitId], references: [id], onDelete: Cascade)
-  participantsStartingHere SplitParticipant[] @relation("ParticipantStartWeek")
+  split                    Split               @relation(fields: [splitId], references: [id], onDelete: Cascade)
+  participantsStartingHere SplitParticipant[]  @relation("ParticipantStartWeek")
+  productivityImport       ProductivityImport?
 
   @@unique([splitId, sequenceNumber])
 }
@@ -110,6 +111,8 @@ model SplitParticipant {
   split     Split     @relation(fields: [splitId], references: [id], onDelete: Cascade)
   person    Person    @relation(fields: [personId], references: [id])
   startWeek SplitWeek @relation("ParticipantStartWeek", fields: [splitId, startWeekSequenceNumber], references: [splitId, sequenceNumber])
+
+  productivityRows ProductivityWeeklyRow[]
 
   // Una persona solo puede aparecer una vez en un mismo split.
   @@unique([splitId, personId])
@@ -146,4 +149,55 @@ model SplitKpiConfig {
 
   // Un split tiene como mucho una configuracion por cada KPI del catalogo.
   @@unique([splitId, kpiCode])
+}
+
+/// Carga semanal del Excel de Productividad para una semana de un split
+/// (ver docs/IMPORT_PRODUCTIVITY.md). Un unico archivo alimenta los KPI
+/// "Cazador de soluciones" y "Explorador de datos". El binario del Excel
+/// nunca se guarda: `fileSha256` solo identifica el archivo procesado, no
+/// se usa para deducir la semana.
+model ProductivityImport {
+  id               String   @id @default(uuid())
+  /// Como mucho una carga de Productividad vigente por semana.
+  splitWeekId      String   @unique
+  originalFilename String
+  fileSha256       String
+  sourceRowCount   Int
+  importedRowCount Int
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  splitWeek SplitWeek                @relation(fields: [splitWeekId], references: [id], onDelete: Cascade)
+  rows      ProductivityWeeklyRow[]
+}
+
+/// Fila de productividad de un participante encontrado en la carga
+/// semanal. Los siete conteos son los valores fuente del Excel; los
+/// puntos de Cazador de soluciones y Explorador de datos no se guardan
+/// aqui, se calculan al consultar (ver docs/DECISIONS.md).
+model ProductivityWeeklyRow {
+  id                         String   @id @default(uuid())
+  productivityImportId       String
+  splitParticipantId         String
+  /// Nombre tal como aparecia en la columna "Nombre del actualizador" del
+  /// Excel, conservado para trazabilidad.
+  sourceAgentName            String
+  /// Conservado para el futuro calculo de Domador de Escaladas.
+  updates                    Int
+  comments                   Int
+  publicComments             Int
+  internalComments           Int
+  ticketsUpdatedWithComment  Int
+  ticketsResolved            Int
+  ticketsCreated             Int
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
+
+  productivityImport ProductivityImport @relation(fields: [productivityImportId], references: [id], onDelete: Cascade)
+  // Restrict: una fila de productividad nunca debe desaparecer por borrar
+  // accidentalmente el participante al que pertenece.
+  splitParticipant   SplitParticipant   @relation(fields: [splitParticipantId], references: [id], onDelete: Restrict)
+
+  // Una carga solo puede contener una fila por participante.
+  @@unique([productivityImportId, splitParticipantId])
 }
