@@ -46,6 +46,7 @@ function makeParticipant(fullName: string, id: string, alias: string): Participa
     startWeekSequenceNumber: 1,
     endWeekSequenceNumber: null,
     factionId: null,
+    professionId: null,
     createdAt: new Date(),
     updatedAt: new Date(),
   };

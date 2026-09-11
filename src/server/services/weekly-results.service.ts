@@ -1,7 +1,11 @@
 import { Prisma, type ParticipantLevel, type PrismaClient, type SplitWeek } from "@prisma/client";
 import { DomainError } from "@/lib/errors";
 import { getSplitById, getSplitWeek } from "@/server/services/split.service";
-import { listApplicableParticipantsForWeek, type ParticipantWithPerson } from "@/server/services/participant.service";
+import {
+  listApplicableParticipantsWithProfessionForWeek,
+  type ParticipantWithPerson,
+  type ParticipantWithPersonAndProfession,
+} from "@/server/services/participant.service";
 import { listKpiConfigsForSplit } from "@/server/services/kpi.service";
 import { listPositionPointRules } from "@/server/services/position-points.service";
 import { getWeeklyKpiLoadSummary } from "@/server/services/kpi-load-summary.service";
@@ -19,6 +23,8 @@ import { resolveEnthusiasticStudentOutcome } from "@/domain/kpis/student";
 import { resolveExpertApprenticeOutcome } from "@/domain/kpis/apprentice";
 import { rankByScoreDescending, compareNormalizedAlias } from "@/domain/ranking";
 import { buildFactionWeeklyPreview, type FactionWeeklyPreview } from "@/server/services/faction.service";
+import { collectProfessionAssignmentIssues, toApplicableProfession } from "@/server/services/profession.service";
+import { applyProfessionBonus, PROFESSION_BONUS_PERCENT } from "@/domain/profession-bonus";
 
 /**
  * Motor agregado de resultados semanales (ver docs/RESULTS_PUBLICATION.md).
@@ -36,11 +42,29 @@ export interface ParticipantKpiResult {
   kpiName: string;
   status: KpiResultStatus;
   rawPoints: number | null;
+  /** Puntos definitivos, ya con el bonus de profesion incluido (`0.8.0` / MVP-2B). */
   finalPoints: number | null;
   baseMax: number | null;
   capped: boolean;
+  /** Puntos tras el maximo base y antes del bonus de profesion. `null` si no hay resultado numerico. */
+  basePointsBeforeProfession: number | null;
+  /** Puntos anadidos por la profesion. `0` cuando no aplica; `null` si no hay resultado numerico. */
+  professionBonusPoints: number | null;
+  /** `true` solo si el bonus se aplico realmente a este KPI. */
+  professionApplied: boolean;
+  /** Nombre de la profesion que produjo el bonus, para explicarlo en pantalla. */
+  professionName: string | null;
   kpiRank: number | null;
   rankedParticipantCount: number | null;
+}
+
+/** Profesion congelable de un participante dentro del resultado semanal. */
+export interface ParticipantProfessionSnapshot {
+  id: string;
+  name: string;
+  kpiCodeA: KpiCode;
+  kpiCodeB: KpiCode;
+  bonusPercent: number;
 }
 
 export interface ParticipantWeeklyResult {
@@ -56,6 +80,10 @@ export interface ParticipantWeeklyResult {
   positionPoints: number | null;
   /** Faccion actual del participante (`0.7.0` / MVP-2A). `null` si el split no usa facciones. */
   factionId: string | null;
+  /** Profesion actual del participante (`0.8.0` / MVP-2B). `null` si el split no usa profesiones o no ha elegido. */
+  profession: ParticipantProfessionSnapshot | null;
+  /** Suma de los puntos anadidos por profesion en la semana (0 si no hay ninguno). */
+  professionBonusTotal: number;
 }
 
 export interface WeeklyResultsComputation {
@@ -78,6 +106,8 @@ export interface WeeklyResultsComputation {
   blockingIssues: string[];
   /** Previsualizacion/instantanea de clasificacion de facciones de esta semana (`0.7.0` / MVP-2A, ver docs/FACTIONS.md). */
   factionPreview: FactionWeeklyPreview;
+  /** `true` si el split tiene al menos una profesion creada (`0.8.0` / MVP-2B). */
+  usesProfessions: boolean;
 }
 
 interface ResolvedKpiOutcome {
@@ -332,11 +362,16 @@ export async function computeWeeklyResults(db: PrismaClient, splitId: string, we
     isComplete,
     blockingIssues: [],
     factionPreview: { hasFactions: false, blockingIssues: [], factions: [] },
+    usesProfessions: false,
   };
 
   if (!isComplete) return base;
 
-  const participants = await listApplicableParticipantsForWeek(db, splitId, week.sequenceNumber);
+  const participants = await listApplicableParticipantsWithProfessionForWeek(db, splitId, week.sequenceNumber);
+  // El split "usa profesiones" en cuanto tiene al menos una creada: si no tiene ninguna, el
+  // comportamiento es identico a `0.7.0` (sin requisitos, sin bonus y sin campos nuevos informados).
+  const professionCount = await db.splitProfession.count({ where: { splitId } });
+  const usesProfessions = professionCount > 0;
   const configByCode = new Map(activeConfigs.map((config) => [config.kpiCode, toKpiConfigView(config)]));
   const ctx = await loadRawDataContext(db, splitId, week.id, new Set(activeCodes));
 
@@ -345,17 +380,24 @@ export async function computeWeeklyResults(db: PrismaClient, splitId: string, we
   for (const code of activeCodes) vacCountsByKpi[code] = 0;
 
   interface WorkingParticipant {
-    participant: ParticipantWithPerson;
+    participant: ParticipantWithPersonAndProfession;
     kpiResults: ParticipantKpiResult[];
     totalKpiPointsDecimal: Prisma.Decimal;
     applicableMaxPointsDecimal: Prisma.Decimal;
     hasApplicableMax: boolean;
+    professionBonusTotalDecimal: Prisma.Decimal;
   }
 
   const working: WorkingParticipant[] = participants.map((participant) => {
     let totalKpiPointsDecimal = new Prisma.Decimal(0);
     let applicableMaxPointsDecimal = new Prisma.Decimal(0);
     let hasApplicableMax = false;
+    let professionBonusTotalDecimal = new Prisma.Decimal(0);
+
+    // La profesion solo interviene si el split usa profesiones: un split sin profesiones nunca
+    // recibe bonus, aunque alguna fila antigua tuviera `professionId` informado.
+    const applicableProfession =
+      usesProfessions && participant.profession ? toApplicableProfession(participant.profession) : null;
 
     const kpiResults: ParticipantKpiResult[] = activeCodes.map((code) => {
       const config = configByCode.get(code)!;
@@ -363,9 +405,19 @@ export async function computeWeeklyResults(db: PrismaClient, splitId: string, we
       if (resolved.blockingIssue) blockingIssues.push(resolved.blockingIssue);
       if (resolved.status === "VAC") vacCountsByKpi[code] = (vacCountsByKpi[code] ?? 0) + 1;
 
-      if (resolved.status === "COMPUTED" && resolved.computation) {
-        totalKpiPointsDecimal = totalKpiPointsDecimal.plus(resolved.computation.finalPoints);
+      // Orden exacto del calculo (seccion 8): formula del KPI -> maximo base -> +20 % de profesion.
+      // `VAC` y `NOT_APPLICABLE` nunca llegan a `applyProfessionBonus`: no tienen puntos que bonificar.
+      const bonus =
+        resolved.status === "COMPUTED" && resolved.computation
+          ? applyProfessionBonus(resolved.computation.finalPoints, code, applicableProfession, participant.level)
+          : null;
+
+      if (bonus) {
+        totalKpiPointsDecimal = totalKpiPointsDecimal.plus(bonus.finalPoints);
+        // `applicableMaxPoints` sigue sumando maximos base, nunca maximos inflados por profesion:
+        // por eso el porcentaje visual puede superar el 100 % (seccion 10 del encargo).
         applicableMaxPointsDecimal = applicableMaxPointsDecimal.plus(config.baseMax);
+        professionBonusTotalDecimal = professionBonusTotalDecimal.plus(bonus.bonusPoints);
         hasApplicableMax = true;
       }
 
@@ -374,16 +426,40 @@ export async function computeWeeklyResults(db: PrismaClient, splitId: string, we
         kpiName: KPI_CATALOG[code].name,
         status: resolved.status,
         rawPoints: resolved.computation ? resolved.computation.rawPoints.toNumber() : null,
-        finalPoints: resolved.computation ? resolved.computation.finalPoints.toNumber() : null,
+        finalPoints: bonus ? bonus.finalPoints.toNumber() : null,
         baseMax: resolved.status === "NOT_APPLICABLE" ? null : config.baseMax,
         capped: resolved.computation?.capped ?? false,
+        basePointsBeforeProfession: bonus ? bonus.basePoints.toNumber() : null,
+        professionBonusPoints: bonus ? bonus.bonusPoints.toNumber() : null,
+        professionApplied: bonus?.applied ?? false,
+        professionName: bonus?.applied ? bonus.professionName : null,
         kpiRank: null,
         rankedParticipantCount: null,
       };
     });
 
-    return { participant, kpiResults, totalKpiPointsDecimal, applicableMaxPointsDecimal, hasApplicableMax };
+    return {
+      participant,
+      kpiResults,
+      totalKpiPointsDecimal,
+      applicableMaxPointsDecimal,
+      hasApplicableMax,
+      professionBonusTotalDecimal,
+    };
   });
+
+  // Profesiones obligatorias antes de publicar, solo cuando el split usa profesiones (seccion 6).
+  for (const issue of collectProfessionAssignmentIssues(
+    usesProfessions,
+    participants.map((participant) => ({
+      id: participant.id,
+      alias: participant.alias,
+      level: participant.level,
+      profession: participant.profession,
+    })),
+  )) {
+    blockingIssues.push(issue.message);
+  }
 
   // Ranking por KPI (seccion 3.5): solo entre resultados COMPUTED.
   for (const code of activeCodes) {
@@ -429,6 +505,17 @@ export async function computeWeeklyResults(db: PrismaClient, splitId: string, we
       weeklyRank: rank,
       positionPoints: positionPoints ?? null,
       factionId: item.participant.factionId,
+      profession:
+        usesProfessions && item.participant.profession
+          ? {
+              id: item.participant.profession.id,
+              name: item.participant.profession.name,
+              kpiCodeA: item.participant.profession.kpiCodeA,
+              kpiCodeB: item.participant.profession.kpiCodeB,
+              bonusPercent: PROFESSION_BONUS_PERCENT,
+            }
+          : null,
+      professionBonusTotal: item.professionBonusTotalDecimal.toNumber(),
     };
   });
 
@@ -453,5 +540,6 @@ export async function computeWeeklyResults(db: PrismaClient, splitId: string, we
     totalVacCount,
     blockingIssues: Array.from(new Set([...blockingIssues, ...factionPreview.blockingIssues])),
     factionPreview,
+    usesProfessions,
   };
 }

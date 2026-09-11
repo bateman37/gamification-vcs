@@ -59,7 +59,12 @@ export async function HistoricoSection({
                 const kpiByCode = new Map(group.perKpi.map((kpi) => [kpi.kpiCode, kpi]));
                 return (
                   <tr key={group.periodKey} className="border-b border-slate-100 align-top">
-                    <td className="sticky left-0 z-10 bg-white px-3 py-2 font-medium">{group.periodLabel}</td>
+                    <td className="sticky left-0 z-10 bg-white px-3 py-2 font-medium">
+                      {group.periodLabel}
+                      {group.periodSecondaryLabel && (
+                        <span className="block text-xs font-normal text-slate-500">{group.periodSecondaryLabel}</span>
+                      )}
+                    </td>
                     {history.availableKpis.map((kpi) => {
                       const cell = kpiByCode.get(kpi.code);
                       if (!cell) {
@@ -74,11 +79,23 @@ export async function HistoricoSection({
                         <td key={kpi.code} className={`px-3 py-2 text-center ${bandClass}`}>
                           <div className="font-semibold">{formatPoints(cell.sum)}</div>
                           <div className="text-xs opacity-80">media {formatPoints(cell.average)}</div>
+                          {cell.professionBonusSum > 0 && (
+                            <div className="text-xs font-medium text-indigo-800">
+                              +{formatPoints(cell.professionBonusSum)} por profesion
+                            </div>
+                          )}
                         </td>
                       );
                     })}
                     <td className="px-3 py-2 text-center">{group.publishedWeekCount}</td>
-                    <td className="px-3 py-2 text-center font-semibold">{formatPoints(group.sumKpiPoints)}</td>
+                    <td className="px-3 py-2 text-center font-semibold">
+                      {formatPoints(group.sumKpiPoints)}
+                      {group.professionBonusSum > 0 && (
+                        <span className="block text-xs font-medium text-indigo-800">
+                          Bonus profesion: {formatPoints(group.professionBonusSum)}
+                        </span>
+                      )}
+                    </td>
                     <td className="px-3 py-2 text-center">{formatPoints(group.averageKpiPoints)}</td>
                     <td className="px-3 py-2 text-center font-semibold">{formatPoints(group.sumPositionPoints)}</td>
                   </tr>

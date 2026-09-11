@@ -8,6 +8,8 @@ import { listPositionPointRules } from "@/server/services/position-points.servic
 import { getWeeklyKpiLoadSummary } from "@/server/services/kpi-load-summary.service";
 import { computeSplitClassification } from "@/server/services/classification.service";
 import { listFactionsForSplit } from "@/server/services/faction.service";
+import { listProfessionsForSplit } from "@/server/services/profession.service";
+import { toProfessionView } from "@/domain/profession-display";
 import { computeFactionClassification } from "@/server/services/faction-classification.service";
 import { requireAdminSession } from "@/lib/session";
 import { TOTAL_KPI_COUNT } from "@/domain/kpis/catalog";
@@ -27,6 +29,7 @@ import { WeekResultsCell } from "./WeekResultsCell";
 import { ClassificationSummarySection } from "./ClassificationSummarySection";
 import { FactionsSection } from "./FactionsSection";
 import { FactionClassificationSummarySection } from "./FactionClassificationSummarySection";
+import { ProfessionsSection } from "./ProfessionsSection";
 
 const STATUS_TONE: Record<string, "slate" | "green" | "gray"> = {
   DRAFT: "slate",
@@ -41,13 +44,14 @@ export default async function SplitDetailPage({ params }: { params: { id: string
     notFound();
   }
 
-  const [weeks, participants, people, kpiConfigs, positionPointRules, factions] = await Promise.all([
+  const [weeks, participants, people, kpiConfigs, positionPointRules, factions, professions] = await Promise.all([
     listSplitWeeks(prisma, split.id),
     listParticipantsForSplit(prisma, split.id),
     listAllPersons(prisma),
     listKpiConfigsForSplit(prisma, split.id),
     listPositionPointRules(prisma, split.id),
     listFactionsForSplit(prisma, split.id),
+    listProfessionsForSplit(prisma, split.id),
   ]);
   const [kpiLoadSummaries, publications, classification, factionClassification] = await Promise.all([
     getWeeklyKpiLoadSummary(prisma, split.id, weeks),
@@ -61,6 +65,7 @@ export default async function SplitDetailPage({ params }: { params: { id: string
   const participatingPersonIds = new Set(participants.map((participant) => participant.personId));
   const availablePeople = people.filter((person) => !participatingPersonIds.has(person.id));
 
+  const professionViews = professions.map(toProfessionView);
   const activeKpiCount = kpiConfigs.filter((config) => config.isActive).length;
   const canActivate = split.status === "DRAFT" && participants.length > 0 && activeKpiCount > 0;
   const showAddParticipant = split.status !== "CLOSED";
@@ -71,6 +76,7 @@ export default async function SplitDetailPage({ params }: { params: { id: string
     { href: "#clasificacion-general-individual", label: "Clasificacion general individual" },
     { href: "#clasificacion-general-facciones", label: "Clasificacion general facciones" },
     { href: "#facciones", label: "Facciones" },
+    { href: "#profesiones", label: "Profesiones" },
     { href: "#participantes", label: "Participantes" },
     ...(showAddParticipant ? [{ href: "#anadir-participante", label: "Anadir participante" }] : []),
     { href: "#kpi-configuracion", label: "KPI del split" },
@@ -168,6 +174,13 @@ export default async function SplitDetailPage({ params }: { params: { id: string
 
         <FactionsSection splitId={split.id} splitStatus={split.status} factions={factions} hasAnyPublication={hasAnyPublication} />
 
+        <ProfessionsSection
+          splitId={split.id}
+          splitStatus={split.status}
+          professions={professions}
+          hasAnyPublication={hasAnyPublication}
+        />
+
         <section id="participantes" className="scroll-mt-6 space-y-3">
           <h2 className="text-lg font-semibold">Participantes</h2>
           <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
@@ -178,13 +191,24 @@ export default async function SplitDetailPage({ params }: { params: { id: string
                   <th className="px-3 py-2 font-medium">Alias</th>
                   <th className="px-3 py-2 font-medium">Nivel</th>
                   <th className="px-3 py-2 font-medium">Faccion</th>
+                  <th className="px-3 py-2 font-medium">Profesion</th>
                   <th className="px-3 py-2 text-center font-medium">Semana inicial</th>
                   <th className="px-3 py-2" />
                 </tr>
               </thead>
               <tbody>
                 {participants.map((participant) => (
-                  <ParticipantEditRow key={participant.id} splitId={split.id} participant={participant} factions={factions} />
+                  <ParticipantEditRow
+                    key={participant.id}
+                    splitId={split.id}
+                    participant={{
+                      ...participant,
+                      profession: participant.profession ? toProfessionView(participant.profession) : null,
+                    }}
+                    factions={factions}
+                    professions={professionViews}
+                    professionLocked={hasAnyPublication}
+                  />
                 ))}
               </tbody>
             </table>
@@ -203,6 +227,8 @@ export default async function SplitDetailPage({ params }: { params: { id: string
                 weeks={weeks}
                 splitStatus={split.status}
                 factions={factions}
+                professions={professionViews}
+                professionRequired={hasAnyPublication && professionViews.length > 0}
               />
             </div>
           )}

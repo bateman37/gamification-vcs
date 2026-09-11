@@ -37,6 +37,20 @@ export function formatCalendarDate(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
+/**
+ * Formatea un `Date` (medianoche UTC) como "DD/MM/AAAA", el formato legible
+ * en castellano. Lee siempre los componentes en UTC, igual que
+ * `formatCalendarDate`, para que una fecha de negocio nunca se desplace un
+ * dia por la zona horaria del proceso (`0.8.0` / MVP-2B: rotulo semanal del
+ * historico general).
+ */
+export function formatCalendarDateEs(date: Date): string {
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  return `${day}/${month}/${year}`;
+}
+
 /** Devuelve el dia ISO de la semana: 1 = lunes ... 7 = domingo. */
 export function isoWeekday(date: Date): number {
   const jsDay = date.getUTCDay(); // 0 = domingo ... 6 = sabado

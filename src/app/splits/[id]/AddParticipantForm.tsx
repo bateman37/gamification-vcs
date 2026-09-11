@@ -5,12 +5,20 @@ import { useState } from "react";
 import { addParticipantAction } from "@/server/actions/participant.actions";
 import { initialActionState } from "@/server/actions/action-result";
 import { ErrorMessage, FieldError, SubmitButton, SuccessMessage } from "@/components/ui";
-import type { Person, SplitWeek } from "@prisma/client";
+import type { Person, ParticipantLevel, SplitWeek } from "@prisma/client";
 import type { FactionWithCounts } from "@/server/services/faction.service";
+import { PROFESSION_BONUS_LABEL } from "@/domain/profession-bonus";
+import { formatPoweredKpis, type ProfessionView } from "@/domain/profession-display";
 
 function SubmitAddParticipantButton() {
   const { pending } = useFormStatus();
   return <SubmitButton pending={pending}>Anadir participante</SubmitButton>;
+}
+
+function isAvailableForLevel(profession: ProfessionView, level: ParticipantLevel): boolean {
+  if (level === "N0") return profession.availableN0;
+  if (level === "N1") return profession.availableN1;
+  return profession.availableN2;
 }
 
 export function AddParticipantForm({
@@ -19,16 +27,24 @@ export function AddParticipantForm({
   weeks,
   splitStatus,
   factions,
+  professions,
+  professionRequired,
 }: {
   splitId: string;
   people: Person[];
   weeks: SplitWeek[];
   splitStatus: string;
   factions: FactionWithCounts[];
+  /** Profesiones del split. Vacio = el split no usa profesiones: no se muestra ningun selector. */
+  professions: ProfessionView[];
+  /** `true` cuando el split ya tiene una semana publicada: la profesion es obligatoria en el propio alta. */
+  professionRequired: boolean;
 }) {
   const addWithId = addParticipantAction.bind(null, splitId);
   const [state, formAction] = useFormState(addWithId, initialActionState);
   const [creatingPerson, setCreatingPerson] = useState(people.length === 0);
+  const [level, setLevel] = useState<ParticipantLevel>("N0");
+  const availableProfessions = professions.filter((profession) => isAvailableForLevel(profession, level));
 
   return (
     <form action={formAction} className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
@@ -121,7 +137,8 @@ export function AddParticipantForm({
           <select
             id="level"
             name="level"
-            defaultValue="N0"
+            value={level}
+            onChange={(event) => setLevel(event.target.value as ParticipantLevel)}
             className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
           >
             <option value="N0">N0</option>
@@ -129,6 +146,33 @@ export function AddParticipantForm({
             <option value="N2">N2</option>
           </select>
         </div>
+
+        {professions.length > 0 && (
+          <div className="w-full sm:w-64">
+            <label htmlFor="professionId" className="block text-sm font-medium text-slate-700">
+              {professionRequired ? "Profesion *" : "Profesion (opcional hasta publicar)"}
+            </label>
+            <select
+              id="professionId"
+              name="professionId"
+              required={professionRequired}
+              defaultValue=""
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            >
+              <option value="">{professionRequired ? "Selecciona una profesion" : "Sin elegir"}</option>
+              {availableProfessions.map((profession) => (
+                <option key={profession.id} value={profession.id}>
+                  {profession.name} ({formatPoweredKpis(profession)})
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-slate-500">{PROFESSION_BONUS_LABEL}</p>
+            {availableProfessions.length === 0 && (
+              <p className="mt-1 text-xs text-amber-700">No hay ninguna profesion disponible para el nivel {level}.</p>
+            )}
+            <FieldError message={state.fieldErrors?.professionId} />
+          </div>
+        )}
 
         {factions.length > 0 && (
           <div className="w-full sm:w-44">
