@@ -18,6 +18,28 @@ function prismaErrorTargetIncludes(error: unknown, code: string, target: string)
   );
 }
 
+/**
+ * Comprueba la faccion enviada desde el cliente: obligatoria en cuanto el
+ * split ya tiene alguna faccion creada (ver docs/FACTIONS.md), y siempre
+ * perteneciente al mismo split (nunca se acepta una faccion de otro
+ * split). Devuelve `null` cuando el split todavia no usa facciones.
+ */
+async function resolveFactionIdOrThrow(db: PrismaClient, splitId: string, factionId: string | undefined): Promise<string | null> {
+  // Un factionId enviado desde el cliente se valida siempre, incluso si este split concreto todavia no tiene
+  // ninguna faccion propia: nunca se acepta una faccion perteneciente a otro split.
+  if (factionId) {
+    const faction = await db.splitFaction.findUnique({ where: { id: factionId } });
+    if (!faction || faction.splitId !== splitId) {
+      throw new DomainError("La faccion seleccionada no pertenece a este split.", "factionId");
+    }
+    return faction.id;
+  }
+
+  const factionCount = await db.splitFaction.count({ where: { splitId } });
+  if (factionCount === 0) return null;
+  throw new DomainError("Selecciona una faccion: este split ya tiene facciones configuradas.", "factionId");
+}
+
 export async function addParticipant(
   db: PrismaClient,
   splitId: string,
@@ -48,6 +70,7 @@ export async function addParticipant(
     );
   }
 
+  const factionId = await resolveFactionIdOrThrow(db, splitId, input.factionId);
   const aliasNormalized = normalizeAlias(input.alias);
 
   try {
@@ -59,6 +82,7 @@ export async function addParticipant(
         aliasNormalized,
         level: input.level,
         startWeekSequenceNumber: input.startWeekSequenceNumber,
+        factionId,
       },
     });
   } catch (error) {
@@ -87,6 +111,7 @@ export async function updateParticipant(
   if (!existing) {
     throw new DomainError("El participante indicado no existe.");
   }
+  const factionId = await resolveFactionIdOrThrow(db, existing.splitId, input.factionId ?? existing.factionId ?? undefined);
   const aliasNormalized = normalizeAlias(input.alias);
 
   try {
@@ -96,6 +121,7 @@ export async function updateParticipant(
         alias: input.alias.trim(),
         aliasNormalized,
         level: input.level,
+        factionId,
       },
     });
   } catch (error) {
@@ -110,10 +136,25 @@ export interface ParticipantWithPerson extends SplitParticipant {
   person: Person;
 }
 
-export async function listParticipantsForSplit(db: Db, splitId: string): Promise<ParticipantWithPerson[]> {
+export interface ParticipantWithPersonAndFaction extends ParticipantWithPerson {
+  faction: { name: string; color: string } | null;
+}
+
+/**
+ * Numero total de personas que participan en el split (`0.7.0` / MVP-2A,
+ * seccion 17 del encargo). Denominador unico de todos los "x de n" de
+ * resultados de un split: nunca el numero de resultados aplicables de un
+ * KPI concreto (`rankedParticipantCount`, que sigue siendo el numerador de
+ * cada ranking, sin cambiar su formula).
+ */
+export async function countParticipantsForSplit(db: Db, splitId: string): Promise<number> {
+  return db.splitParticipant.count({ where: { splitId } });
+}
+
+export async function listParticipantsForSplit(db: Db, splitId: string): Promise<ParticipantWithPersonAndFaction[]> {
   return db.splitParticipant.findMany({
     where: { splitId },
-    include: { person: true },
+    include: { person: true, faction: { select: { name: true, color: true } } },
     orderBy: { startWeekSequenceNumber: "asc" },
   });
 }

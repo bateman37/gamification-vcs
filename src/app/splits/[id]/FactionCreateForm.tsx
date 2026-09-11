@@ -1,0 +1,60 @@
+"use client";
+
+import { useFormState, useFormStatus } from "react-dom";
+import { createFactionAction } from "@/server/actions/faction.actions";
+import { initialActionState } from "@/server/actions/action-result";
+import { ErrorMessage, FieldError, SubmitButton, SuccessMessage } from "@/components/ui";
+
+function CreateFactionButton() {
+  const { pending } = useFormStatus();
+  return <SubmitButton pending={pending}>Crear faccion</SubmitButton>;
+}
+
+export function FactionCreateForm({ splitId }: { splitId: string }) {
+  const createWithId = createFactionAction.bind(null, splitId);
+  const [state, formAction] = useFormState(createWithId, initialActionState);
+
+  return (
+    <form action={formAction} className="grid grid-cols-1 gap-3 rounded-lg border border-dashed border-slate-300 bg-white p-4 sm:grid-cols-[minmax(0,1fr)_8rem_auto] sm:items-end">
+      <div>
+        <label htmlFor="faction-new-name" className="block text-sm font-medium text-slate-700">
+          Nombre de la nueva faccion
+        </label>
+        <input
+          id="faction-new-name"
+          name="name"
+          type="text"
+          required
+          className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+        />
+        <FieldError message={state.fieldErrors?.name} />
+      </div>
+      <div>
+        <label htmlFor="faction-new-color" className="block text-sm font-medium text-slate-700">
+          Color
+        </label>
+        <input
+          id="faction-new-color"
+          name="color"
+          type="color"
+          defaultValue="#1d4ed8"
+          className="mt-1 h-10 w-full rounded-md border border-slate-300"
+        />
+        <FieldError message={state.fieldErrors?.color} />
+      </div>
+      <div>
+        <CreateFactionButton />
+      </div>
+      {!state.ok && state.error && (
+        <div className="sm:col-span-3">
+          <ErrorMessage>{state.error}</ErrorMessage>
+        </div>
+      )}
+      {state.ok && (
+        <div className="sm:col-span-3">
+          <SuccessMessage>Faccion creada correctamente.</SuccessMessage>
+        </div>
+      )}
+    </form>
+  );
+}

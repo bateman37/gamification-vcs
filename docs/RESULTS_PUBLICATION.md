@@ -210,10 +210,16 @@ En la interfaz, una semana publicada muestra `Semana publicada: los datos
 estan bloqueados` en vez de formularios editables, y `Comprobar` sigue
 disponible en modo lectura.
 
-Las configuraciones del split (KPI, puntos por posicion) siguen pudiendo
-editarse para semanas futuras, pero **nunca** alteran una semana ya
-publicada: la instantanea es la unica fuente de verdad para lo ya
-publicado.
+**Actualizado en `0.7.0` / MVP-2A:** desde que el split tiene al menos una
+semana publicada, la configuracion de KPI y los puntos por posicion quedan
+bloqueados por completo (no solo las semanas ya publicadas, tambien las
+futuras), mediante `assertSplitConfigurationIsEditable`
+(`src/server/services/shared/split-configuration-lock.ts`). Esto sustituye
+la frase anterior de esta seccion ("las configuraciones del split siguen
+pudiendo editarse para semanas futuras"): ver `docs/DECISIONS.md` para el
+detalle completo de esta decision, que sustituye expresamente la
+provisional de `MVP-1B`. La instantanea sigue siendo, en cualquier caso, la
+unica fuente de verdad para lo ya publicado.
 
 No existe "Despublicar" ni "Reabrir" en esta entrega. `WeekPublication` es
 la unica fuente de verdad de que una semana esta publicada; no se mezcla
@@ -250,7 +256,13 @@ Toda lectura de participante viene exclusivamente de tablas publicadas
 (`PublishedParticipantWeeklyResult`/`PublishedKpiResult`): nunca se
 recalcula con la configuracion actual.
 
-## 7. Clasificacion general del split
+## 7. Clasificacion general individual del split
+
+**Renombrada en `0.7.0` / MVP-2A** de "Clasificacion general" a
+"Clasificacion general individual" (ancla, indice lateral y titulo de la
+pagina detallada incluidos), para distinguirla de la nueva "Clasificacion
+general facciones" que aparece justo debajo (ver `docs/FACTIONS.md`). Su
+calculo no ha cambiado.
 
 Usa **exclusivamente los puntos por posicion semanal publicados**
 (`SplitPositionPointRule` consumida al publicar, ver
@@ -273,20 +285,37 @@ sin conceder ninguna ventaja de negocio.
   los primeros N: se puede consultar la clasificacion completa.
 - **Vista detallada** (`/splits/[id]/clasificacion`, solo administrador):
   filtro de semana concreta o acumulado, filtro de KPI (todos o uno
-  activo), orden por puntos de posicion/total KPI/KPI seleccionado,
-  columnas de posicion, nombre, alias, nivel, semanas publicadas y
-  totales; con un KPI seleccionado, suma/media y posicion por ese KPI
-  (`computeSplitKpiClassification`). Desde el hotfix `AVISO`/`0` (ver
-  `docs/DECISIONS.md`), una semana `VAC` de ese KPI cuenta como un cero
-  real en la suma, la media y el ranking (`includedWeekCount` incluye
-  `COMPUTED` y `VAC`); `NOT_APPLICABLE` sigue excluido por completo, tanto
-  del acumulado como de una semana concreta (se muestra `—`, nunca `0`).
+  activo); con un KPI seleccionado, la columna de posicion pasa a llamarse
+  "Posicion KPI" y muestra el ranking real de ese KPI (nunca la posicion
+  general bajo ese titulo), y el orden predeterminado es su suma/resultado
+  descendente (`0.7.0` / MVP-2A, ver `docs/DECISIONS.md`). Se puede ordenar
+  ademas por puntos de posicion, total KPI y media (acumulado) mediante
+  encabezados de columna accesibles (`aria-sort`) que conservan los
+  filtros de semana y KPI; columnas de nombre, alias, nivel, semanas
+  publicadas y totales; con un KPI seleccionado, tambien suma/media y
+  posicion por ese KPI (`computeSplitKpiClassification`). Desde el hotfix
+  `AVISO`/`0` (ver `docs/DECISIONS.md`), una semana `VAC` de ese KPI cuenta
+  como un cero real en la suma, la media y el ranking (`includedWeekCount`
+  incluye `COMPUTED` y `VAC`); `NOT_APPLICABLE` sigue excluido por
+  completo, tanto del acumulado como de una semana concreta (se muestra
+  `—`, nunca `0`).
 - **Vista limitada para participante** (dentro de `/resultados > Por
   split`): alias, posicion semanal/general, total de puntos KPI por
-  semana, puntos por posicion de cada semana, sumas acumuladas. Nunca
-  incluye nombre real, valores de KPI individuales, niveles, estados
-  `VAC` ni maximos de otros participantes; la respuesta del servidor no
-  contiene esos campos (no se ocultan solo con CSS).
+  semana, puntos por posicion de cada semana, sumas acumuladas, y (`0.7.0`
+  / MVP-2A) la faccion actual y la clasificacion general de facciones (ver
+  `docs/FACTIONS.md`). Nunca incluye nombre real, valores de KPI
+  individuales, niveles, estados `VAC` ni maximos de otros participantes;
+  la respuesta del servidor no contiene esos campos (no se ocultan solo
+  con CSS).
+
+**Denominador unico de "x de n" (`0.7.0` / MVP-2A, ver `docs/DECISIONS.md`):**
+toda posicion mostrada en resultados (general, semanal, por KPI, vista
+administrativa de una semana publicada y subvista `Por split`) usa como
+denominador el numero total de participantes del split
+(`countParticipantsForSplit`), no el numero de resultados aplicables de un
+KPI concreto. `rankedParticipantCount` se conserva sin cambios como
+numerador interno de cada ranking; no se usa como denominador en ninguna
+pantalla.
 
 ## 8. Integridad y seguridad
 
@@ -304,3 +333,7 @@ sin conceder ninguna ventaja de negocio.
 Despublicar, reabrir o editar una semana publicada; exportacion
 Excel/PDF de resultados; medallas; API publica; facciones, profesiones,
 economia, tienda, objetos o recompensas.
+
+Las facciones se implementaron en `0.7.0` / MVP-2A (ver
+`docs/FACTIONS.md`) sin tocar ninguna de las formulas ni reglas descritas
+en este documento; el resto de la lista sigue fuera de alcance.

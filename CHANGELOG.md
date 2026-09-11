@@ -4,6 +4,80 @@ Formato inspirado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/)
 Este proyecto usa versionado `0.x` mientras se construye el nucleo
 funcional; la primera version publicada es `0.1.0`.
 
+## [0.7.0] - MVP-2A — Facciones, clasificacion de facciones y consolidacion de UX
+
+### Anadido
+
+- **Facciones por split (`SplitFaction`):** administracion completa
+  (crear/editar/eliminar segun el estado del split), asignacion
+  obligatoria de participantes en cuanto el split ya tiene alguna faccion
+  creada, y activacion/publicacion condicionadas al conjunto completo de
+  reglas (al menos dos facciones, todos los participantes asignados, al
+  menos tres aplicables por faccion) solo cuando el split usa facciones
+  (un split sin facciones se comporta igual que antes de esta version, ver
+  `docs/DECISIONS.md`).
+- **Renombre = puntos por posicion**, sin segunda formula ni tabla
+  independiente: el aporte de cada participante a su faccion es siempre
+  `positionPoints` ya publicado.
+- **Regla semanal de facciones:** suma de los tres mejores `positionPoints`
+  (nunca una media), con desempate por mejor/segundo/tercer participante y
+  ranking de competicion en empate real
+  (`src/domain/faction-ranking.ts`).
+- **Instantanea de faccion** congelada en cada publicacion semanal
+  (`PublishedParticipantWeeklyResult.factionId`/`factionNameSnapshot`/
+  `factionColorSnapshot`), clasificacion de facciones semanal y acumulada
+  calculada al consultar (`faction-classification.service.ts`), resumen
+  bajo la clasificacion individual y vista detallada
+  (`/splits/[id]/clasificacion-facciones`).
+- **Visibilidad de facciones para el participante** en `/resultados > Por
+  split`: faccion actual, clasificacion general de facciones de solo
+  lectura y detalle de los tres alias que puntuaron cada semana, sin
+  revelar datos privados de otras personas.
+- Detalle completo en `docs/FACTIONS.md`.
+
+### Cambiado
+
+- **Bloqueo de configuracion tras la primera publicacion:** la activacion
+  y desactivacion de KPI, sus maximos/multiplicadores/parametros y los
+  puntos por posicion quedan bloqueados en cuanto el split tiene al menos
+  una semana publicada (`assertSplitConfigurationIsEditable`), sustituyendo
+  la decision provisional de `MVP-1B` que permitia editar KPI en un split
+  activo sin limite.
+- **Clasificacion individual detallada filtrada por KPI:** con un KPI
+  seleccionado, el orden predeterminado pasa a ser su suma/resultado
+  descendente y la columna de posicion se renombra a "Posicion KPI"
+  (mostrando el ranking real de ese KPI, nunca la posicion general bajo
+  ese titulo); se puede ordenar tambien por puntos de posicion, total KPI
+  y media mediante encabezados de columna accesibles (`aria-sort`) que
+  conservan los filtros de semana y KPI.
+- **Denominador unico "x de n":** todas las posiciones de resultados de un
+  split (general, semanal, por KPI, vista administrativa de una semana
+  publicada y subvista `Por split`) usan como denominador el numero total
+  de participantes del split, no el numero de resultados aplicables de
+  cada KPI.
+- **Historico general** (`/resultados > Historico general`): sustituye el
+  bloque de texto "Desglose por KPI (suma / media)" por una columna
+  compacta por cada KPI presente (ordenadas segun el catalogo), con la
+  suma como valor principal y la media como texto secundario, y bandas de
+  color basadas en un porcentaje agregado reproducible.
+- **KPI del split** en una sola linea por tarjeta en todos los anchos de
+  pantalla, con la configuracion distribuida horizontalmente.
+- **Layout general** mas ancho en pantallas panoramicas (hasta 1920 px).
+- **Formulario "Anadir participante"** reorganizado en rejilla, con la
+  nota de "Semana inicial" en su propia linea y asociada de forma
+  accesible al selector (`aria-describedby`).
+- La seccion "Clasificacion general" del detalle del split se renombra a
+  "Clasificacion general individual", para distinguirla de la nueva
+  "Clasificacion general facciones".
+
+### Documentacion
+
+- Nuevo `docs/FACTIONS.md`.
+- `docs/DATA_MODEL.md`, `docs/RESULTS_PUBLICATION.md`, `docs/ROADMAP.md`,
+  `docs/DECISIONS.md` y `README.md` actualizados; corrige la referencia
+  anterior del roadmap a "promedio de los tres mejores renombres" (la
+  regla vigente es suma).
+
 ## [0.6.2] - Hotfix `AVISO`/`0` — Avisos de carga y ceros en resultados
 
 ### Corregido

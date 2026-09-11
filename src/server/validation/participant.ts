@@ -10,6 +10,8 @@ export const addParticipantSchema = z.object({
     .number()
     .int("La semana inicial debe ser un numero entero.")
     .min(1, "La semana inicial debe ser al menos 1."),
+  /** Obligatoria solo cuando el split ya tiene facciones creadas (ver docs/FACTIONS.md); se valida en el servicio. */
+  factionId: z.string().trim().min(1).optional(),
 });
 
 export type AddParticipantInput = z.infer<typeof addParticipantSchema>;
@@ -17,6 +19,7 @@ export type AddParticipantInput = z.infer<typeof addParticipantSchema>;
 export const updateParticipantSchema = z.object({
   alias: z.string().trim().min(1, "El alias es obligatorio.").max(100),
   level: participantLevelSchema,
+  factionId: z.string().trim().min(1).optional(),
 });
 
 export type UpdateParticipantInput = z.infer<typeof updateParticipantSchema>;

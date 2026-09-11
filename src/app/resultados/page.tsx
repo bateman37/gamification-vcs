@@ -17,7 +17,15 @@ function buildTabHref(vista: string, personId: string, isAdmin: boolean): string
 export default async function ResultadosPage({
   searchParams,
 }: {
-  searchParams: { persona?: string; vista?: string; split?: string; anio?: string; splitFiltro?: string; agrupacion?: string };
+  searchParams: {
+    persona?: string;
+    vista?: string;
+    split?: string;
+    anio?: string;
+    splitFiltro?: string;
+    agrupacion?: string;
+    semanaFaccion?: string;
+  };
 }) {
   const session = await requireSession();
   const isAdmin = session.user.role === "ADMIN";
@@ -61,7 +69,12 @@ export default async function ResultadosPage({
           </nav>
 
           {vista === "por-split" ? (
-            <PorSplitSection personId={personId} requestedSplitId={searchParams.split ?? null} isAdmin={isAdmin} />
+            <PorSplitSection
+              personId={personId}
+              requestedSplitId={searchParams.split ?? null}
+              isAdmin={isAdmin}
+              factionWeek={searchParams.semanaFaccion ?? null}
+            />
           ) : (
             <HistoricoSection personId={personId} isAdmin={isAdmin} searchParams={searchParams} />
           )}

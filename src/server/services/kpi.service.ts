@@ -2,6 +2,7 @@ import type { Prisma, PrismaClient, SplitKpiConfig } from "@prisma/client";
 import { DomainError } from "@/lib/errors";
 import { KPI_CATALOG_LIST, type KpiCode } from "@/domain/kpis/catalog";
 import type { UpdateKpiConfigInput } from "@/server/validation/kpi";
+import { assertSplitConfigurationIsEditable } from "@/server/services/shared/split-configuration-lock";
 
 type Db = PrismaClient | Prisma.TransactionClient;
 
@@ -39,9 +40,14 @@ export async function countActiveKpiConfigs(db: Db, splitId: string): Promise<nu
 }
 
 /**
- * Actualiza la configuracion de un KPI de un split. Solo se permite editar
- * mientras el split no esta cerrado: en `DRAFT` y en `ACTIVE` (esta ultima
- * decision es provisional, ver `docs/DECISIONS.md`).
+ * Actualiza la configuracion de un KPI de un split. Bloqueada por completo
+ * (activacion, maximo, multiplicadores y parametros) desde que el split
+ * tiene al menos una semana publicada, ademas de en un split `CLOSED`
+ * (`assertSplitConfigurationIsEditable`, seccion 12 de `0.7.0` / MVP-2A;
+ * sustituye la decision provisional de `MVP-1B`, ver `docs/DECISIONS.md`).
+ * La comprobacion se hace dentro de la misma transaccion que la escritura,
+ * para proteger tambien una carrera entre la primera publicacion y una
+ * edicion concurrente.
  */
 export async function updateKpiConfig(
   db: PrismaClient,
@@ -49,30 +55,30 @@ export async function updateKpiConfig(
   kpiCode: KpiCode,
   input: UpdateKpiConfigInput,
 ): Promise<SplitKpiConfig> {
-  const split = await db.split.findUnique({ where: { id: splitId } });
-  if (!split) {
-    throw new DomainError("El split indicado no existe.");
-  }
-  if (split.status === "CLOSED") {
-    throw new DomainError("No se puede editar la configuracion de KPI de un split cerrado.");
-  }
+  return db.$transaction(async (tx) => {
+    const split = await tx.split.findUnique({ where: { id: splitId } });
+    if (!split) {
+      throw new DomainError("El split indicado no existe.");
+    }
+    await assertSplitConfigurationIsEditable(tx, split);
 
-  const existing = await db.splitKpiConfig.findUnique({
-    where: { splitId_kpiCode: { splitId, kpiCode } },
-  });
-  if (!existing) {
-    throw new DomainError("La configuracion de este KPI no existe para este split.");
-  }
+    const existing = await tx.splitKpiConfig.findUnique({
+      where: { splitId_kpiCode: { splitId, kpiCode } },
+    });
+    if (!existing) {
+      throw new DomainError("La configuracion de este KPI no existe para este split.");
+    }
 
-  return db.splitKpiConfig.update({
-    where: { splitId_kpiCode: { splitId, kpiCode } },
-    data: {
-      isActive: input.isActive,
-      baseMax: input.baseMax,
-      multiplierN0: input.multiplierN0 ?? null,
-      multiplierN1: input.multiplierN1 ?? null,
-      multiplierN2: input.multiplierN2 ?? null,
-      parameters: input.parameters,
-    },
+    return tx.splitKpiConfig.update({
+      where: { splitId_kpiCode: { splitId, kpiCode } },
+      data: {
+        isActive: input.isActive,
+        baseMax: input.baseMax,
+        multiplierN0: input.multiplierN0 ?? null,
+        multiplierN1: input.multiplierN1 ?? null,
+        multiplierN2: input.multiplierN2 ?? null,
+        parameters: input.parameters,
+      },
+    });
   });
 }

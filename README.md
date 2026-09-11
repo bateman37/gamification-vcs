@@ -13,9 +13,10 @@ configuracion**, **IMPORT-1A / MVP-1C.1 — Carga semanal de
 Productividad**, **MVP-1C.2 / IMPORT-1B — Carga semanal de Escalados,
 Calidad y Llamadas**, **MVP-1C.3 / INPUT-1C — Cargas manuales y
 completitud semanal**, **BUGFIX-1 / UX-SPLIT-1 — Correcciones de
-formularios manuales y configuracion compacta del split** y **`0.6.0` /
-MVP-1C — Resultados, publicacion y clasificacion** (ver `docs/ROADMAP.md`).
-Version actual: `0.6.0`.
+formularios manuales y configuracion compacta del split**, **`0.6.0` /
+MVP-1C — Resultados, publicacion y clasificacion** y **`0.7.0` / MVP-2A —
+Facciones, clasificacion de facciones y consolidacion de UX** (ver
+`docs/ROADMAP.md`). Version actual: `0.7.0`.
 
 Estas entregas implementan:
 
@@ -75,10 +76,25 @@ Estas entregas implementan:
   clasificacion general del split (resumen, vista detallada y version
   limitada para participante).
 
+- Primera capa de juego real: **facciones por split**, con administracion
+  (crear/editar/eliminar segun el estado del split), asignacion
+  obligatoria de participantes en cuanto el split ya usa facciones, y
+  clasificacion de facciones (semanal y acumulada) calculada a partir de
+  los mismos puntos por posicion ya publicados (Renombre = puntos por
+  posicion, sin segunda formula). Ver `docs/FACTIONS.md`.
+- **Bloqueo de configuracion tras la primera publicacion:** los puntos por
+  posicion semanal y toda la configuracion de KPI (activacion, maximos,
+  multiplicadores, parametros) quedan bloqueados en cuanto el split tiene
+  al menos una semana publicada.
+- Correcciones de UX: KPI del split en una sola linea por tarjeta, layout
+  panoramico mas ancho, formulario "Anadir participante" reorganizado,
+  clasificacion individual filtrada por KPI con orden y posicion correctos,
+  denominador unico "x de n" en todos los resultados del split, e
+  historico general con columnas KPI compactas.
+
 Todavia **no** incluye despublicar/reabrir una semana, exportacion
-Excel/PDF de resultados, ni ninguna capa de juego adicional (facciones,
-profesiones, objetos, economia, renombre...). Consulta `docs/ROADMAP.md`
-para el plan completo.
+Excel/PDF de resultados, ni profesiones, localizaciones, objetos o
+economia de creditos. Consulta `docs/ROADMAP.md` para el plan completo.
 
 ## Pila tecnologica
 
@@ -490,8 +506,9 @@ Cierra el ciclo semanal completo. Detalle funcional exhaustivo en
    muestra `VAC` ni `AVISO`, sino el valor numerico `0`.
 4. Publica la semana con el boton de confirmacion; intenta modificar una
    carga manual y una de Excel de esa semana y comprueba que ambas se
-   rechazan; cambia la configuracion de un KPI y verifica que la
-   instantanea publicada no cambia.
+   rechazan; intenta cambiar la configuracion de un KPI o los puntos por
+   posicion despues de publicar y comprueba que ahora se rechaza tambien
+   (bloqueo de configuracion, `0.7.0` / MVP-2A, ver mas abajo).
 5. Intenta anadir un participante con semana inicial en la semana recien
    publicada (debe rechazarse) y con semana inicial en una semana futura
    (debe aceptarse).
@@ -508,6 +525,94 @@ Cierra el ciclo semanal completo. Detalle funcional exhaustivo en
 9. Reduce la ventana del navegador a unos 360 px en las tablas de
    resultados y clasificacion: deben mantenerse legibles con scroll
    horizontal contenido, sin desbordar la pagina.
+
+## Facciones, clasificacion de facciones y consolidacion de UX (`0.7.0` / MVP-2A)
+
+Primera capa de juego real y correcciones de resultados/UX. Detalle
+funcional exhaustivo en [`docs/FACTIONS.md`](docs/FACTIONS.md).
+
+- Facciones por split (crear/editar/eliminar segun el estado del split),
+  asignacion obligatoria de participantes en cuanto el split ya tiene
+  alguna faccion, y activacion/publicacion condicionadas al conjunto
+  completo de reglas solo cuando el split usa facciones.
+- Clasificacion de facciones (suma de los tres mejores puntos por
+  posicion, nunca una media) semanal y acumulada, con resumen bajo la
+  clasificacion individual y vista detallada
+  (`/splits/[id]/clasificacion-facciones`), y visibilidad segura en
+  `/resultados > Por split`.
+- Bloqueo de la configuracion de KPI y de los puntos por posicion en
+  cuanto el split tiene al menos una semana publicada.
+- KPI del split en una sola linea por tarjeta, layout panoramico mas
+  ancho, formulario "Anadir participante" reorganizado, clasificacion
+  individual filtrada por KPI con orden accesible y denominador `x de n`
+  unico, e historico general con columnas KPI compactas.
+
+### Comprobar manualmente
+
+1. Crea un split en borrador y dos facciones con nombre y colores
+   distintos; comprueba que no se puede repetir el mismo nombre dentro
+   del split.
+2. Anade al menos seis participantes (tres por faccion); comprueba que el
+   selector `Faccion` es obligatorio en el formulario en cuanto existe
+   alguna faccion.
+3. Configura al menos un KPI activo y los puntos por posicion, y activa el
+   split; repite quitando participantes de una faccion hasta dejarla con
+   menos de tres y comprueba que la activacion se rechaza con un mensaje
+   claro.
+4. Carga o introduce una semana completa; en la previsualizacion revisa la
+   tabla individual y, debajo, la previsualizacion compacta de
+   clasificacion de facciones.
+5. Publica la semana y comprueba que la suma de cada faccion usa
+   exactamente los tres mejores puntos por posicion; fuerza un empate de
+   suma con distinto mejor participante y comprueba el desempate, y un
+   empate real (mismo vector de tres aportaciones) y comprueba que reciben
+   la misma posicion.
+6. En el detalle del split, comprueba que aparece primero
+   `Clasificacion general individual` y justo debajo
+   `Clasificacion general facciones`; abre ambas vistas detalladas.
+7. Intenta modificar la configuracion de KPI y los puntos por posicion
+   despues de publicar: debe rechazarse tanto en la interfaz (solo
+   lectura con el aviso de bloqueo) como directamente en el servicio.
+8. Entra como participante vinculado a una persona del split y comprueba
+   que ve su propia faccion y la clasificacion de facciones sin datos
+   privados de otras personas.
+9. Con un split de seis personas, comprueba que todos los `x de n` de sus
+   resultados (posicion general, semanal, por KPI) terminan en `de 6`.
+10. En `/splits/[id]/clasificacion`, filtra por un KPI activo: comprueba
+    que el orden predeterminado es la suma de ese KPI descendente, que la
+    columna se llama `Posicion KPI`, y que se puede ordenar tambien por
+    puntos de posicion, total KPI y media.
+11. Abre el historico general (`/resultados > Historico general`) por
+    semana, mes y año, y revisa las columnas compactas por KPI (suma y
+    media) en vez del bloque de texto anterior.
+12. Revisa el detalle del split a 1366 px, a 1920/2048 px y en movil (~360
+    px): el contenido debe aprovechar el ancho disponible sin scroll
+    horizontal de pagina.
+
+## Reinicio opcional y destructivo del entorno local
+
+**Solo para una base de datos local ficticia.** Este comando **borra
+permanentemente** todos los datos de la base indicada en `DATABASE_URL`
+(personas, splits, participantes, facciones, cargas, resultados,
+publicaciones y cuentas) y vuelve a aplicar las migraciones desde cero.
+No lo ejecutes contra una base con datos reales: no hay forma de
+deshacerlo. Antes de continuar, detén `npm run dev` y verifica en tu
+`.env` que `DATABASE_URL` apunta a tu base local ficticia y no a un
+entorno compartido.
+
+```powershell
+# ATENCION: elimina todos los datos de la base indicada en DATABASE_URL.
+# Detén antes npm run dev y verifica que DATABASE_URL apunta a la base local ficticia correcta.
+npx prisma migrate reset
+
+$env:ADMIN_EMAIL = "admin@ejemplo.com"
+$env:ADMIN_PASSWORD = "una-contrasena-temporal-segura"
+npm run db:create-admin
+npm run dev
+```
+
+`.env` y cualquier credencial real nunca se suben al repositorio (ya
+estan excluidos en `.gitignore`).
 
 ## Documentos del proyecto
 
@@ -536,6 +641,8 @@ Cierra el ciclo semanal completo. Detalle funcional exhaustivo en
   inmutable, vista individual y clasificacion general (`0.6.0` / MVP-1C).
 - [`docs/AUTHENTICATION.md`](docs/AUTHENTICATION.md) — autenticacion
   local, ciclo de cuenta y matriz de permisos (`0.6.0` / MVP-1C).
+- [`docs/FACTIONS.md`](docs/FACTIONS.md) — facciones, clasificacion de
+  facciones y bloqueo de configuracion (`0.7.0` / MVP-2A).
 - [`docs/DECISIONS.md`](docs/DECISIONS.md) — decisiones tecnicas y de
   producto registradas.
 - [`CHANGELOG.md`](CHANGELOG.md) — historial de cambios.

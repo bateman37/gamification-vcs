@@ -6,6 +6,7 @@ import { addParticipantAction } from "@/server/actions/participant.actions";
 import { initialActionState } from "@/server/actions/action-result";
 import { ErrorMessage, FieldError, SubmitButton, SuccessMessage } from "@/components/ui";
 import type { Person, SplitWeek } from "@prisma/client";
+import type { FactionWithCounts } from "@/server/services/faction.service";
 
 function SubmitAddParticipantButton() {
   const { pending } = useFormStatus();
@@ -17,11 +18,13 @@ export function AddParticipantForm({
   people,
   weeks,
   splitStatus,
+  factions,
 }: {
   splitId: string;
   people: Person[];
   weeks: SplitWeek[];
   splitStatus: string;
+  factions: FactionWithCounts[];
 }) {
   const addWithId = addParticipantAction.bind(null, splitId);
   const [state, formAction] = useFormState(addWithId, initialActionState);
@@ -47,9 +50,9 @@ export function AddParticipantForm({
         </label>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:flex lg:flex-wrap lg:items-end">
+      <div className="flex flex-wrap items-end gap-4">
         {!creatingPerson ? (
-          <div className="lg:min-w-[14rem] lg:flex-1">
+          <div className="w-full sm:w-64">
             <label htmlFor="personId" className="block text-sm font-medium text-slate-700">
               Persona
             </label>
@@ -71,8 +74,8 @@ export function AddParticipantForm({
             <FieldError message={state.fieldErrors?.personId} />
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:min-w-[24rem] lg:flex-[2]">
-            <div>
+          <div className="grid w-full grid-cols-1 gap-3 sm:w-auto sm:grid-cols-2 sm:gap-4">
+            <div className="sm:w-56">
               <label htmlFor="newPersonFullName" className="block text-sm font-medium text-slate-700">
                 Nombre completo
               </label>
@@ -83,7 +86,7 @@ export function AddParticipantForm({
                 className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
               />
             </div>
-            <div>
+            <div className="sm:w-56">
               <label htmlFor="newPersonEmail" className="block text-sm font-medium text-slate-700">
                 Correo (opcional)
               </label>
@@ -97,7 +100,7 @@ export function AddParticipantForm({
           </div>
         )}
 
-        <div className="lg:w-40">
+        <div className="w-full sm:w-40">
           <label htmlFor="alias" className="block text-sm font-medium text-slate-700">
             Alias en este split
           </label>
@@ -111,7 +114,7 @@ export function AddParticipantForm({
           <FieldError message={state.fieldErrors?.alias} />
         </div>
 
-        <div className="lg:w-28">
+        <div className="w-full sm:w-28">
           <label htmlFor="level" className="block text-sm font-medium text-slate-700">
             Nivel tecnico
           </label>
@@ -127,14 +130,40 @@ export function AddParticipantForm({
           </select>
         </div>
 
-        <div className="lg:w-44">
+        {factions.length > 0 && (
+          <div className="w-full sm:w-44">
+            <label htmlFor="factionId" className="block text-sm font-medium text-slate-700">
+              Faccion *
+            </label>
+            <select
+              id="factionId"
+              name="factionId"
+              required
+              defaultValue=""
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            >
+              <option value="" disabled>
+                Selecciona una faccion
+              </option>
+              {factions.map((faction) => (
+                <option key={faction.id} value={faction.id}>
+                  {faction.name}
+                </option>
+              ))}
+            </select>
+            <FieldError message={state.fieldErrors?.factionId} />
+          </div>
+        )}
+
+        <div className="w-full sm:w-44">
           <label htmlFor="startWeekSequenceNumber" className="block text-sm font-medium text-slate-700">
-            Semana inicial
+            Semana inicial *
           </label>
           <select
             id="startWeekSequenceNumber"
             name="startWeekSequenceNumber"
             defaultValue="1"
+            aria-describedby={splitStatus === "ACTIVE" ? "startWeekSequenceNumber-help" : undefined}
             className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
           >
             {weeks.map((week) => (
@@ -143,18 +172,19 @@ export function AddParticipantForm({
               </option>
             ))}
           </select>
-          {splitStatus === "ACTIVE" && (
-            <p className="mt-1 text-xs text-slate-500">
-              El split ya esta activo: indica desde que semana compite esta persona.
-            </p>
-          )}
           <FieldError message={state.fieldErrors?.startWeekSequenceNumber} />
         </div>
 
-        <div>
+        <div className="w-full sm:w-auto">
           <SubmitAddParticipantButton />
         </div>
       </div>
+
+      {splitStatus === "ACTIVE" && (
+        <p id="startWeekSequenceNumber-help" className="text-xs text-slate-500">
+          * En un split activo, indica desde que semana empieza a competir esta persona.
+        </p>
+      )}
 
       {!state.ok && state.error && <ErrorMessage>{state.error}</ErrorMessage>}
       {state.ok && <SuccessMessage>Participante anadido correctamente.</SuccessMessage>}

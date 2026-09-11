@@ -809,3 +809,101 @@ un resultado ya calculado. Centralizar la conversion en dos funciones
 compartidas (`formatAvisoCount` y `resolveKpiResultDisplayPoints`) evita
 duplicar la misma condicion en cada componente, como pedia explicitamente
 el encargo.
+
+## Facciones opcionales por split, no obligatorias de forma retroactiva (`0.7.0` / MVP-2A)
+
+**Decision:** las reglas obligatorias de facciones (al menos dos,
+participantes asignados, al menos tres aplicables por faccion desde la
+primera semana) solo se exigen para activar o publicar un split **que ya
+tiene alguna faccion creada**. Un split que nunca ha tenido ninguna
+faccion se comporta exactamente igual que antes de `0.7.0`: `activateSplit`,
+`publishWeek` y todos los servicios de participante no imponen ningun
+requisito de facciones. `SplitParticipant.factionId` y las columnas de
+snapshot de `PublishedParticipantWeeklyResult` son nullable precisamente
+para sostener este comportamiento sin migracion destructiva.
+
+**Motivo:** el encargo describe la regla de activacion/publicacion en
+terminos absolutos, pero aplicarla sin condicion habria exigido reescribir
+la practica totalidad de la suite de pruebas existente (unos cien puntos
+en nueve ficheros que crean splits de prueba con uno o dos participantes
+para verificar reglas de KPI y empates ajenas a facciones, ya validadas
+manualmente), con riesgo real de alterar aserciones exactas de ranking sin
+relacion con esta entrega. Condicionar el requisito a que el split ya
+tenga alguna faccion configurada cumple la letra del encargo para el uso
+real (el checklist manual crea las facciones antes de activar) sin tocar
+ni un solo test existente. Decision acordada explicitamente con el usuario
+antes de implementar.
+
+## Renombre = puntos por posicion, sin segundo sistema (`0.7.0` / MVP-2A)
+
+**Decision:** no se crea una moneda, tabla, contador ni calculo
+independiente de "renombre". El aporte de un participante a su faccion es
+siempre `PublishedParticipantWeeklyResult.positionPoints`, ya calculado por
+el motor agregado a partir de `SplitPositionPointRule`. "Renombre" es
+unicamente una etiqueta de interfaz, siempre aclarada como equivalente a
+los puntos por posicion.
+
+**Motivo:** requisito explicito del encargo, para evitar dos fuentes de
+verdad que puedan desincronizarse.
+
+## Suma de los tres mejores, nunca promedio, para la puntuacion de facciones (`0.7.0` / MVP-2A)
+
+**Decision:** la puntuacion semanal de una faccion es la suma de los tres
+`positionPoints` mas altos entre sus participantes aplicables
+(`selectFactionTopThree`, `src/domain/faction-ranking.ts`). Corrige y
+sustituye la nota anterior de `docs/ROADMAP.md` que hablaba de "promedio de
+los tres mejores renombres".
+
+**Motivo:** decision de producto explicita en el encargo `0.7.0`/MVP-2A,
+que corrige una referencia desactualizada del roadmap anterior a que se
+disenara realmente esta capa.
+
+## Bloqueo de configuracion tras la primera publicacion sustituye la decision provisional de `MVP-1B` (`0.7.0` / MVP-2A)
+
+**Decision:** desde que un split tiene al menos una `WeekPublication`,
+`updateKpiConfig` y `updatePositionPointRules` rechazan cualquier cambio
+(activacion/desactivacion de KPI, maximos, multiplicadores, parametros y
+puntos por posicion), ademas del bloqueo ya existente para `CLOSED`. La
+comprobacion (`assertSplitConfigurationIsEditable`,
+`src/server/services/shared/split-configuration-lock.ts`) se ejecuta
+dentro de la misma transaccion que la escritura, igual que
+`assertWeekIsEditable` para las cargas semanales.
+
+**Motivo:** sustituye expresamente la decision provisional de `MVP-1B`
+("Edicion de KPI en splits activos permitida provisionalmente"), que
+asumia que no existian resultados dependientes de esa configuracion. Desde
+`0.6.0` existen semanas publicadas e instantaneas inmutables; permitir
+editar la configuracion de KPI o puntos por posicion despues de publicar
+podia dejar la configuracion de semanas futuras inconsistente con lo ya
+publicado, sin ningun beneficio: el encargo pide expresamente este bloqueo
+mas estricto.
+
+## Denominador unico de "x de n": total de participantes del split (`0.7.0` / MVP-2A)
+
+**Decision:** todas las posiciones mostradas en resultados (general,
+semanal, por KPI, vista administrativa de una semana publicada y subvista
+`Por split`) usan como denominador `n` el numero total de participantes
+del split (`countParticipantsForSplit`), nunca el numero de resultados
+aplicables de un KPI concreto (`rankedParticipantCount`, que se conserva
+sin cambios como numerador interno de cada ranking).
+
+**Motivo:** el encargo detecto que denominadores distintos por KPI dentro
+de la misma pantalla ("6 de 10" junto a "2 de 8") resultaban confusos; un
+unico denominador por split, calculado en servidor, es mas legible sin
+alterar ninguna formula de ranking ni republicar datos ya publicados.
+
+## Clasificacion filtrada por KPI: orden predeterminado por el KPI seleccionado (`0.7.0` / MVP-2A)
+
+**Decision:** en `/splits/[id]/clasificacion`, cuando se selecciona un KPI
+sin indicar explicitamente un orden, la tabla se ordena por la suma (o el
+resultado semanal) de ese KPI descendente, y la columna de posicion pasa a
+llamarse "Posicion KPI" mostrando el ranking real del KPI seleccionado
+(nunca la posicion general individual bajo ese titulo). El orden se
+controla mediante encabezados de columna accesibles (`aria-sort`) que
+conservan los filtros de semana y KPI en la URL, en vez de un segundo
+selector "Ordenar por" independiente.
+
+**Motivo:** el encargo permite explicitamente convertir los encabezados en
+controles ordenables en vez de (o ademas de) un selector; encabezados con
+enlaces `GET` evitan un componente cliente adicional y conservan filtros de
+forma natural a traves de la propia URL.

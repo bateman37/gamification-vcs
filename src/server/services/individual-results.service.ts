@@ -1,5 +1,7 @@
 import { Prisma, type PrismaClient } from "@prisma/client";
 import { computeSplitClassification } from "@/server/services/classification.service";
+import { countParticipantsForSplit } from "@/server/services/participant.service";
+import { KPI_CATALOG_LIST } from "@/domain/kpis/catalog";
 
 /**
  * Vista individual de resultados (seccion 7 de docs/RESULTS_PUBLICATION.md):
@@ -48,6 +50,7 @@ export interface PersonSplitKpiCell {
   finalPoints: number | null;
   baseMax: number | null;
   kpiRank: number | null;
+  /** Numerador real del ranking de este KPI (participantes con resultado COMPUTED). No usar como denominador de "x de n" (ver seccion 17 de `0.7.0` / MVP-2A). */
   rankedParticipantCount: number | null;
 }
 
@@ -71,6 +74,10 @@ export interface PersonSplitDetail {
   totalKpiPoints: number;
   currentRank: number | null;
   rankedParticipantCount: number;
+  /** Numero total de personas que participan en el split: denominador unico de todo "x de n" (seccion 17 de `0.7.0` / MVP-2A). */
+  splitParticipantCount: number;
+  /** Faccion actual de la persona en este split (`0.7.0` / MVP-2A). `null` si el split no usa facciones. */
+  currentFaction: { id: string; name: string; color: string } | null;
 }
 
 export async function getPersonSplitDetail(db: PrismaClient, personId: string, splitId: string): Promise<PersonSplitDetail | null> {
@@ -79,6 +86,11 @@ export async function getPersonSplitDetail(db: PrismaClient, personId: string, s
     include: { kpiResults: true, publication: { include: { splitWeek: true } }, split: { select: { name: true } } },
   });
   if (rows.length === 0) return null;
+
+  const currentParticipant = await db.splitParticipant.findUnique({
+    where: { splitId_personId: { splitId, personId } },
+    include: { faction: { select: { id: true, name: true, color: true } } },
+  });
 
   const sortedRows = [...rows].sort((a, b) => a.publication.splitWeek.sequenceNumber - b.publication.splitWeek.sequenceNumber);
 
@@ -107,6 +119,7 @@ export async function getPersonSplitDetail(db: PrismaClient, personId: string, s
 
   const classification = await computeSplitClassification(db, splitId);
   const entry = classification.entries.find((candidate) => candidate.personId === personId);
+  const splitParticipantCount = await countParticipantsForSplit(db, splitId);
 
   return {
     splitId,
@@ -116,6 +129,8 @@ export async function getPersonSplitDetail(db: PrismaClient, personId: string, s
     totalKpiPoints: totalKpiPointsDecimal.toNumber(),
     currentRank: entry?.rank ?? null,
     rankedParticipantCount: classification.entries.length,
+    splitParticipantCount,
+    currentFaction: currentParticipant?.faction ?? null,
   };
 }
 
@@ -135,6 +150,8 @@ export interface HistoryKpiBreakdown {
   /** Semanas que participan en `sum`/`average`: `COMPUTED` y `VAC` (VAC aporta 0, hotfix AVISO/0, ver docs/DECISIONS.md). `NOT_APPLICABLE` queda siempre excluido. */
   includedWeekCount: number;
   vacCount: number;
+  /** Porcentaje agregado reproducible (suma mostrada / suma de maximos aplicables x 100), o `null` si el denominador es cero (seccion 18 de `0.7.0` / MVP-2A). */
+  percentageOfMax: number | null;
 }
 
 export interface HistoryGroupRow {
@@ -144,12 +161,15 @@ export interface HistoryGroupRow {
   sumPositionPoints: number;
   sumKpiPoints: number;
   averageKpiPoints: number;
+  /** Una entrada solo para los KPI presentes en este periodo; el resto de columnas de `availableKpis` deben mostrarse como "—" (seccion 18). */
   perKpi: HistoryKpiBreakdown[];
 }
 
 export interface PersonHistory {
   availableYears: number[];
   availableSplits: { id: string; name: string }[];
+  /** Union de KPI presentes en los grupos filtrados, ordenados segun `KPI_CATALOG_LIST` (seccion 18 de `0.7.0` / MVP-2A). */
+  availableKpis: { code: string; name: string }[];
   groups: HistoryGroupRow[];
 }
 
@@ -183,16 +203,26 @@ export async function getPersonHistory(db: PrismaClient, personId: string, filte
     return true;
   });
 
+  interface WorkingKpiGroup {
+    kpiName: string;
+    sumDecimal: Prisma.Decimal;
+    sumBaseMaxDecimal: Prisma.Decimal;
+    includedWeekCount: number;
+    vacCount: number;
+  }
+
   interface WorkingGroup {
     periodKey: string;
     periodLabel: string;
     publishedWeekCount: number;
     sumPositionPointsDecimal: Prisma.Decimal;
     sumKpiPointsDecimal: Prisma.Decimal;
-    perKpi: Map<string, { kpiName: string; sumDecimal: Prisma.Decimal; includedWeekCount: number; vacCount: number }>;
+    perKpi: Map<string, WorkingKpiGroup>;
   }
 
   const groupsByKey = new Map<string, WorkingGroup>();
+  const kpiOrderByCode = new Map(KPI_CATALOG_LIST.map((entry, index) => [entry.code as string, index]));
+  const kpiNameByCode = new Map<string, string>();
 
   for (const row of filteredRows) {
     const week = row.publication.splitWeek;
@@ -216,12 +246,14 @@ export async function getPersonHistory(db: PrismaClient, personId: string, filte
     for (const kpiResult of row.kpiResults) {
       // No aplica queda siempre excluido de la suma/media/recuento: nunca se convierte en cero (ver docs/DECISIONS.md).
       if (kpiResult.outcomeStatus === "NOT_APPLICABLE") continue;
+      kpiNameByCode.set(kpiResult.kpiCode, kpiResult.kpiNameSnapshot);
 
       let kpiGroup = group.perKpi.get(kpiResult.kpiCode);
       if (!kpiGroup) {
-        kpiGroup = { kpiName: kpiResult.kpiNameSnapshot, sumDecimal: new Prisma.Decimal(0), includedWeekCount: 0, vacCount: 0 };
+        kpiGroup = { kpiName: kpiResult.kpiNameSnapshot, sumDecimal: new Prisma.Decimal(0), sumBaseMaxDecimal: new Prisma.Decimal(0), includedWeekCount: 0, vacCount: 0 };
         group.perKpi.set(kpiResult.kpiCode, kpiGroup);
       }
+      kpiGroup.sumBaseMaxDecimal = kpiGroup.sumBaseMaxDecimal.plus(kpiResult.baseMax ?? new Prisma.Decimal(0));
       if (kpiResult.outcomeStatus === "COMPUTED") {
         kpiGroup.sumDecimal = kpiGroup.sumDecimal.plus(kpiResult.finalPoints ?? new Prisma.Decimal(0));
       } else {
@@ -231,6 +263,10 @@ export async function getPersonHistory(db: PrismaClient, personId: string, filte
       kpiGroup.includedWeekCount += 1;
     }
   }
+
+  const availableKpis = Array.from(kpiNameByCode.entries())
+    .sort(([codeA], [codeB]) => (kpiOrderByCode.get(codeA) ?? 0) - (kpiOrderByCode.get(codeB) ?? 0))
+    .map(([code, name]) => ({ code, name }));
 
   const groups: HistoryGroupRow[] = Array.from(groupsByKey.values())
     .sort((a, b) => b.periodKey.localeCompare(a.periodKey))
@@ -248,8 +284,9 @@ export async function getPersonHistory(db: PrismaClient, personId: string, filte
         average: kpiGroup.includedWeekCount > 0 ? kpiGroup.sumDecimal.div(kpiGroup.includedWeekCount).toNumber() : 0,
         includedWeekCount: kpiGroup.includedWeekCount,
         vacCount: kpiGroup.vacCount,
+        percentageOfMax: kpiGroup.sumBaseMaxDecimal.greaterThan(0) ? kpiGroup.sumDecimal.div(kpiGroup.sumBaseMaxDecimal).mul(100).toNumber() : null,
       })),
     }));
 
-  return { availableYears, availableSplits, groups };
+  return { availableYears, availableSplits, availableKpis, groups };
 }

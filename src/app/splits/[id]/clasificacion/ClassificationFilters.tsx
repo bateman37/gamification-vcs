@@ -17,13 +17,11 @@ export function ClassificationFilters({
   kpis,
   selectedWeek,
   selectedKpi,
-  selectedOrder,
 }: {
   weeks: WeekOption[];
   kpis: KpiOption[];
   selectedWeek: string;
   selectedKpi: string;
-  selectedOrder: string;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -68,23 +66,7 @@ export function ClassificationFilters({
           ))}
         </select>
       </div>
-
-      <div>
-        <label htmlFor="orden" className="block text-xs font-medium text-slate-600">
-          Ordenar por
-        </label>
-        <select
-          id="orden"
-          name="orden"
-          defaultValue={selectedOrder}
-          onChange={() => formRef.current?.requestSubmit()}
-          className="mt-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm"
-        >
-          <option value="posicion">Puntos de posicion</option>
-          <option value="totalKpi">Total KPI</option>
-          {selectedKpi !== "todos" && <option value="kpi">KPI seleccionado</option>}
-        </select>
-      </div>
+      <p className="text-xs text-slate-500">Pulsa un encabezado de columna en la tabla para ordenar por esa columna.</p>
     </form>
   );
 }

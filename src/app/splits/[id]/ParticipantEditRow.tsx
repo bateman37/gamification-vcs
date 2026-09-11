@@ -6,18 +6,31 @@ import { updateParticipantAction } from "@/server/actions/participant.actions";
 import { initialActionState } from "@/server/actions/action-result";
 import { ErrorMessage, FieldError, SubmitButton } from "@/components/ui";
 import type { ParticipantWithPerson } from "@/server/services/participant.service";
+import type { FactionWithCounts } from "@/server/services/faction.service";
 
 function SaveButton() {
   const { pending } = useFormStatus();
   return <SubmitButton pending={pending}>Guardar</SubmitButton>;
 }
 
+function FactionBadge({ faction }: { faction: { name: string; color: string } | null }) {
+  if (!faction) return <span className="text-slate-400">—</span>;
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <span aria-hidden className="h-3 w-3 rounded-full border border-slate-300" style={{ backgroundColor: faction.color }} />
+      {faction.name}
+    </span>
+  );
+}
+
 export function ParticipantEditRow({
   splitId,
   participant,
+  factions,
 }: {
   splitId: string;
-  participant: ParticipantWithPerson;
+  participant: ParticipantWithPerson & { faction: { name: string; color: string } | null };
+  factions: FactionWithCounts[];
 }) {
   const [editing, setEditing] = useState(false);
   const updateWithIds = updateParticipantAction.bind(null, splitId, participant.id);
@@ -29,6 +42,9 @@ export function ParticipantEditRow({
         <td className="px-3 py-2">{participant.person.fullName}</td>
         <td className="px-3 py-2 font-medium">{participant.alias}</td>
         <td className="px-3 py-2">{participant.level}</td>
+        <td className="px-3 py-2">
+          <FactionBadge faction={participant.faction} />
+        </td>
         <td className="px-3 py-2 text-center">{participant.startWeekSequenceNumber}</td>
         <td className="px-3 py-2 text-right">
           <button
@@ -46,7 +62,7 @@ export function ParticipantEditRow({
   return (
     <tr className="border-b border-slate-100 bg-slate-50">
       <td className="px-3 py-2">{participant.person.fullName}</td>
-      <td colSpan={4} className="px-3 py-3">
+      <td colSpan={5} className="px-3 py-3">
         <form action={formAction} className="flex flex-wrap items-start gap-3">
           <div>
             <label className="block text-xs font-medium text-slate-600">Alias</label>
@@ -70,6 +86,27 @@ export function ParticipantEditRow({
               <option value="N2">N2</option>
             </select>
           </div>
+          {factions.length > 0 && (
+            <div>
+              <label className="block text-xs font-medium text-slate-600">Faccion</label>
+              <select
+                name="factionId"
+                defaultValue={participant.factionId ?? ""}
+                required
+                className="mt-1 rounded-md border border-slate-300 px-2 py-1 text-sm"
+              >
+                <option value="" disabled>
+                  Selecciona una faccion
+                </option>
+                {factions.map((faction) => (
+                  <option key={faction.id} value={faction.id}>
+                    {faction.name}
+                  </option>
+                ))}
+              </select>
+              <FieldError message={state.fieldErrors?.factionId} />
+            </div>
+          )}
           <div className="flex gap-2 pt-5">
             <SaveButton />
             <button

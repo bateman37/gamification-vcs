@@ -8,25 +8,34 @@ export function KpiConfigSection({
   splitId,
   splitStatus,
   kpiConfigs,
+  locked,
 }: {
   splitId: string;
   splitStatus: SplitStatus;
   kpiConfigs: SplitKpiConfig[];
+  /** `true` desde que el split tiene al menos una semana publicada (seccion 12 de `0.7.0` / MVP-2A). */
+  locked: boolean;
 }) {
   const configByCode = new Map<string, KpiConfigView>(
     kpiConfigs.map((config) => [config.kpiCode, toKpiConfigView(config)]),
   );
-  const readOnly = splitStatus === "CLOSED";
+  const readOnly = splitStatus === "CLOSED" || locked;
 
   return (
     <section id="kpi-configuracion" className="scroll-mt-6 space-y-3">
       <h2 className="text-lg font-semibold">KPI del split</h2>
-      {readOnly && (
+      {splitStatus === "CLOSED" ? (
         <p className="text-sm text-slate-500">
           El split esta cerrado: la configuracion de KPI se muestra en modo solo lectura.
         </p>
+      ) : (
+        locked && (
+          <p className="text-sm text-amber-700">
+            La configuracion quedo bloqueada al publicar la primera semana del split.
+          </p>
+        )
       )}
-      <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3">
         {KPI_CATALOG_LIST.map((catalogEntry) => {
           const config = configByCode.get(catalogEntry.code);
           if (!config) return null;

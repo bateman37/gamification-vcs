@@ -7,6 +7,8 @@ import { listKpiConfigsForSplit } from "@/server/services/kpi.service";
 import { listPositionPointRules } from "@/server/services/position-points.service";
 import { getWeeklyKpiLoadSummary } from "@/server/services/kpi-load-summary.service";
 import { computeSplitClassification } from "@/server/services/classification.service";
+import { listFactionsForSplit } from "@/server/services/faction.service";
+import { computeFactionClassification } from "@/server/services/faction-classification.service";
 import { requireAdminSession } from "@/lib/session";
 import { TOTAL_KPI_COUNT } from "@/domain/kpis/catalog";
 import { formatCalendarDate } from "@/lib/dates";
@@ -23,6 +25,8 @@ import { WeekKpiLoadCell } from "./WeekKpiLoadCell";
 import { WeekKpiLoadedCount } from "./WeekKpiLoadedCount";
 import { WeekResultsCell } from "./WeekResultsCell";
 import { ClassificationSummarySection } from "./ClassificationSummarySection";
+import { FactionsSection } from "./FactionsSection";
+import { FactionClassificationSummarySection } from "./FactionClassificationSummarySection";
 
 const STATUS_TONE: Record<string, "slate" | "green" | "gray"> = {
   DRAFT: "slate",
@@ -37,19 +41,22 @@ export default async function SplitDetailPage({ params }: { params: { id: string
     notFound();
   }
 
-  const [weeks, participants, people, kpiConfigs, positionPointRules] = await Promise.all([
+  const [weeks, participants, people, kpiConfigs, positionPointRules, factions] = await Promise.all([
     listSplitWeeks(prisma, split.id),
     listParticipantsForSplit(prisma, split.id),
     listAllPersons(prisma),
     listKpiConfigsForSplit(prisma, split.id),
     listPositionPointRules(prisma, split.id),
+    listFactionsForSplit(prisma, split.id),
   ]);
-  const [kpiLoadSummaries, publications, classification] = await Promise.all([
+  const [kpiLoadSummaries, publications, classification, factionClassification] = await Promise.all([
     getWeeklyKpiLoadSummary(prisma, split.id, weeks),
     prisma.weekPublication.findMany({ where: { splitWeekId: { in: weeks.map((week) => week.id) } } }),
     computeSplitClassification(prisma, split.id),
+    computeFactionClassification(prisma, split.id),
   ]);
   const publishedAtByWeekId = new Map(publications.map((publication) => [publication.splitWeekId, publication.publishedAt]));
+  const hasAnyPublication = publications.length > 0;
 
   const participatingPersonIds = new Set(participants.map((participant) => participant.personId));
   const availablePeople = people.filter((person) => !participatingPersonIds.has(person.id));
@@ -61,7 +68,9 @@ export default async function SplitDetailPage({ params }: { params: { id: string
   const navItems: SplitDetailNavItem[] = [
     { href: "#resumen", label: "Resumen" },
     { href: "#calendario-semanas", label: "Calendario de semanas" },
-    { href: "#clasificacion-general", label: "Clasificacion general" },
+    { href: "#clasificacion-general-individual", label: "Clasificacion general individual" },
+    { href: "#clasificacion-general-facciones", label: "Clasificacion general facciones" },
+    { href: "#facciones", label: "Facciones" },
     { href: "#participantes", label: "Participantes" },
     ...(showAddParticipant ? [{ href: "#anadir-participante", label: "Anadir participante" }] : []),
     { href: "#kpi-configuracion", label: "KPI del split" },
@@ -155,6 +164,10 @@ export default async function SplitDetailPage({ params }: { params: { id: string
 
         <ClassificationSummarySection splitId={split.id} classification={classification} />
 
+        <FactionClassificationSummarySection splitId={split.id} classification={factionClassification} />
+
+        <FactionsSection splitId={split.id} splitStatus={split.status} factions={factions} hasAnyPublication={hasAnyPublication} />
+
         <section id="participantes" className="scroll-mt-6 space-y-3">
           <h2 className="text-lg font-semibold">Participantes</h2>
           <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
@@ -164,13 +177,14 @@ export default async function SplitDetailPage({ params }: { params: { id: string
                   <th className="px-3 py-2 font-medium">Persona</th>
                   <th className="px-3 py-2 font-medium">Alias</th>
                   <th className="px-3 py-2 font-medium">Nivel</th>
+                  <th className="px-3 py-2 font-medium">Faccion</th>
                   <th className="px-3 py-2 text-center font-medium">Semana inicial</th>
                   <th className="px-3 py-2" />
                 </tr>
               </thead>
               <tbody>
                 {participants.map((participant) => (
-                  <ParticipantEditRow key={participant.id} splitId={split.id} participant={participant} />
+                  <ParticipantEditRow key={participant.id} splitId={split.id} participant={participant} factions={factions} />
                 ))}
               </tbody>
             </table>
@@ -188,14 +202,15 @@ export default async function SplitDetailPage({ params }: { params: { id: string
                 people={availablePeople}
                 weeks={weeks}
                 splitStatus={split.status}
+                factions={factions}
               />
             </div>
           )}
         </section>
 
-        <KpiConfigSection splitId={split.id} splitStatus={split.status} kpiConfigs={kpiConfigs} />
+        <KpiConfigSection splitId={split.id} splitStatus={split.status} kpiConfigs={kpiConfigs} locked={hasAnyPublication} />
 
-        <PositionPointsSection splitId={split.id} splitStatus={split.status} rules={positionPointRules} />
+        <PositionPointsSection splitId={split.id} splitStatus={split.status} rules={positionPointRules} locked={hasAnyPublication} />
 
         {split.status === "DRAFT" && (
           <section id="editar-split" className="scroll-mt-6 space-y-3">

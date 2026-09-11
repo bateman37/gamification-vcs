@@ -18,6 +18,7 @@ import { resolveStarWriterOutcome } from "@/domain/kpis/writer";
 import { resolveEnthusiasticStudentOutcome } from "@/domain/kpis/student";
 import { resolveExpertApprenticeOutcome } from "@/domain/kpis/apprentice";
 import { rankByScoreDescending, compareNormalizedAlias } from "@/domain/ranking";
+import { buildFactionWeeklyPreview, type FactionWeeklyPreview } from "@/server/services/faction.service";
 
 /**
  * Motor agregado de resultados semanales (ver docs/RESULTS_PUBLICATION.md).
@@ -53,6 +54,8 @@ export interface ParticipantWeeklyResult {
   applicableMaxPoints: number | null;
   weeklyRank: number;
   positionPoints: number | null;
+  /** Faccion actual del participante (`0.7.0` / MVP-2A). `null` si el split no usa facciones. */
+  factionId: string | null;
 }
 
 export interface WeeklyResultsComputation {
@@ -73,6 +76,8 @@ export interface WeeklyResultsComputation {
   isComplete: boolean;
   /** Inconsistencias que deben impedir la publicacion (fila inesperada ausente, posicion sin regla configurada, etc.). Vacio si se puede publicar. */
   blockingIssues: string[];
+  /** Previsualizacion/instantanea de clasificacion de facciones de esta semana (`0.7.0` / MVP-2A, ver docs/FACTIONS.md). */
+  factionPreview: FactionWeeklyPreview;
 }
 
 interface ResolvedKpiOutcome {
@@ -326,6 +331,7 @@ export async function computeWeeklyResults(db: PrismaClient, splitId: string, we
     completeness,
     isComplete,
     blockingIssues: [],
+    factionPreview: { hasFactions: false, blockingIssues: [], factions: [] },
   };
 
   if (!isComplete) return base;
@@ -422,10 +428,22 @@ export async function computeWeeklyResults(db: PrismaClient, splitId: string, we
       applicableMaxPoints: item.hasApplicableMax ? item.applicableMaxPointsDecimal.toNumber() : null,
       weeklyRank: rank,
       positionPoints: positionPoints ?? null,
+      factionId: item.participant.factionId,
     };
   });
 
   const totalVacCount = Object.values(vacCountsByKpi).reduce((sum, count) => sum + (count ?? 0), 0);
+
+  const factionPreview = await buildFactionWeeklyPreview(
+    db,
+    splitId,
+    resultParticipants.map((participant) => ({
+      splitParticipantId: participant.splitParticipantId,
+      alias: participant.alias,
+      positionPoints: participant.positionPoints,
+      factionId: participant.factionId,
+    })),
+  );
 
   return {
     ...base,
@@ -433,6 +451,7 @@ export async function computeWeeklyResults(db: PrismaClient, splitId: string, we
     totalParticipantCount: resultParticipants.length,
     vacCountsByKpi,
     totalVacCount,
-    blockingIssues: Array.from(new Set(blockingIssues)),
+    blockingIssues: Array.from(new Set([...blockingIssues, ...factionPreview.blockingIssues])),
+    factionPreview,
   };
 }

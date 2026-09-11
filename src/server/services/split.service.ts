@@ -4,6 +4,7 @@ import { generateSplitWeeks, parseCalendarDate } from "@/lib/dates";
 import type { CreateSplitInput, UpdateSplitDraftInput } from "@/server/validation/split";
 import { countActiveKpiConfigs, createDefaultKpiConfigs } from "@/server/services/kpi.service";
 import { createDefaultPositionPointRules } from "@/server/services/position-points.service";
+import { assertFactionsReadyToActivate } from "@/server/services/faction.service";
 
 type Db = PrismaClient | Prisma.TransactionClient;
 
@@ -165,6 +166,7 @@ export async function activateSplit(db: PrismaClient, splitId: string): Promise<
   if (activeKpiCount < 1) {
     throw new DomainError("El split necesita al menos un KPI activo para poder activarse.");
   }
+  await assertFactionsReadyToActivate(db, splitId);
 
   return db.split.update({ where: { id: splitId }, data: { status: "ACTIVE" } });
 }

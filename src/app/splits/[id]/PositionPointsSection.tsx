@@ -22,30 +22,38 @@ export function PositionPointsSection({
   splitId,
   splitStatus,
   rules,
+  locked,
 }: {
   splitId: string;
   splitStatus: SplitStatus;
   rules: SplitPositionPointRule[];
+  /** `true` desde que el split tiene al menos una semana publicada (seccion 12 de `0.7.0` / MVP-2A). */
+  locked: boolean;
 }) {
   const updateWithId = updatePositionPointsAction.bind(null, splitId);
   const [state, formAction] = useFormState<PositionPointsActionState, FormData>(
     updateWithId,
     initialPositionPointsActionState,
   );
-  const readOnly = splitStatus === "CLOSED";
+  const readOnly = splitStatus === "CLOSED" || locked;
   const sortedRules = [...rules].sort((a, b) => a.position - b.position);
 
   return (
     <section id="puntos-posicion" className="scroll-mt-20 space-y-3">
       <h2 className="text-lg font-semibold">Puntos por posicion semanal</h2>
       <p className="text-sm text-slate-600">
-        Configura los puntos que recibira cada posicion (1 a 15) al calcular la clasificacion semanal. Esta entrega
-        solo guarda estos valores: todavia no calcula ninguna posicion ni reparte estos puntos.
+        Configura los puntos que recibira cada posicion (1 a 15) al calcular la clasificacion semanal.
       </p>
-      {readOnly && (
+      {splitStatus === "CLOSED" ? (
         <p className="text-sm text-slate-500">
           El split esta cerrado: los puntos por posicion se muestran en modo solo lectura.
         </p>
+      ) : (
+        locked && (
+          <p className="text-sm text-amber-700">
+            La configuracion quedo bloqueada al publicar la primera semana del split.
+          </p>
+        )
       )}
 
       <form action={readOnly ? undefined : formAction} className="rounded-lg border border-slate-200 bg-white p-4">
