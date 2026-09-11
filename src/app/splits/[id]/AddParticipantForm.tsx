@@ -50,9 +50,9 @@ export function AddParticipantForm({
         </label>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-[minmax(12rem,1.5fr)_minmax(8rem,1fr)_minmax(7rem,0.8fr)_minmax(10rem,1fr)_minmax(9rem,1fr)_auto] lg:items-end">
+      <div className="flex flex-wrap items-end gap-4">
         {!creatingPerson ? (
-          <div className="sm:col-span-2 lg:col-span-1 lg:min-w-[14rem]">
+          <div className="w-full sm:w-64">
             <label htmlFor="personId" className="block text-sm font-medium text-slate-700">
               Persona
             </label>
@@ -74,8 +74,8 @@ export function AddParticipantForm({
             <FieldError message={state.fieldErrors?.personId} />
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-3 sm:col-span-2 sm:grid-cols-2 lg:col-span-1 lg:min-w-[24rem]">
-            <div>
+          <div className="grid w-full grid-cols-1 gap-3 sm:w-auto sm:grid-cols-2 sm:gap-4">
+            <div className="sm:w-56">
               <label htmlFor="newPersonFullName" className="block text-sm font-medium text-slate-700">
                 Nombre completo
               </label>
@@ -86,7 +86,7 @@ export function AddParticipantForm({
                 className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
               />
             </div>
-            <div>
+            <div className="sm:w-56">
               <label htmlFor="newPersonEmail" className="block text-sm font-medium text-slate-700">
                 Correo (opcional)
               </label>
@@ -100,7 +100,7 @@ export function AddParticipantForm({
           </div>
         )}
 
-        <div>
+        <div className="w-full sm:w-40">
           <label htmlFor="alias" className="block text-sm font-medium text-slate-700">
             Alias en este split
           </label>
@@ -114,7 +114,7 @@ export function AddParticipantForm({
           <FieldError message={state.fieldErrors?.alias} />
         </div>
 
-        <div>
+        <div className="w-full sm:w-28">
           <label htmlFor="level" className="block text-sm font-medium text-slate-700">
             Nivel tecnico
           </label>
@@ -131,7 +131,7 @@ export function AddParticipantForm({
         </div>
 
         {factions.length > 0 && (
-          <div>
+          <div className="w-full sm:w-44">
             <label htmlFor="factionId" className="block text-sm font-medium text-slate-700">
               Faccion *
             </label>
@@ -155,7 +155,7 @@ export function AddParticipantForm({
           </div>
         )}
 
-        <div>
+        <div className="w-full sm:w-44">
           <label htmlFor="startWeekSequenceNumber" className="block text-sm font-medium text-slate-700">
             Semana inicial *
           </label>
@@ -175,7 +175,7 @@ export function AddParticipantForm({
           <FieldError message={state.fieldErrors?.startWeekSequenceNumber} />
         </div>
 
-        <div>
+        <div className="w-full sm:w-auto">
           <SubmitAddParticipantButton />
         </div>
       </div>

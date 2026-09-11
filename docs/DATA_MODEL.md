@@ -12,10 +12,11 @@ Fuente de verdad: `prisma/schema.prisma` y las migraciones
 (MVP-1C.3 / INPUT-1C),
 `prisma/migrations/20260911140000_add_position_points/migration.sql`
 (`BUGFIX-1 / UX-SPLIT-1`),
-`prisma/migrations/20260911154959_add_results_publication_and_auth/migration.sql`
-y
+`prisma/migrations/20260911154959_add_results_publication_and_auth/migration.sql`,
 `prisma/migrations/20260911155500_add_publication_check_constraints/migration.sql`
-(`0.6.0` / MVP-1C). Este documento describe y explica ese esquema; en caso
+(`0.6.0` / MVP-1C) y
+`prisma/migrations/20260911205212_add_factions/migration.sql`
+(`0.7.0` / MVP-2A). Este documento describe y explica ese esquema; en caso
 de discrepancia, el esquema real manda.
 
 ## Diagrama entidad-relacion
@@ -27,6 +28,9 @@ erDiagram
     Split ||--o{ SplitParticipant : "tiene"
     Split ||--o{ SplitKpiConfig : "configura"
     Split ||--o{ SplitPositionPointRule : "configura"
+    Split ||--o{ SplitFaction : "tiene"
+    SplitFaction ||--o{ SplitParticipant : "agrupa"
+    SplitFaction ||--o{ PublishedParticipantWeeklyResult : "tiene resultado en (snapshot)"
     SplitWeek ||--o{ SplitParticipant : "es semana inicial de"
     SplitWeek ||--o| ProductivityImport : "tiene carga vigente"
     ProductivityImport ||--o{ ProductivityWeeklyRow : "contiene"
@@ -93,6 +97,9 @@ erDiagram
         int weeklyRank "mayor o igual que 1"
         int positionPoints "no negativo"
         int rankedParticipantCount "mayor o igual que 1"
+        string factionId FK "opcional; null si el split no usa facciones o es anterior a 0.7.0"
+        string factionNameSnapshot "opcional, congelado al publicar"
+        string factionColorSnapshot "opcional, congelado al publicar"
         datetime createdAt
     }
 
@@ -149,6 +156,17 @@ erDiagram
         enum level "N0, N1, N2"
         int startWeekSequenceNumber "FK compuesta a SplitWeek"
         int endWeekSequenceNumber "opcional, sin usar todavia"
+        string factionId FK "opcional, ver SplitFaction"
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    SplitFaction {
+        string id PK
+        string splitId FK
+        string name
+        string nameNormalized "minusculas, sin espacios exteriores; unico por split"
+        string color "hexadecimal #RRGGBB"
         datetime createdAt
         datetime updatedAt
     }
@@ -395,6 +413,32 @@ participacion.
 - Indice unico `SplitParticipant_splitId_aliasNormalized_key`: el alias
   normalizado es unico dentro del split (el mismo alias si puede
   repetirse en splits distintos).
+- `factionId` (`0.7.0` / MVP-2A, ver `docs/FACTIONS.md`): referencia
+  opcional a `SplitFaction` con `onDelete: Restrict` (una faccion con
+  participantes asignados nunca se borra fisicamente). Nullable para
+  migrar de forma segura splits existentes y splits que no usan facciones;
+  los servicios exigen una asignacion completa antes de activar o publicar
+  un split que ya tiene alguna faccion creada. Indice `SplitParticipant_factionId_idx`.
+
+### `SplitFaction` (`0.7.0` / MVP-2A)
+
+Faccion de un split (ver `docs/FACTIONS.md`).
+
+- `id`: UUID, clave primaria.
+- `splitId`: referencia a `Split` (borrado en cascada si se borra el
+  split).
+- `name`, `nameNormalized` (minusculas, sin espacios exteriores, con
+  restriccion de base de datos que impide que quede vacio). Indice unico
+  `SplitFaction_splitId_nameNormalized_key`: unico dentro del split, puede
+  repetirse en otro split.
+- `color`: hexadecimal `#RRGGBB`, validado en servicio y con la
+  restriccion de base de datos `SplitFaction_color_format_check`. Solo es
+  una ayuda visual, no necesita ser unico.
+- No se borra fisicamente una faccion referenciada por
+  `SplitParticipant.factionId` (`onDelete: Restrict`) ni por
+  `PublishedParticipantWeeklyResult.factionId`: el servicio comprueba
+  ademas explicitamente que no tenga participantes asignados ni el split
+  publicaciones antes de permitir eliminarla.
 
 ### `SplitKpiConfig`
 
@@ -628,8 +672,17 @@ nunca modifica estas filas.
 - `onDelete: Cascade` desde `WeekPublication` hacia
   `PublishedParticipantWeeklyResult`, y desde ahi hacia
   `PublishedKpiResult`; `onDelete: Restrict` hacia `Split`,
-  `SplitParticipant` y `Person` (una fila publicada nunca desaparece por
-  borrar accidentalmente la entidad viva a la que hace referencia).
+  `SplitParticipant`, `Person` y `SplitFaction` (una fila publicada nunca
+  desaparece por borrar accidentalmente la entidad viva a la que hace
+  referencia).
+- `factionId`, `factionNameSnapshot`, `factionColorSnapshot` (`0.7.0` /
+  MVP-2A, ver `docs/FACTIONS.md`): faccion del participante congelada en
+  el momento de publicar. Los tres son opcionales: `null` cuando el split
+  no usa facciones, o en publicaciones anteriores a esta version (nunca se
+  completan retroactivamente). Indice `PublishedParticipantWeeklyResult_factionId_idx`.
+  No existe un "renombre" ni un total de faccion persistido: la
+  clasificacion de facciones se calcula siempre al consultar a partir de
+  estos snapshots y de `positionPoints` (`faction-classification.service.ts`).
 
 ## Decisiones sobre fechas
 
@@ -665,8 +718,10 @@ tenga que redescubrirlas:
 - Despublicar/reabrir una semana ya publicada, o cierre irreversible de un
   split completo (`SplitStatus.CLOSED` ya existe, pero no se activa
   automaticamente).
-- Facciones, profesiones, localizaciones, objetos, economia de creditos y
-  renombre.
+- Profesiones, localizaciones, objetos y economia de creditos. Las
+  facciones se implementaron en `0.7.0` / MVP-2A (`SplitFaction`, ver
+  `docs/FACTIONS.md`); "renombre" no es una entidad propia, es
+  `positionPoints` ya existente.
 
 Con `0.6.0` / MVP-1C, ademas de los diez origenes de datos de KPI
 (`ProductivityImport`/`ProductivityWeeklyRow`,
@@ -677,3 +732,9 @@ incluye autenticacion (`User`) y el ciclo completo de resultados
 `PublishedKpiResult`). La clasificacion general y la vista individual se
 calculan en servicio a partir de estas tablas publicadas, sin tablas
 propias adicionales (ver `docs/RESULTS_PUBLICATION.md`).
+
+Con `0.7.0` / MVP-2A se anade `SplitFaction` y su relacion opcional desde
+`SplitParticipant` y desde `PublishedParticipantWeeklyResult` (snapshot).
+La clasificacion de facciones tampoco anade tablas propias: se calcula en
+servicio a partir de estos snapshots y de `positionPoints` (ver
+`docs/FACTIONS.md`).

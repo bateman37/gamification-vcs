@@ -180,6 +180,9 @@ describe("Clasificacion e historico: una semana VAC participa en sumas/rankings 
     expect(kpiBreakdown.includedWeekCount).toBe(2);
     expect(kpiBreakdown.average).toBeCloseTo(10, 5);
     expect(kpiBreakdown.vacCount).toBe(1); // se conserva internamente, aunque ya no se muestre como texto VAC.
+    // 0.7.0 / MVP-2A, seccion 18: columnas KPI del historico ordenadas segun el catalogo, con porcentaje agregado reproducible.
+    expect(history.availableKpis.map((kpi) => kpi.code)).toEqual(["SOLUTION_HUNTER"]);
+    expect(kpiBreakdown.percentageOfMax).not.toBeNull();
   });
 
   it("No aplica nunca participa en la clasificacion por KPI ni se convierte en cero", async () => {

@@ -188,12 +188,43 @@ satisfactorias.
   exportacion Excel/PDF, medallas y cualquier capa de juego adicional
   (facciones, profesiones, economia...).
 
+## `0.7.0` / MVP-2A — Facciones, clasificacion de facciones y consolidacion de UX
+
+**Estado: completado.**
+
+- Primera capa de juego real: facciones por split (`SplitFaction`), con
+  administracion (crear/editar/eliminar segun el estado del split),
+  asignacion obligatoria de participantes en cuanto el split ya tiene
+  alguna faccion creada, y activacion/publicacion condicionadas al
+  conjunto completo de reglas solo quando el split usa facciones (splits
+  sin facciones se comportan igual que antes, ver `docs/DECISIONS.md`).
+- Renombre = puntos por posicion (`positionPoints`), sin segunda formula ni
+  tabla independiente.
+- Regla semanal de facciones: suma de los tres mejores `positionPoints`
+  (nunca promedio, corrige la nota anterior de este documento), con
+  desempate por mejor/segundo/tercer participante y ranking de competicion
+  en empate real (`src/domain/faction-ranking.ts`).
+- Instantanea de faccion congelada en cada publicacion semanal
+  (`PublishedParticipantWeeklyResult.factionId`/`factionNameSnapshot`/
+  `factionColorSnapshot`), clasificacion semanal y acumulada calculada al
+  consultar (`faction-classification.service.ts`), resumen y vista
+  detallada (`/splits/[id]/clasificacion-facciones`), y visibilidad segura
+  para el participante en `/resultados`.
+- Bloqueo de KPI y puntos por posicion desde la primera publicacion del
+  split, sustituyendo la decision provisional de `MVP-1B`.
+- Correcciones de UX: KPI del split en una sola linea por tarjeta, layout
+  panorámico mas ancho, formulario "Anadir participante" reorganizado,
+  clasificacion individual filtrada por KPI con orden y "Posicion KPI"
+  correctos, denominador unico "x de n" (total de participantes del
+  split) y rediseno del historico general con columnas KPI compactas.
+- Detalle completo en `docs/FACTIONS.md`.
+- Fuera de alcance: profesiones, localizaciones, objetos, economia de
+  creditos y misiones (ver mas abajo).
+
 ## Capas posteriores (fuera de alcance por ahora)
 
 **Estado: pendiente**, documentadas unicamente para no perder contexto:
 
-- Facciones y clasificacion de faccion (basada en el promedio de los tres
-  mejores renombres semanales del equipo).
 - Profesiones, con bonus sobre pares de KPI.
 - Localizaciones, con bonus semanales.
 - Objetos permanentes y efectos acumulables.

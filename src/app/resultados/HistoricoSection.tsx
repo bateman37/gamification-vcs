@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { getPersonHistory, type HistoryGrouping } from "@/server/services/individual-results.service";
 import { formatPoints } from "@/lib/format";
 import { EmptyState } from "@/components/ui";
+import { colorBandForPercentage, COLOR_BAND_CLASSES } from "@/domain/color-bands";
 import { HistoryFilters } from "./HistoryFilters";
 
 const VALID_GROUPINGS: HistoryGrouping[] = ["semana", "mes", "año"];
@@ -41,33 +42,48 @@ export async function HistoricoSection({
           <table className="w-full text-left text-sm">
             <thead className="border-b border-slate-200 bg-slate-50 text-slate-600">
               <tr>
-                <th className="px-3 py-2 font-medium">Periodo</th>
+                <th className="sticky left-0 z-10 whitespace-normal bg-slate-50 px-3 py-2 font-medium">Periodo</th>
+                {history.availableKpis.map((kpi) => (
+                  <th key={kpi.code} className="whitespace-normal px-3 py-2 text-center font-medium">
+                    {kpi.name}
+                  </th>
+                ))}
                 <th className="px-3 py-2 text-center font-medium">Semanas publicadas</th>
                 <th className="px-3 py-2 text-center font-medium">Suma puntos KPI</th>
                 <th className="px-3 py-2 text-center font-medium">Media puntos KPI</th>
                 <th className="px-3 py-2 text-center font-medium">Suma puntos por posicion</th>
-                <th className="px-3 py-2 font-medium">Desglose por KPI (suma / media)</th>
               </tr>
             </thead>
             <tbody>
-              {history.groups.map((group) => (
-                <tr key={group.periodKey} className="border-b border-slate-100 align-top">
-                  <td className="px-3 py-2 font-medium">{group.periodLabel}</td>
-                  <td className="px-3 py-2 text-center">{group.publishedWeekCount}</td>
-                  <td className="px-3 py-2 text-center font-semibold">{formatPoints(group.sumKpiPoints)}</td>
-                  <td className="px-3 py-2 text-center">{formatPoints(group.averageKpiPoints)}</td>
-                  <td className="px-3 py-2 text-center font-semibold">{formatPoints(group.sumPositionPoints)}</td>
-                  <td className="px-3 py-2">
-                    <ul className="space-y-0.5 text-xs text-slate-600">
-                      {group.perKpi.map((kpi) => (
-                        <li key={kpi.kpiCode}>
-                          {kpi.kpiName}: suma {formatPoints(kpi.sum)}, media {formatPoints(kpi.average)}
-                        </li>
-                      ))}
-                    </ul>
-                  </td>
-                </tr>
-              ))}
+              {history.groups.map((group) => {
+                const kpiByCode = new Map(group.perKpi.map((kpi) => [kpi.kpiCode, kpi]));
+                return (
+                  <tr key={group.periodKey} className="border-b border-slate-100 align-top">
+                    <td className="sticky left-0 z-10 bg-white px-3 py-2 font-medium">{group.periodLabel}</td>
+                    {history.availableKpis.map((kpi) => {
+                      const cell = kpiByCode.get(kpi.code);
+                      if (!cell) {
+                        return (
+                          <td key={kpi.code} className="px-3 py-2 text-center text-slate-400">
+                            —
+                          </td>
+                        );
+                      }
+                      const bandClass = cell.percentageOfMax === null ? "" : COLOR_BAND_CLASSES[colorBandForPercentage(cell.percentageOfMax).band];
+                      return (
+                        <td key={kpi.code} className={`px-3 py-2 text-center ${bandClass}`}>
+                          <div className="font-semibold">{formatPoints(cell.sum)}</div>
+                          <div className="text-xs opacity-80">media {formatPoints(cell.average)}</div>
+                        </td>
+                      );
+                    })}
+                    <td className="px-3 py-2 text-center">{group.publishedWeekCount}</td>
+                    <td className="px-3 py-2 text-center font-semibold">{formatPoints(group.sumKpiPoints)}</td>
+                    <td className="px-3 py-2 text-center">{formatPoints(group.averageKpiPoints)}</td>
+                    <td className="px-3 py-2 text-center font-semibold">{formatPoints(group.sumPositionPoints)}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
