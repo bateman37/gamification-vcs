@@ -4,6 +4,90 @@ Formato inspirado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/)
 Este proyecto usa versionado `0.x` mientras se construye el nucleo
 funcional; la primera version publicada es `0.1.0`.
 
+## [0.5.1] - BUGFIX-1 / UX-SPLIT-1 — Correcciones de formularios manuales y configuracion compacta del split
+
+### Corregido
+
+- **"Volver a introducir datos"** en los cinco formularios manuales
+  (Guardian de la Estabilidad, Cronomagia laboral, Redactor estrella,
+  Estudiante entusiasta, Aprendiz experto) ahora vuelve realmente al
+  formulario precargado con los datos ya guardados en PostgreSQL, y el
+  boton pasa a decir "Actualizar datos". El bloque de exito compartido
+  (`ManualEntrySuccessPanel`) usa una navegacion HTML completa (`<a>`) en
+  vez de `next/link`: una navegacion client-side hacia la misma URL no
+  reiniciaba `useFormState`, dejando la pantalla de exito visible para
+  siempre.
+- **Redactor estrella** (`STAR_WRITER`): `deliveredArticles`,
+  `undeliveredArticles` y `proposedArticles`, vacios o con solo espacios,
+  se interpretan y persisten ahora como `0`. Una pantalla con
+  combinaciones de campos rellenos y vacios se guarda sin mensajes de "es
+  obligatorio"; los tres campos vacios de una persona se guardan como tres
+  ceros y el resultado se calcula como cero. Se mantiene el rechazo de
+  negativos, decimales y texto no numerico.
+- **Estudiante entusiasta** (`ENTHUSIASTIC_STUDENT`): `dedicatedHours`
+  vacio se interpreta y persiste como `0`, conservando el parseo decimal
+  con coma o punto. Todos los participantes aplicables quedan con fila
+  (incluidos los dejados en blanco) y el grupo puede quedar `Cargado`.
+- **Aprendiz experto** (`EXPERT_APPRENTICE`): `completedTrainings` vacio se
+  interpreta y persiste como `0` (el `0` explicito ya funcionaba
+  correctamente y sigue sin confundirse con ausencia). El maximo
+  configurado (`targetValue`) es **inclusivo**: un valor igual al maximo es
+  valido, solo se rechaza al superarlo. Los textos visibles afectados usan
+  ahora "Máximo"/"máximo"/"válido" con tilde.
+
+### Anadido
+
+- Helper explicito `parseNonNegativeNumberDefaultZero`
+  (`src/server/validation/manual-entry.ts`), que reutiliza las mismas
+  validaciones numericas de `parseRequiredNonNegativeNumber` pero
+  interpreta un campo vacio o ausente como `0`. Se usa unicamente en
+  Redactor estrella, Estudiante entusiasta y Aprendiz experto; Guardian de
+  la Estabilidad y Cronomagia laboral no cambian.
+- Nueva configuracion **"Puntos por posicion semanal"** por split
+  (`SplitPositionPointRule`, migracion `add_position_points`): quince
+  posiciones (`1..15`) con los valores predeterminados exactos de Split 8
+  (`1→15, 2→11, 3→8, 4→5, 5→3, 6→2, 7..15→1`), con backfill para splits
+  existentes y creacion automatica (misma transaccion que el split, sus
+  semanas y su configuracion de KPI) para splits nuevos. Servicio,
+  validacion y accion de servidor propios
+  (`src/server/services/position-points.service.ts`,
+  `src/server/validation/position-points.ts`,
+  `src/server/actions/position-points.actions.ts`), con guardado atomico
+  de las quince filas y solo lectura en splits `CLOSED` (protegido tambien
+  en servidor). Nueva seccion en el detalle del split
+  (`PositionPointsSection`). Esta entrega **solo guarda la
+  configuracion**: no calcula ninguna posicion semanal, no reparte estos
+  puntos y no es un KPI (no cuenta como "KPI cargado"). Documentacion
+  principal: `docs/POSITION_POINTS_CONFIGURATION.md`.
+- Mejora responsive del detalle del split: el contenedor global pasa de
+  `max-w-5xl` a `max-w-screen-2xl`; `/splits/[id]` incorpora un indice
+  lateral de secciones `sticky` en escritorio (`SplitDetailNav`) y una
+  navegacion compacta al principio de la pagina en movil, con anclas HTML
+  y `scroll-margin`; `AddParticipantForm` y `KpiConfigSection` usan
+  rejillas horizontales en pantallas grandes y vuelven a una columna en
+  movil, sin scroll horizontal de pagina a 360 px.
+- Pruebas de servicio (Vitest) sobre las reglas criticas de esta entrega:
+  Redactor estrella con los tres campos vacios como tres ceros, con
+  combinaciones de campos vacios y rellenos, y con rechazo persistente de
+  negativos/decimales/texto no numerico; Estudiante entusiasta con vacio y
+  decimal con coma; Aprendiz experto con el limite exacto de `targetValue`
+  aceptado y `targetValue + 1` rechazado, y con vacio/`0` guardados como
+  cero; creacion de las quince reglas de puntos por posicion con los
+  valores exactos de Split 8; aislamiento entre splits; guardado atomico
+  ante un valor invalido; y proteccion de un split cerrado en el servicio.
+
+### Fuera de alcance en esta entrega
+
+Calculo de posicion semanal, reparto efectivo de los puntos configurados,
+resultados agregados o panel de publicacion, clasificacion general o vista
+individual, renombre/creditos/economia/objetos/profesiones/facciones/
+localizaciones, vacaciones/bajas como entidad, cambios en la semantica
+`VAC`/`Carga parcial` ya documentada, cambios en importadores Excel o
+formulas de los diez KPI (salvo las tres correcciones manuales descritas),
+autenticacion, permisos, API publica, Docker como requisito, actualizacion
+general de dependencias, rediseno visual completo y refactors amplios no
+necesarios para estos criterios. Ver `docs/ROADMAP.md`.
+
 ## [0.5.0] - MVP-1C.3 / INPUT-1C — Cargas manuales y completitud semanal
 
 ### Corregido

@@ -128,6 +128,30 @@ satisfactorias.
   clasificacion general, vista individual, autenticacion, historial de
   versiones de las entradas manuales (ver mas abajo).
 
+## BUGFIX-1 / UX-SPLIT-1 — Correcciones de formularios manuales y configuracion compacta del split
+
+**Estado: completado.**
+
+- Correccion de "Volver a introducir datos" en los cinco formularios
+  manuales: ahora vuelve realmente al formulario precargado (navegacion
+  HTML completa en vez de `next/link` hacia la misma ruta).
+- Redactor estrella, Estudiante entusiasta y Aprendiz experto: un campo
+  vacio o con solo espacios se interpreta y persiste como `0` (excepcion
+  explicita; Guardian de la Estabilidad y Cronomagia laboral no cambian).
+- Aprendiz experto: el maximo configurado (`targetValue`) es inclusivo, y
+  los textos visibles afectados usan "Máximo"/"máximo"/"válido" con tilde.
+- Nueva configuracion "Puntos por posicion semanal" por split
+  (`SplitPositionPointRule`, quince posiciones con los valores exactos de
+  Split 8), migracion con backfill y creacion automatica al crear un split
+  nuevo. Todavia no calcula ninguna posicion ni reparte estos puntos: ver
+  `docs/POSITION_POINTS_CONFIGURATION.md`.
+- Mejora responsive del detalle del split: contenedor global mas ancho,
+  indice lateral `sticky` en escritorio / navegacion compacta en movil,
+  `AddParticipantForm` y `KpiConfigSection` en rejilla horizontal.
+- Fuera de alcance (sin cambios): calculo de posicion semanal, reparto de
+  los puntos configurados, resultados agregados, clasificacion, vista
+  individual y cualquier capa de juego adicional (ver `MVP-1C` mas abajo).
+
 ## MVP-1C — Resultados agregados, publicacion y clasificacion
 
 **Estado: pendiente.**

@@ -1,13 +1,13 @@
 "use client";
 
-import Link from "next/link";
 import { useFormState, useFormStatus } from "react-dom";
 import { saveApprenticeEntriesAction } from "@/server/actions/apprentice.actions";
 import {
   initialManualEntryActionState,
   type ManualEntryActionState,
 } from "@/server/actions/manual-entry-action-state";
-import { ErrorMessage, FieldError, SuccessMessage } from "@/components/ui";
+import { ErrorMessage, FieldError } from "@/components/ui";
+import { ManualEntrySuccessPanel } from "../../ManualEntrySuccessPanel";
 import type { ApprenticeFormView } from "@/server/services/apprentice-entry.service";
 
 function SaveButton({ label }: { label: string }) {
@@ -45,20 +45,12 @@ export function ApprenticeEntryForm({
 
   if (state.ok && state.saved) {
     return (
-      <div className="space-y-3">
-        <SuccessMessage>Datos de Aprendiz experto guardados correctamente.</SuccessMessage>
-        <div className="flex flex-wrap gap-4 text-sm">
-          <Link href={comprobarHref} className="underline hover:text-slate-900">
-            Ir a Comprobar
-          </Link>
-          <Link href={introducirHref} className="underline hover:text-slate-900">
-            Volver a introducir datos
-          </Link>
-          <Link href={backHref} className="underline hover:text-slate-900">
-            Volver a las cargas de la semana
-          </Link>
-        </div>
-      </div>
+      <ManualEntrySuccessPanel
+        message="Datos de Aprendiz experto guardados correctamente."
+        introducirHref={introducirHref}
+        comprobarHref={comprobarHref}
+        backHref={backHref}
+      />
     );
   }
 
@@ -74,7 +66,7 @@ export function ApprenticeEntryForm({
     <form action={formAction} className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
       {!state.ok && state.error && <ErrorMessage>{state.error}</ErrorMessage>}
       <p className="text-sm text-slate-600">
-        Maximo configurado: <strong>{formView.targetValue}</strong>
+        Máximo configurado: <strong>{formView.targetValue}</strong>
       </p>
 
       <div className="overflow-x-auto rounded-md border border-slate-200">
@@ -108,7 +100,7 @@ export function ApprenticeEntryForm({
                     <FieldError message={errorMessage} />
                     {!errorMessage && row.exceedsTarget && (
                       <p className="mt-1 text-xs text-amber-700">
-                        Este valor supera el maximo actual ({formView.targetValue}): corrigelo antes de guardar.
+                        Este valor supera el máximo actual ({formView.targetValue}); introduce un valor válido antes de guardar.
                       </p>
                     )}
                   </td>

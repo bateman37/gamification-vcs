@@ -6,7 +6,7 @@ import { listKpiConfigsForSplit } from "@/server/services/kpi.service";
 import { toKpiConfigView, type KpiConfigView } from "@/domain/kpis/mapping";
 import { resolveStarWriterOutcome, toStarWriterOutcomeView, type StarWriterOutcomeView } from "@/domain/kpis/writer";
 import type { LoadCoverageStatus } from "@/domain/kpis/loadGroups";
-import { parseRequiredNonNegativeNumber, ManualEntryValidationError, type ManualEntryFieldError } from "@/server/validation/manual-entry";
+import { parseNonNegativeNumberDefaultZero, ManualEntryValidationError, type ManualEntryFieldError } from "@/server/validation/manual-entry";
 
 /**
  * Entrada manual semanal de Redactor estrella (`STAR_WRITER`, ver
@@ -69,13 +69,13 @@ export async function saveWriterEntries(db: PrismaClient, splitId: string, weekI
   const fieldErrors: ManualEntryFieldError[] = [];
   const rows: { splitParticipantId: string; deliveredArticles: number; undeliveredArticles: number; proposedArticles: number }[] = [];
   for (const participant of participants) {
-    const delivered = parseRequiredNonNegativeNumber(formData, "deliveredArticles", "Articulos entregados", participant.id, {
+    const delivered = parseNonNegativeNumberDefaultZero(formData, "deliveredArticles", "Articulos entregados", participant.id, {
       integer: true,
     });
-    const undelivered = parseRequiredNonNegativeNumber(formData, "undeliveredArticles", "Articulos no entregados", participant.id, {
+    const undelivered = parseNonNegativeNumberDefaultZero(formData, "undeliveredArticles", "Articulos no entregados", participant.id, {
       integer: true,
     });
-    const proposed = parseRequiredNonNegativeNumber(formData, "proposedArticles", "Articulos propuestos", participant.id, {
+    const proposed = parseNonNegativeNumberDefaultZero(formData, "proposedArticles", "Articulos propuestos", participant.id, {
       integer: true,
     });
     if (!delivered.ok) fieldErrors.push(delivered.error);

@@ -1,14 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useFormState, useFormStatus } from "react-dom";
 import { saveChronomancyEntriesAction } from "@/server/actions/chronomancy.actions";
 import {
   initialManualEntryActionState,
   type ManualEntryActionState,
 } from "@/server/actions/manual-entry-action-state";
-import { ErrorMessage, FieldError, SuccessMessage } from "@/components/ui";
+import { ErrorMessage, FieldError } from "@/components/ui";
+import { ManualEntrySuccessPanel } from "../../ManualEntrySuccessPanel";
 import { formatPoints } from "@/lib/format";
 import type { ChronomancyFormRow, ChronomancyFormView } from "@/server/services/chronomancy-entry.service";
 
@@ -109,20 +109,12 @@ export function ChronomancyEntryForm({
 
   if (state.ok && state.saved) {
     return (
-      <div className="space-y-3">
-        <SuccessMessage>Datos de Cronomagia laboral guardados correctamente.</SuccessMessage>
-        <div className="flex flex-wrap gap-4 text-sm">
-          <Link href={comprobarHref} className="underline hover:text-slate-900">
-            Ir a Comprobar
-          </Link>
-          <Link href={introducirHref} className="underline hover:text-slate-900">
-            Volver a introducir datos
-          </Link>
-          <Link href={backHref} className="underline hover:text-slate-900">
-            Volver a las cargas de la semana
-          </Link>
-        </div>
-      </div>
+      <ManualEntrySuccessPanel
+        message="Datos de Cronomagia laboral guardados correctamente."
+        introducirHref={introducirHref}
+        comprobarHref={comprobarHref}
+        backHref={backHref}
+      />
     );
   }
 

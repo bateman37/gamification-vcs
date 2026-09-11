@@ -19,14 +19,14 @@ export function KpiConfigSection({
   const readOnly = splitStatus === "CLOSED";
 
   return (
-    <section id="kpi-configuracion" className="space-y-3">
+    <section id="kpi-configuracion" className="scroll-mt-6 space-y-3">
       <h2 className="text-lg font-semibold">KPI del split</h2>
       {readOnly && (
         <p className="text-sm text-slate-500">
           El split esta cerrado: la configuracion de KPI se muestra en modo solo lectura.
         </p>
       )}
-      <div className="space-y-3">
+      <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
         {KPI_CATALOG_LIST.map((catalogEntry) => {
           const config = configByCode.get(catalogEntry.code);
           if (!config) return null;

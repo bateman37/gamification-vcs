@@ -11,8 +11,10 @@ resultados y clasificacion.
 **MVP-1A — Personas y creacion de splits**, **MVP-1B — KPI activos y
 configuracion**, **IMPORT-1A / MVP-1C.1 — Carga semanal de
 Productividad**, **MVP-1C.2 / IMPORT-1B — Carga semanal de Escalados,
-Calidad y Llamadas** y **MVP-1C.3 / INPUT-1C — Cargas manuales y
-completitud semanal** (ver `docs/ROADMAP.md`).
+Calidad y Llamadas**, **MVP-1C.3 / INPUT-1C — Cargas manuales y
+completitud semanal** y **BUGFIX-1 / UX-SPLIT-1 — Correcciones de
+formularios manuales y configuracion compacta del split** (ver
+`docs/ROADMAP.md`). Version actual: `0.5.1`.
 
 Estas entregas implementan:
 
@@ -47,6 +49,12 @@ Estas entregas implementan:
 - Hotfix: Domador de Escaladas ahora infiere reasignaciones `0` cuando la
   carga de Escalados ya existe y la persona no aparece en ella, siempre que
   tenga Productividad; si tampoco tiene Productividad, se muestra `VAC`.
+- Correccion de "Volver a introducir datos" en los cinco formularios
+  manuales, campos vacios interpretados como `0` en Redactor estrella,
+  Estudiante entusiasta y Aprendiz experto, maximo inclusivo de Aprendiz
+  experto, nueva configuracion "Puntos por posicion semanal" por split y
+  mejora responsive del detalle del split (`BUGFIX-1 / UX-SPLIT-1`, ver
+  mas abajo).
 
 Todavia **no** incluye cierre irreversible ni publicacion de semana,
 clasificacion general, vista individual, autenticacion ni ninguna capa de
@@ -360,6 +368,50 @@ en `docs/MANUAL_KPI_ENTRY.md`.
 9. Cierra el split: las pantallas `Comprobar` siguen siendo consultables,
    pero ninguna accion de guardado esta disponible.
 
+## Correcciones de formularios manuales y configuracion del split (BUGFIX-1 / UX-SPLIT-1)
+
+Version `0.5.1`. Corrige tres errores de las cargas manuales y anade una
+nueva configuracion administrativa y mejoras de composicion, sin tocar
+resultados, publicacion ni clasificacion:
+
+- **Navegacion:** "Volver a introducir datos" en los cinco formularios
+  manuales vuelve realmente al formulario (antes se quedaba en la pantalla
+  de exito) y precarga los datos ya guardados.
+- **Campos vacios como cero:** en Redactor estrella, Estudiante entusiasta
+  y Aprendiz experto, un campo vacio se guarda como `0` (Guardian de la
+  Estabilidad y Cronomagia laboral no cambian).
+- **Maximo inclusivo de Aprendiz experto:** un valor igual al maximo
+  configurado es valido; solo se rechaza al superarlo.
+- **Puntos por posicion semanal:** nueva seccion en el detalle de cada
+  split con las quince posiciones y sus puntos (valores predeterminados de
+  Split 8). Todavia no calcula ninguna posicion ni reparte estos puntos:
+  detalle completo en
+  [`docs/POSITION_POINTS_CONFIGURATION.md`](docs/POSITION_POINTS_CONFIGURATION.md).
+- **Responsive:** el detalle del split aprovecha mejor pantallas grandes,
+  con un indice lateral de secciones en escritorio y navegacion compacta en
+  movil; `AddParticipantForm` y `KpiConfigSection` usan rejillas
+  horizontales.
+
+### Comprobar manualmente
+
+1. En cualquiera de los cinco formularios manuales, guarda datos, pulsa
+   `Volver a introducir datos` y comprueba que el formulario reaparece
+   precargado con los valores guardados y el boton pasa a decir
+   `Actualizar datos`.
+2. En Redactor estrella, deja los tres campos vacios para una persona:
+   debe guardarse sin pedir "es obligatorio" y calcularse como cero.
+3. En Estudiante entusiasta, deja el campo vacio: se guarda como `0`.
+4. En Aprendiz experto, introduce exactamente el maximo configurado (por
+   ejemplo `15`): debe aceptarse; introduce `16` y comprueba que se
+   rechaza. Revisa que el texto dice "Máximo configurado".
+5. En el detalle de un split (`/splits/[id]`), guarda los quince puntos de
+   la seccion "Puntos por posicion semanal" y recarga: los valores se
+   mantienen; comprueba que un split cerrado los muestra en solo lectura.
+6. Reduce la ventana del navegador a unos 360 px: no debe aparecer scroll
+   horizontal de pagina ni una barra lateral fija. A partir de 1024 px
+   aproximadamente debe aparecer el indice lateral y los KPI en rejilla de
+   dos columnas.
+
 ## Documentos del proyecto
 
 - [`docs/PROJECT_CONTEXT.md`](docs/PROJECT_CONTEXT.md) — objetivo del
@@ -379,6 +431,9 @@ en `docs/MANUAL_KPI_ENTRY.md`.
 - [`docs/MANUAL_KPI_ENTRY.md`](docs/MANUAL_KPI_ENTRY.md) — hotfix del cero
   implicito de Domador de Escaladas, entrada manual de los cinco KPI
   restantes y el contador `KPI cargados` del calendario de semanas.
+- [`docs/POSITION_POINTS_CONFIGURATION.md`](docs/POSITION_POINTS_CONFIGURATION.md)
+  — configuracion "Puntos por posicion semanal" por split (`BUGFIX-1 /
+  UX-SPLIT-1`), todavia sin aplicar a ningun resultado.
 - [`docs/DECISIONS.md`](docs/DECISIONS.md) — decisiones tecnicas y de
   producto registradas.
 - [`CHANGELOG.md`](CHANGELOG.md) — historial de cambios.
