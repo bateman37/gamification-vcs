@@ -1,11 +1,13 @@
-# Modelo de datos — MVP-1A, MVP-1B e IMPORT-1A / MVP-1C.1
+# Modelo de datos — MVP-1A, MVP-1B, IMPORT-1A / MVP-1C.1 y MVP-1C.2 / IMPORT-1B
 
 Fuente de verdad: `prisma/schema.prisma` y las migraciones
 `prisma/migrations/20260910133815_init/migration.sql` (MVP-1A),
 `prisma/migrations/20260910202939_add_kpi_configuration/migration.sql`
-(MVP-1B) y
+(MVP-1B),
 `prisma/migrations/20260911082446_add_productivity_import/migration.sql`
-(IMPORT-1A / MVP-1C.1). Este documento describe y explica ese esquema; en
+(IMPORT-1A / MVP-1C.1) y
+`prisma/migrations/20260911100002_add_escalations_quality_voice_import/migration.sql`
+(MVP-1C.2 / IMPORT-1B). Este documento describe y explica ese esquema; en
 caso de discrepancia, el esquema real manda.
 
 ## Diagrama entidad-relacion
@@ -20,6 +22,15 @@ erDiagram
     SplitWeek ||--o| ProductivityImport : "tiene carga vigente"
     ProductivityImport ||--o{ ProductivityWeeklyRow : "contiene"
     SplitParticipant ||--o{ ProductivityWeeklyRow : "tiene fila en"
+    SplitWeek ||--o| EscalationImport : "tiene carga vigente"
+    EscalationImport ||--o{ EscalationWeeklyRow : "contiene"
+    SplitParticipant ||--o{ EscalationWeeklyRow : "tiene fila en"
+    SplitWeek ||--o| QualityImport : "tiene carga vigente"
+    QualityImport ||--o{ QualityWeeklyRow : "contiene"
+    SplitParticipant ||--o{ QualityWeeklyRow : "tiene fila en"
+    SplitWeek ||--o| VoiceImport : "tiene carga vigente"
+    VoiceImport ||--o{ VoiceWeeklyRow : "contiene"
+    SplitParticipant ||--o{ VoiceWeeklyRow : "tiene fila en"
 
     Person {
         string id PK
@@ -100,6 +111,78 @@ erDiagram
         int ticketsUpdatedWithComment "entrada de Explorador de datos"
         int ticketsResolved "entrada de Cazador de soluciones"
         int ticketsCreated
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    EscalationImport {
+        string id PK
+        string splitWeekId FK "unico: una carga vigente por semana"
+        string originalFilename
+        string fileSha256
+        int sourceRowCount
+        int importedRowCount
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    EscalationWeeklyRow {
+        string id PK
+        string escalationImportId FK
+        string splitParticipantId FK "onDelete Restrict"
+        string sourceAgentName "trazabilidad"
+        int groupReassignments "numerador de Domador de Escaladas"
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    QualityImport {
+        string id PK
+        string splitWeekId FK "unico: una carga vigente por semana"
+        string originalFilename
+        string fileSha256
+        int sourceRowCount
+        int importedRowCount
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    QualityWeeklyRow {
+        string id PK
+        string qualityImportId FK
+        string splitParticipantId FK "onDelete Restrict"
+        string sourceAgentName "trazabilidad"
+        int goodSatisfactionTickets
+        int badSatisfactionTickets
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    VoiceImport {
+        string id PK
+        string splitWeekId FK "unico: una carga vigente por semana"
+        string originalFilename
+        string fileSha256
+        int sourceRowCount
+        int importedRowCount
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    VoiceWeeklyRow {
+        string id PK
+        string voiceImportId FK
+        string splitParticipantId FK "onDelete Restrict"
+        string sourceAgentName "trazabilidad"
+        int acceptedCallSegments
+        int rejectedCallSegments
+        int unattendedCallSegments
+        int outboundCalls
+        decimal segmentDurationHours "trazabilidad, no puntua"
+        decimal segmentTalkTimeHours "trazabilidad, no puntua"
+        decimal segmentWrapUpTimeHours "trazabilidad, no puntua"
+        decimal segmentTalkTimeMinutes "trazabilidad, no puntua"
+        decimal segmentWrapUpTimeMinutes "trazabilidad, no puntua"
         datetime createdAt
         datetime updatedAt
     }
@@ -255,6 +338,39 @@ Una fila por participante encontrado dentro de una carga.
   nivel del participante y `SplitKpiConfig` (ver
   `docs/IMPORT_PRODUCTIVITY.md` y `docs/DECISIONS.md`).
 
+### `EscalationImport` y `EscalationWeeklyRow`
+
+Misma forma que `ProductivityImport`/`ProductivityWeeklyRow` (ver
+`docs/IMPORT_ESCALATIONS_QUALITY_VOICE.md`), para la carga semanal del
+Excel de Escalados. `EscalationWeeklyRow.groupReassignments` (`Int`, no
+negativo) es el numerador de Domador de Escaladas (`ESCALATION_TAMER`); el
+denominador (`ProductivityWeeklyRow.updates`) no se duplica aqui, se lee de
+Productividad de la misma semana y participante al calcular. Igual que
+Productividad: `splitWeekId` unico en la cabecera, `onDelete: Restrict`
+desde la fila hacia el participante, y una fila como maximo por
+participante dentro de una carga (`@@unique([escalationImportId, splitParticipantId])`).
+
+### `QualityImport` y `QualityWeeklyRow`
+
+Misma forma, para la carga semanal del Excel de Calidad.
+`QualityWeeklyRow.goodSatisfactionTickets` y `badSatisfactionTickets`
+(`Int`, no negativos) alimentan Maestro Artesano (`MASTER_CRAFTSMAN`).
+
+### `VoiceImport` y `VoiceWeeklyRow`
+
+Misma forma, para la carga semanal del Excel de Llamadas.
+`VoiceWeeklyRow` guarda cuatro conteos (`Int`, no negativos:
+`acceptedCallSegments`, `rejectedCallSegments`, `unattendedCallSegments`,
+`outboundCalls`) que alimentan Embajador de voz (`VOICE_AMBASSADOR`), mas
+cinco metricas de tiempo (`Decimal(14,6)`, no negativas: `segmentDurationHours`, `segmentTalkTimeHours`,
+`segmentWrapUpTimeHours`, `segmentTalkTimeMinutes`,
+`segmentWrapUpTimeMinutes`) conservadas solo para trazabilidad, sin
+intervenir en el calculo.
+
+Los puntos de los tres KPI, igual que Productividad, **no** se guardan:
+se calculan al consultar a partir de estos conteos, el nivel del
+participante y `SplitKpiConfig`.
+
 ## Decisiones sobre fechas
 
 - Todas las fechas de negocio (`Split.startDate`, `SplitWeek.startDate`,
@@ -286,11 +402,15 @@ Estas entidades aparecen en el contexto funcional del producto pero
 **no** se han creado todavia. Se documentan para que una futura entrega no
 tenga que redescubrirlas:
 
-- Resultados calculados de los KPI distintos de Productividad (`MVP-1C`).
-- Registros de carga de datos de los demas origenes (Escalados, Calidad,
-  Llamadas, Estabilidad, Cronomagia, Articulos, Dedicacion, Formaciones;
-  ver `IMPORT-1`). La carga de Productividad ya existe: `ProductivityImport`
-  y `ProductivityWeeklyRow`, arriba.
+- Resultados calculados de los KPI distintos de Productividad, Escalados,
+  Calidad y Llamadas (`MVP-1C`).
+- Registros de carga de datos de los origenes restantes (Estabilidad,
+  Cronomagia, Articulos, Dedicacion, Formaciones; ver `IMPORT-1`). Las
+  cargas de Productividad, Escalados, Calidad y Llamadas ya existen:
+  `ProductivityImport`/`ProductivityWeeklyRow`,
+  `EscalationImport`/`EscalationWeeklyRow`,
+  `QualityImport`/`QualityWeeklyRow` y `VoiceImport`/`VoiceWeeklyRow`,
+  arriba.
 - Clasificacion general y su calculo acumulado (`MVP-1C`).
 - Usuarios, autenticacion y sesiones.
 - Facciones, profesiones, localizaciones, objetos, economia de creditos y

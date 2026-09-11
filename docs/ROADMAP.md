@@ -77,14 +77,46 @@ satisfactorias.
   Calidad, Llamadas, Estabilidad, Cronomagia, Articulos, Dedicacion,
   Formaciones), clasificacion general y vista individual (`MVP-1C`).
 
+## MVP-1C.2 / IMPORT-1B — Carga semanal de Escalados, Calidad y Llamadas
+
+**Estado: completado.**
+
+- Carga, previsualizacion, confirmacion y sustitucion de los Excel de
+  Escalados, Calidad y Llamadas en la misma pantalla semanal, con rutas
+  propias (`.../kpis/escalados`, `.../kpis/calidad`, `.../kpis/llamadas`)
+  siguiendo el convenio ya usado por Productividad.
+- Calculo administrativo de **Domador de Escaladas**
+  (`ESCALATION_TAMER`, cruzado con `ProductivityWeeklyRow.updates` de la
+  misma semana y participante), **Maestro Artesano**
+  (`MASTER_CRAFTSMAN`) y **Embajador de voz** (`VOICE_AMBASSADOR`), con
+  los mismos principios de Productividad: funciones puras, aritmetica
+  decimal, maximo aplicado despues del calculo, sin suelo de cero.
+- Nuevas entidades `EscalationImport`/`EscalationWeeklyRow`,
+  `QualityImport`/`QualityWeeklyRow` y `VoiceImport`/`VoiceWeeklyRow`
+  (migracion `add_escalations_quality_voice_import`), con las mismas
+  reglas de una carga vigente por origen y semana, sustitucion atomica y
+  restricciones de no negatividad.
+- **Correccion del estado de cobertura introducido en `MVP-1C.1`**: una
+  carga confirmada de Productividad, Calidad o Llamadas es verde
+  (`Cargado`) aunque falten participantes aplicables, con un contador
+  informativo `n VAC` (no persistido, no confirma vacaciones ni bajas).
+  El amarillo (`Carga parcial`) queda reservado para Domador de Escaladas,
+  cuando falta uno de sus dos origenes.
+- Detalle completo en `docs/IMPORT_ESCALATIONS_QUALITY_VOICE.md`.
+- Fuera de alcance: el resto de origenes de `IMPORT-1` (Estabilidad,
+  Cronomagia, Articulos, Dedicacion, Formaciones), clasificacion general y
+  vista individual (`MVP-1C`).
+
 ## IMPORT-1 — Auditoria e implementacion del resto de cargas
 
-**Estado: pendiente de recibir los Excel originales.**
+**Estado: pendiente de recibir los Excel originales de los origenes
+restantes.**
 
 - El usuario proporcionara ejemplos reales de los Excel de entrada tal
-  como llegan hoy (Escalados, Calidad, Llamadas, Articulos, Formaciones) y
-  de las entradas manuales (Estabilidad, Cronomagia, Dedicacion). La carga
-  de Productividad ya se implemento (ver `IMPORT-1A / MVP-1C.1`).
+  como llegan hoy (Articulos, Formaciones) y de las entradas manuales
+  (Estabilidad, Cronomagia, Dedicacion). Productividad, Escalados, Calidad
+  y Llamadas ya se implementaron (ver `IMPORT-1A / MVP-1C.1` y
+  `MVP-1C.2 / IMPORT-1B`).
 - A partir de esos ejemplos se definiran columnas, encabezados,
   variaciones de nombres, duplicados, vacios, ceros, correcciones y
   previsualizacion antes de guardar.
@@ -96,8 +128,12 @@ satisfactorias.
 **Estado: pendiente.**
 
 - Apertura y cierre formal de una semana para carga de datos (mas alla de
-  la carga de Productividad ya implementada, que no incluye publicacion).
-- Calculo del resto de KPI activos segun sus parametros configurados.
+  las cargas ya implementadas de Productividad, Escalados, Calidad y
+  Llamadas, que no incluyen publicacion).
+- Calculo del resto de KPI activos (Guardian de la Estabilidad, Cronomagia
+  laboral, Redactor estrella, Estudiante entusiasta, Aprendiz experto)
+  segun sus parametros configurados, una vez auditados sus origenes en
+  `IMPORT-1`.
 - Panel de administracion para revisar los resultados antes de
   publicarlos.
 - Vista individual del resultado de cada participante.

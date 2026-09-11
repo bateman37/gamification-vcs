@@ -85,6 +85,9 @@ model SplitWeek {
   split                    Split               @relation(fields: [splitId], references: [id], onDelete: Cascade)
   participantsStartingHere SplitParticipant[]  @relation("ParticipantStartWeek")
   productivityImport       ProductivityImport?
+  escalationImport         EscalationImport?
+  qualityImport            QualityImport?
+  voiceImport              VoiceImport?
 
   @@unique([splitId, sequenceNumber])
 }
@@ -113,6 +116,9 @@ model SplitParticipant {
   startWeek SplitWeek @relation("ParticipantStartWeek", fields: [splitId, startWeekSequenceNumber], references: [splitId, sequenceNumber])
 
   productivityRows ProductivityWeeklyRow[]
+  escalationRows   EscalationWeeklyRow[]
+  qualityRows      QualityWeeklyRow[]
+  voiceRows        VoiceWeeklyRow[]
 
   // Una persona solo puede aparecer una vez en un mismo split.
   @@unique([splitId, personId])
@@ -200,4 +206,122 @@ model ProductivityWeeklyRow {
 
   // Una carga solo puede contener una fila por participante.
   @@unique([productivityImportId, splitParticipantId])
+}
+
+/// Carga semanal del Excel de Escalados para una semana de un split (ver
+/// docs/IMPORT_ESCALATIONS_QUALITY_VOICE.md). Alimenta, junto con
+/// `ProductivityWeeklyRow.updates` de la misma semana y participante, el
+/// KPI "Domador de Escaladas". El binario del Excel nunca se guarda.
+model EscalationImport {
+  id               String   @id @default(uuid())
+  /// Como mucho una carga de Escalados vigente por semana.
+  splitWeekId      String   @unique
+  originalFilename String
+  fileSha256       String
+  sourceRowCount   Int
+  importedRowCount Int
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  splitWeek SplitWeek              @relation(fields: [splitWeekId], references: [id], onDelete: Cascade)
+  rows      EscalationWeeklyRow[]
+}
+
+/// Fila de Escalados de un participante encontrado en la carga semanal.
+/// El numerador de Domador de Escaladas; el denominador (`updates`) se lee
+/// de `ProductivityWeeklyRow` de la misma semana, no se duplica aqui.
+model EscalationWeeklyRow {
+  id                  String   @id @default(uuid())
+  escalationImportId  String
+  splitParticipantId  String
+  /// Nombre tal como aparecia en la columna "Nombre del actualizador".
+  sourceAgentName     String
+  groupReassignments  Int
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  escalationImport EscalationImport @relation(fields: [escalationImportId], references: [id], onDelete: Cascade)
+  splitParticipant SplitParticipant @relation(fields: [splitParticipantId], references: [id], onDelete: Restrict)
+
+  @@unique([escalationImportId, splitParticipantId])
+}
+
+/// Carga semanal del Excel de Calidad para una semana de un split.
+/// Alimenta el KPI "Maestro Artesano". El binario del Excel nunca se guarda.
+model QualityImport {
+  id               String   @id @default(uuid())
+  /// Como mucho una carga de Calidad vigente por semana.
+  splitWeekId      String   @unique
+  originalFilename String
+  fileSha256       String
+  sourceRowCount   Int
+  importedRowCount Int
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  splitWeek SplitWeek         @relation(fields: [splitWeekId], references: [id], onDelete: Cascade)
+  rows      QualityWeeklyRow[]
+}
+
+/// Fila de Calidad de un participante encontrado en la carga semanal.
+model QualityWeeklyRow {
+  id                       String   @id @default(uuid())
+  qualityImportId          String
+  splitParticipantId       String
+  /// Nombre tal como aparecia en la columna "Nombre del agente asignado".
+  sourceAgentName          String
+  goodSatisfactionTickets  Int
+  badSatisfactionTickets   Int
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  qualityImport    QualityImport    @relation(fields: [qualityImportId], references: [id], onDelete: Cascade)
+  splitParticipant SplitParticipant @relation(fields: [splitParticipantId], references: [id], onDelete: Restrict)
+
+  @@unique([qualityImportId, splitParticipantId])
+}
+
+/// Carga semanal del Excel de Llamadas para una semana de un split.
+/// Alimenta el KPI "Embajador de voz". El binario del Excel nunca se guarda.
+model VoiceImport {
+  id               String   @id @default(uuid())
+  /// Como mucho una carga de Llamadas vigente por semana.
+  splitWeekId      String   @unique
+  originalFilename String
+  fileSha256       String
+  sourceRowCount   Int
+  importedRowCount Int
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  splitWeek SplitWeek       @relation(fields: [splitWeekId], references: [id], onDelete: Cascade)
+  rows      VoiceWeeklyRow[]
+}
+
+/// Fila de Llamadas de un participante encontrado en la carga semanal. Las
+/// cuatro primeras metricas puntuan Embajador de voz; las cinco de tiempo
+/// se conservan solo para trazabilidad (ver
+/// docs/IMPORT_ESCALATIONS_QUALITY_VOICE.md).
+model VoiceWeeklyRow {
+  id                     String   @id @default(uuid())
+  voiceImportId          String
+  splitParticipantId     String
+  /// Nombre tal como aparecia en la columna "Agente del segmento - Nombre".
+  sourceAgentName        String
+  acceptedCallSegments   Int
+  rejectedCallSegments   Int
+  unattendedCallSegments Int
+  outboundCalls          Int
+  segmentDurationHours      Decimal @db.Decimal(14, 6)
+  segmentTalkTimeHours      Decimal @db.Decimal(14, 6)
+  segmentWrapUpTimeHours    Decimal @db.Decimal(14, 6)
+  segmentTalkTimeMinutes    Decimal @db.Decimal(14, 6)
+  segmentWrapUpTimeMinutes  Decimal @db.Decimal(14, 6)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  voiceImport      VoiceImport      @relation(fields: [voiceImportId], references: [id], onDelete: Cascade)
+  splitParticipant SplitParticipant @relation(fields: [splitParticipantId], references: [id], onDelete: Restrict)
+
+  @@unique([voiceImportId, splitParticipantId])
 }

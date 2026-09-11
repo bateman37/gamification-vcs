@@ -37,7 +37,7 @@ beforeEach(async () => {
 });
 
 describe("Confirmar una carga de productividad", () => {
-  it("persiste una sola cabecera y solo las filas encontradas; el estado pasa de Pendiente a Carga parcial o Cargado", async () => {
+  it("persiste una sola cabecera y solo las filas encontradas; el estado pasa de Pendiente a Cargado con n VAC si faltan participantes", async () => {
     const split = await createDraftSplit();
     const personFound = await createPerson(testDb, { fullName: "Marta Ruiz Soler", email: undefined });
     const personMissing = await createPerson(testDb, { fullName: "Pedro Gomez Diaz", email: undefined });
@@ -57,7 +57,10 @@ describe("Confirmar una carga de productividad", () => {
     const weeks = await listSplitWeeks(testDb, split.id);
     const week = weeks[0]!;
 
-    expect(await getProductivityLoadStatus(testDb, split.id, week.id, week.sequenceNumber)).toBe("PENDING");
+    expect(await getProductivityLoadStatus(testDb, split.id, week.id, week.sequenceNumber)).toEqual({
+      status: "PENDING",
+      vacCount: 0,
+    });
 
     const buffer = await buildWorkbookBuffer([
       PRODUCTIVITY_HEADERS,
@@ -77,7 +80,13 @@ describe("Confirmar una carga de productividad", () => {
     expect(imports[0]!.sourceRowCount).toBe(2);
     expect(imports[0]!.importedRowCount).toBe(1);
 
-    expect(await getProductivityLoadStatus(testDb, split.id, week.id, week.sequenceNumber)).toBe("PARTIAL");
+    // Corregido en MVP-1C.2 / IMPORT-1B: una carga confirmada es verde
+    // (LOADED) aunque falten participantes; la ausencia se expresa con
+    // "n VAC", nunca con el amarillo (PARTIAL, ver docs/DECISIONS.md).
+    expect(await getProductivityLoadStatus(testDb, split.id, week.id, week.sequenceNumber)).toEqual({
+      status: "LOADED",
+      vacCount: 1,
+    });
   });
 });
 

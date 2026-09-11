@@ -15,8 +15,41 @@ Antes de proponer o realizar cualquier cambio, lee en este orden:
 
 Ademas, revisa `docs/DECISIONS.md` para no contradecir decisiones ya
 tomadas sin justificarlo explicitamente, y `docs/DISCOVERY-1-SPLIT-8.md`,
-`docs/KPI_CONFIGURATION.md` y `docs/IMPORT_PRODUCTIVITY.md` si vas a
-trabajar en KPI, cargas de datos o motor de calculo.
+`docs/KPI_CONFIGURATION.md`, `docs/IMPORT_PRODUCTIVITY.md` y
+`docs/IMPORT_ESCALATIONS_QUALITY_VOICE.md` si vas a trabajar en KPI,
+cargas de datos o motor de calculo.
+
+## Estado real de las cargas semanales (no romper sin justificarlo)
+
+A fecha de `MVP-1C.2 / IMPORT-1B`, cuatro origenes de carga semanal estan
+implementados: Productividad, Escalados, Calidad y Llamadas (ver
+`docs/IMPORT_PRODUCTIVITY.md` y
+`docs/IMPORT_ESCALATIONS_QUALITY_VOICE.md`). Reglas ya asentadas que una
+sesion futura no debe deshacer sin registrar el motivo en
+`docs/DECISIONS.md`:
+
+- Una carga confirmada de Productividad, Calidad o Llamadas es siempre
+  verde (`Cargado`), aunque falten participantes aplicables; la ausencia
+  se expresa con `n VAC` (calculado al consultar, nunca persistido), no
+  con amarillo. No reintroduzcas `Carga parcial` para estos tres grupos.
+- El amarillo (`Carga parcial`) esta reservado exclusivamente para Domador
+  de Escaladas, cuando existe exactamente uno de sus dos origenes
+  (Excel de Escalados o Productividad de la misma semana).
+- Domador de Escaladas se calcula uniendo `EscalationWeeklyRow` con
+  `ProductivityWeeklyRow.updates` por `splitWeekId` + `splitParticipantId`
+  al consultar; nunca dupliques `updates` en `EscalationWeeklyRow`, y
+  nunca hagas que analizar o confirmar Escalados cree o modifique
+  Productividad.
+- Cada origen (Productividad, Escalados, Calidad, Llamadas) tiene su
+  propia ruta bajo `.../kpis/<origen>/{cargar,comprobar}` y su propia
+  cabecera de carga con sustitucion atomica e independiente de los demas.
+  No reutilices la ruta de un origen para el boton de otro.
+- El recorrido de bajo nivel de lectura de Excel
+  (`src/server/services/shared/xlsx.ts`) y de emparejamiento por nombre
+  real (`src/server/services/shared/matching.ts`) es un helper compartido,
+  no un motor generico: cada origen sigue declarando sus propios
+  encabezados, mensajes y reglas de persistencia en su propio lector y
+  servicio.
 
 ## Reglas de trabajo
 
