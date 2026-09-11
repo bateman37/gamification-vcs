@@ -6,8 +6,8 @@ import {
   createParticipantAccountAction,
   setAccountActiveAction,
   setTemporaryPasswordAction,
-  initialSimpleActionState,
 } from "@/server/actions/auth.actions";
+import { initialSimpleActionState } from "@/server/actions/action-state";
 import { Badge, FieldError, SubmitButton } from "@/components/ui";
 import type { PersonWithAccount } from "@/server/services/auth.service";
 

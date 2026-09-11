@@ -3,7 +3,8 @@
 import { useEffect } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { signOut } from "next-auth/react";
-import { changeOwnPasswordAction, initialSimpleActionState } from "@/server/actions/auth.actions";
+import { changeOwnPasswordAction } from "@/server/actions/auth.actions";
+import { initialSimpleActionState } from "@/server/actions/action-state";
 import { ErrorMessage, SuccessMessage, SubmitButton } from "@/components/ui";
 
 function SaveButton() {

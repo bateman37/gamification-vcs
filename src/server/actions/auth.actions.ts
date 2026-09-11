@@ -10,14 +10,7 @@ import {
   setAccountActive,
   setTemporaryPassword,
 } from "@/server/services/auth.service";
-
-export interface SimpleActionState {
-  ok: boolean;
-  error?: string;
-  saved?: boolean;
-}
-
-export const initialSimpleActionState: SimpleActionState = { ok: true };
+import type { SimpleActionState } from "@/server/actions/action-state";
 
 /** Cambio de la propia contrasena, obligatorio en el primer acceso. */
 export async function changeOwnPasswordAction(

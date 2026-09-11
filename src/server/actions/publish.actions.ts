@@ -5,10 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { DomainError } from "@/lib/errors";
 import { requireAdminSession } from "@/lib/session";
 import { publishWeek } from "@/server/services/publish-week.service";
-import type { SimpleActionState } from "@/server/actions/auth.actions";
-import { initialSimpleActionState } from "@/server/actions/auth.actions";
-
-export { initialSimpleActionState };
+import type { SimpleActionState } from "@/server/actions/action-state";
 
 /** Publica una semana (seccion 5.2 de docs/RESULTS_PUBLICATION.md). Solo administrador; recalcula todo en servidor. */
 export async function publishWeekAction(
