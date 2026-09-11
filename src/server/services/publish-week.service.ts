@@ -48,6 +48,11 @@ export async function publishWeek(
     throw new DomainError(`No se puede publicar hasta resolver: ${results.blockingIssues.join(" ")}`);
   }
 
+  // Faccion actual de cada participante (`0.7.0` / MVP-2A, ver docs/FACTIONS.md): se congela nombre y color en el
+  // momento de publicar. `null` para splits que no usan facciones.
+  const factions = await db.splitFaction.findMany({ where: { splitId } });
+  const factionById = new Map(factions.map((faction) => [faction.id, faction]));
+
   try {
     const publication = await db.$transaction(
       async (tx) => {
@@ -59,6 +64,8 @@ export async function publishWeek(
           if (participant.positionPoints === null) {
             throw new DomainError(`Falta la regla de puntos por posicion para la posicion ${participant.weeklyRank}.`);
           }
+
+          const faction = participant.factionId ? factionById.get(participant.factionId) ?? null : null;
 
           const participantResult = await tx.publishedParticipantWeeklyResult.create({
             data: {
@@ -74,6 +81,9 @@ export async function publishWeek(
               weeklyRank: participant.weeklyRank,
               positionPoints: participant.positionPoints,
               rankedParticipantCount: results.participants.length,
+              factionId: faction?.id ?? null,
+              factionNameSnapshot: faction?.name ?? null,
+              factionColorSnapshot: faction?.color ?? null,
             },
           });
 

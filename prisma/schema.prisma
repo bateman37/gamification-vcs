@@ -99,6 +99,7 @@ model Split {
   kpiConfigs         SplitKpiConfig[]
   positionPointRules SplitPositionPointRule[]
   publishedResults   PublishedParticipantWeeklyResult[]
+  factions           SplitFaction[]
 }
 
 /// Semana de un split. La identidad funcional es splitId + sequenceNumber,
@@ -145,12 +146,20 @@ model SplitParticipant {
   startWeekSequenceNumber Int
   /// Preparado para el futuro cierre de participacion. No se usa todavia.
   endWeekSequenceNumber   Int?
+  /// Faccion actual del participante (`0.7.0` / MVP-2A, ver docs/FACTIONS.md).
+  /// Nullable para permitir una migracion segura de datos existentes y
+  /// splits que todavia no usan facciones; los servicios exigen una
+  /// asignacion completa antes de activar un split que ya tiene facciones
+  /// creadas (ver docs/DECISIONS.md).
+  factionId               String?
   createdAt               DateTime         @default(now())
   updatedAt               DateTime         @updatedAt
 
-  split     Split     @relation(fields: [splitId], references: [id], onDelete: Cascade)
-  person    Person    @relation(fields: [personId], references: [id])
-  startWeek SplitWeek @relation("ParticipantStartWeek", fields: [splitId, startWeekSequenceNumber], references: [splitId, sequenceNumber])
+  split     Split         @relation(fields: [splitId], references: [id], onDelete: Cascade)
+  person    Person        @relation(fields: [personId], references: [id])
+  startWeek SplitWeek     @relation("ParticipantStartWeek", fields: [splitId, startWeekSequenceNumber], references: [splitId, sequenceNumber])
+  // Restrict: no se borra fisicamente una faccion mientras tenga participantes asignados (ver docs/FACTIONS.md).
+  faction   SplitFaction? @relation(fields: [factionId], references: [id], onDelete: Restrict)
 
   productivityRows   ProductivityWeeklyRow[]
   escalationRows     EscalationWeeklyRow[]
@@ -167,6 +176,30 @@ model SplitParticipant {
   @@unique([splitId, personId])
   // El alias normalizado debe ser unico dentro del split (no entre splits).
   @@unique([splitId, aliasNormalized])
+  @@index([factionId])
+}
+
+/// Faccion de un split (`0.7.0` / MVP-2A, ver docs/FACTIONS.md). Cada
+/// faccion pertenece a un unico split; un split necesita al menos dos para
+/// considerarse "configurado" con facciones. No es una segunda entidad de
+/// renombre: el aporte de cada participante a su faccion es exactamente su
+/// `positionPoints` ya publicado.
+model SplitFaction {
+  id             String   @id @default(uuid())
+  splitId        String
+  name           String
+  /// Nombre normalizado (minusculas, sin espacios exteriores), unico dentro del split.
+  nameNormalized String
+  /// Color hexadecimal `#RRGGBB`, validado en servicio. Solo es una ayuda visual: no es unico.
+  color          String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  split            Split                              @relation(fields: [splitId], references: [id], onDelete: Cascade)
+  participants     SplitParticipant[]
+  publishedResults PublishedParticipantWeeklyResult[]
+
+  @@unique([splitId, nameNormalized])
 }
 
 /// Configuracion de un KPI del catalogo cerrado para un split concreto.
@@ -533,12 +566,20 @@ model PublishedParticipantWeeklyResult {
   positionPoints         Int
   /// Numero total de participantes que entraron en el ranking semanal (denominador de "x de n").
   rankedParticipantCount Int
+  /// Faccion congelada del participante en el momento de publicar (`0.7.0` /
+  /// MVP-2A, ver docs/FACTIONS.md). `null` para splits que no usan facciones
+  /// o para publicaciones anteriores a esta version: quedan excluidas de la
+  /// clasificacion de facciones, sin recalculo retroactivo.
+  factionId              String?
+  factionNameSnapshot    String?
+  factionColorSnapshot   String?
   createdAt              DateTime         @default(now())
 
   publication      WeekPublication      @relation(fields: [publicationId], references: [id], onDelete: Cascade)
   split            Split                @relation(fields: [splitId], references: [id], onDelete: Restrict)
   splitParticipant SplitParticipant     @relation(fields: [splitParticipantId], references: [id], onDelete: Restrict)
   person           Person               @relation(fields: [personId], references: [id], onDelete: Restrict)
+  faction          SplitFaction?        @relation(fields: [factionId], references: [id], onDelete: Restrict)
   kpiResults       PublishedKpiResult[]
 
   // Un solo resultado por participante y publicacion (equivale a una vez por semana, ya que la publicacion es unica por semana).
@@ -546,6 +587,7 @@ model PublishedParticipantWeeklyResult {
   @@index([personId])
   @@index([splitId])
   @@index([splitParticipantId])
+  @@index([factionId])
 }
 
 /// Resultado congelado de un KPI para un participante publicado: estado

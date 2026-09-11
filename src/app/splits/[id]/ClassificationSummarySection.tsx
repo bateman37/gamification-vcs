@@ -8,9 +8,9 @@ export function ClassificationSummarySection({ splitId, classification }: { spli
   const { weeks, entries } = classification;
 
   return (
-    <section id="clasificacion-general" className="scroll-mt-6 space-y-3">
+    <section id="clasificacion-general-individual" className="scroll-mt-6 space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold">Clasificacion general</h2>
+        <h2 className="text-lg font-semibold">Clasificacion general individual</h2>
         <Link href={`/splits/${splitId}/clasificacion`} className="text-sm font-medium text-slate-700 underline hover:text-slate-900">
           Ver clasificacion detallada
         </Link>

@@ -31,11 +31,13 @@ export async function addParticipantAction(
       throw new DomainError("Selecciona una persona existente o crea una nueva.", "personId");
     }
 
+    const factionIdRaw = String(formData.get("factionId") ?? "").trim();
     const input = addParticipantSchema.parse({
       personId,
       alias: formData.get("alias"),
       level: formData.get("level"),
       startWeekSequenceNumber: formData.get("startWeekSequenceNumber"),
+      factionId: factionIdRaw || undefined,
     });
     await addParticipant(prisma, splitId, input);
     revalidatePath(`/splits/${splitId}`);
@@ -50,9 +52,11 @@ export async function updateParticipantAction(
   formData: FormData,
 ): Promise<ActionState> {
   return runAction(async () => {
+    const factionIdRaw = String(formData.get("factionId") ?? "").trim();
     const input = updateParticipantSchema.parse({
       alias: formData.get("alias"),
       level: formData.get("level"),
+      factionId: factionIdRaw || undefined,
     });
     await updateParticipant(prisma, participantId, input);
     revalidatePath(`/splits/${splitId}`);

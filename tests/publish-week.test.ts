@@ -94,36 +94,45 @@ describe("publishWeek: instantanea y bloqueo", () => {
     expect(await testDb.weekPublication.count({ where: { splitWeekId: week.id } })).toBe(1);
   });
 
-  it("un cambio de configuracion despues de publicar no altera la lectura publicada", async () => {
+  it("tras publicar, la configuracion de KPI queda bloqueada (0.7.0 / MVP-2A) y la lectura publicada no puede alterarse", async () => {
     const { split, week, participant } = await buildReadySplit();
     await publishWeek(testDb, split.id, week.id, null);
 
-    await updateKpiConfig(testDb, split.id, "STABILITY_GUARDIAN", {
-      isActive: true, baseMax: 5, multiplierN2: 1, parameters: { pointsPerResult: 30 },
-    });
+    await expect(
+      updateKpiConfig(testDb, split.id, "STABILITY_GUARDIAN", {
+        isActive: true, baseMax: 5, multiplierN2: 1, parameters: { pointsPerResult: 30 },
+      }),
+    ).rejects.toBeInstanceOf(DomainError);
 
     const publication = await testDb.weekPublication.findUnique({
       where: { splitWeekId: week.id },
       include: { participantResults: { include: { kpiResults: true } } },
     });
     const kpiResult = publication!.participantResults.find((row) => row.splitParticipantId === participant.id)!.kpiResults[0]!;
-    // Sigue reflejando el maximo de 30 vigente al publicar, no el 5 recien configurado.
+    // Sigue reflejando el maximo de 30 vigente al publicar: el intento de cambio ni siquiera se aplico.
     expect(kpiResult.baseMax?.toNumber()).toBe(30);
     expect(kpiResult.finalPoints?.toNumber()).toBe(30);
   });
 
   it("todas las mutaciones manuales y Excel relevantes rechazan una semana publicada", async () => {
     const { split, week, participant } = await buildReadySplit();
+    // Redactor estrella se activa antes de publicar (la configuracion de KPI queda bloqueada tras la primera
+    // publicacion desde 0.7.0 / MVP-2A, ver docs/DECISIONS.md): el guardado debe rechazarse por semana bloqueada.
+    await updateKpiConfig(testDb, split.id, "STAR_WRITER", {
+      isActive: true, baseMax: 60, multiplierN2: 1, parameters: { approvedArticlePoints: 10, negativeArticlePoints: 10, proposalPoints: 5 },
+    });
+    await saveWriterEntries(
+      testDb,
+      split.id,
+      week.id,
+      form({ [`deliveredArticles__${participant.id}`]: "1", [`undeliveredArticles__${participant.id}`]: "0", [`proposedArticles__${participant.id}`]: "0" }),
+    );
     await publishWeek(testDb, split.id, week.id, null);
 
     await expect(
       saveStabilityEntries(testDb, split.id, week.id, form({ [`resultValue__${participant.id}`]: "2" })),
     ).rejects.toBeInstanceOf(DomainError);
 
-    // Redactor estrella no estaba activo, pero el guardado igualmente debe rechazarse por semana bloqueada antes de llegar a filtrar participantes.
-    await updateKpiConfig(testDb, split.id, "STAR_WRITER", {
-      isActive: true, baseMax: 60, multiplierN2: 1, parameters: { approvedArticlePoints: 10, negativeArticlePoints: 10, proposalPoints: 5 },
-    });
     await expect(
       saveWriterEntries(
         testDb,
