@@ -4,6 +4,7 @@ import { getSplitById, listSplitWeeks } from "@/server/services/split.service";
 import { listParticipantsForSplit } from "@/server/services/participant.service";
 import { listAllPersons } from "@/server/services/person.service";
 import { listKpiConfigsForSplit } from "@/server/services/kpi.service";
+import { getWeeklyKpiLoadSummary } from "@/server/services/kpi-load-summary.service";
 import { TOTAL_KPI_COUNT } from "@/domain/kpis/catalog";
 import { formatCalendarDate } from "@/lib/dates";
 import { Badge, EmptyState } from "@/components/ui";
@@ -14,6 +15,7 @@ import { AddParticipantForm } from "./AddParticipantForm";
 import { ParticipantEditRow } from "./ParticipantEditRow";
 import { KpiConfigSection } from "./KpiConfigSection";
 import { WeekKpiLoadCell } from "./WeekKpiLoadCell";
+import { WeekKpiLoadedCount } from "./WeekKpiLoadedCount";
 
 const STATUS_TONE: Record<string, "slate" | "green" | "gray"> = {
   DRAFT: "slate",
@@ -33,6 +35,7 @@ export default async function SplitDetailPage({ params }: { params: { id: string
     listAllPersons(prisma),
     listKpiConfigsForSplit(prisma, split.id),
   ]);
+  const kpiLoadSummaries = await getWeeklyKpiLoadSummary(prisma, split.id, weeks);
 
   const participatingPersonIds = new Set(participants.map((participant) => participant.personId));
   const availablePeople = people.filter((person) => !participatingPersonIds.has(person.id));
@@ -90,20 +93,27 @@ export default async function SplitDetailPage({ params }: { params: { id: string
                 <th className="px-3 py-2 font-medium">Semana</th>
                 <th className="px-3 py-2 font-medium">Inicio</th>
                 <th className="px-3 py-2 font-medium">Fin</th>
+                <th className="px-3 py-2 font-medium">KPI cargados</th>
                 <th className="px-3 py-2 font-medium">Carga de KPI</th>
               </tr>
             </thead>
             <tbody>
-              {weeks.map((week) => (
-                <tr key={week.id} className="border-b border-slate-100">
-                  <td className="px-3 py-2">{week.sequenceNumber}</td>
-                  <td className="px-3 py-2">{formatCalendarDate(week.startDate)}</td>
-                  <td className="px-3 py-2">{formatCalendarDate(week.endDate)}</td>
-                  <td className="px-3 py-2">
-                    <WeekKpiLoadCell splitId={split.id} splitStatus={split.status} week={week} />
-                  </td>
-                </tr>
-              ))}
+              {weeks.map((week) => {
+                const summary = kpiLoadSummaries.get(week.id) ?? { loadedCount: 0, totalActiveCount: 0 };
+                return (
+                  <tr key={week.id} className="border-b border-slate-100">
+                    <td className="px-3 py-2">{week.sequenceNumber}</td>
+                    <td className="px-3 py-2">{formatCalendarDate(week.startDate)}</td>
+                    <td className="px-3 py-2">{formatCalendarDate(week.endDate)}</td>
+                    <td className="px-3 py-2">
+                      <WeekKpiLoadedCount summary={summary} />
+                    </td>
+                    <td className="px-3 py-2">
+                      <WeekKpiLoadCell splitId={split.id} splitStatus={split.status} week={week} />
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

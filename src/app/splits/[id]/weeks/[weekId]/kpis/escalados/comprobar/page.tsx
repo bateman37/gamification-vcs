@@ -12,9 +12,33 @@ function formatOutcome(outcome: EscalationTamerOutcomeView | null): string {
   if (!outcome) return "-";
   if (outcome.status === "not_applicable") return "No aplica";
   if (outcome.status === "no_escalation_data") return "Sin dato de Escalados";
+  if (outcome.status === "vac") return "VAC";
   if (outcome.status === "no_productivity_data") return "Falta Productividad";
   if (outcome.status === "zero_updates") return "No calculable: Actualizaciones es 0";
   return formatPoints(outcome.finalPoints ?? 0);
+}
+
+const INFERRED_ZERO_TITLE =
+  "El fichero de Escalados esta cargado y la persona no aparece; se interpreta como cero reasignaciones.";
+
+/**
+ * Reasignaciones de grupo mostradas: la fila real del Excel si existe, `0
+ * (inferido)` cuando la carga existe pero la persona falta y hay
+ * Productividad (hotfix `MVP-1C.3 / INPUT-1C`), `VAC` cuando falta en
+ * ambos origenes, o `Sin dato` en el resto de casos (por ejemplo, no existe
+ * la carga de Escalados).
+ */
+function formatReassignments(row: { groupReassignments: number | undefined; escalationTamer: EscalationTamerOutcomeView | null }): {
+  text: string;
+  title?: string;
+} {
+  if (row.groupReassignments !== undefined) return { text: String(row.groupReassignments) };
+  const outcome = row.escalationTamer;
+  if (outcome?.inferred && (outcome.status === "computed" || outcome.status === "zero_updates")) {
+    return { text: "0 (inferido)", title: INFERRED_ZERO_TITLE };
+  }
+  if (outcome?.status === "vac") return { text: "VAC" };
+  return { text: "Sin dato" };
 }
 
 export default async function EscalationCheckPage({
@@ -89,16 +113,21 @@ export default async function EscalationCheckPage({
               </tr>
             </thead>
             <tbody>
-              {view.rows.map((row) => (
-                <tr key={row.participantId} className="border-b border-slate-100">
-                  <td className="px-3 py-2">{row.alias}</td>
-                  <td className="px-3 py-2">{row.fullName}</td>
-                  <td className="px-3 py-2">{row.level}</td>
-                  <td className="px-3 py-2">{row.groupReassignments ?? "Sin dato"}</td>
-                  <td className="px-3 py-2">{row.updates ?? "Sin dato"}</td>
-                  {view.escalationTamerActive && <td className="px-3 py-2">{formatOutcome(row.escalationTamer)}</td>}
-                </tr>
-              ))}
+              {view.rows.map((row) => {
+                const reassignments = formatReassignments(row);
+                return (
+                  <tr key={row.participantId} className="border-b border-slate-100">
+                    <td className="px-3 py-2">{row.alias}</td>
+                    <td className="px-3 py-2">{row.fullName}</td>
+                    <td className="px-3 py-2">{row.level}</td>
+                    <td className="px-3 py-2" title={reassignments.title}>
+                      {reassignments.text}
+                    </td>
+                    <td className="px-3 py-2">{row.updates ?? "Sin dato"}</td>
+                    {view.escalationTamerActive && <td className="px-3 py-2">{formatOutcome(row.escalationTamer)}</td>}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

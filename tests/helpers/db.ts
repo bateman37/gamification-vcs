@@ -17,6 +17,11 @@ export async function resetDatabase(): Promise<void> {
   await testDb.escalationImport.deleteMany();
   await testDb.qualityImport.deleteMany();
   await testDb.voiceImport.deleteMany();
+  await testDb.stabilityWeeklyEntry.deleteMany();
+  await testDb.chronomancyWeeklyEntry.deleteMany();
+  await testDb.writerWeeklyEntry.deleteMany();
+  await testDb.studentWeeklyEntry.deleteMany();
+  await testDb.apprenticeWeeklyEntry.deleteMany();
   await testDb.splitParticipant.deleteMany();
   await testDb.splitKpiConfig.deleteMany();
   await testDb.splitWeek.deleteMany();

@@ -4,6 +4,89 @@ Formato inspirado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/)
 Este proyecto usa versionado `0.x` mientras se construye el nucleo
 funcional; la primera version publicada es `0.1.0`.
 
+## [0.5.0] - MVP-1C.3 / INPUT-1C — Cargas manuales y completitud semanal
+
+### Corregido
+
+- **Cero implicito de Domador de Escaladas:** la ausencia de fila de
+  Escalados para un participante se interpreta ahora como reasignaciones
+  `0` (no como "Sin dato") cuando ya existe una carga de Escalados
+  confirmada para la semana y el participante tiene Productividad; se
+  muestra en `Comprobar` como `0 (inferido)`, con ayuda accesible. Si
+  tampoco tiene Productividad, se muestra `VAC` sin puntos. La inferencia
+  nunca se aplica si la carga de Escalados no existe todavia para la
+  semana, y nunca inserta una fila artificial en `EscalationWeeklyRow`.
+- **`vacCount` de Domador de Escaladas:** ahora cuenta unicamente a los
+  participantes aplicables que no tienen fila ni en Escalados ni en
+  Productividad (antes contaba tambien, incorrectamente, a quien le
+  faltaba solo uno de los dos origenes).
+
+### Anadido
+
+- Entrada manual de los cinco KPI restantes: **Guardian de la
+  Estabilidad** (`STABILITY_GUARDIAN`, solo participantes N2),
+  **Cronomagia laboral** (`WORK_CHRONOMANCY`, con `totalHours = 0` como
+  `VAC`), **Redactor estrella** (`STAR_WRITER`, con entregados/no
+  entregados/propuestos en tres campos separados), **Estudiante
+  entusiasta** (`ENTHUSIASTIC_STUDENT`) y **Aprendiz experto**
+  (`EXPERT_APPRENTICE`, con `targetValue` validado en servidor). **Los diez
+  KPI de Split 8 tienen ya introduccion de datos funcional.**
+- Nuevas entidades `StabilityWeeklyEntry`, `ChronomancyWeeklyEntry`,
+  `WriterWeeklyEntry`, `StudentWeeklyEntry` y `ApprenticeWeeklyEntry`
+  (migracion `add_manual_kpi_entries`), sin fichero ni cabecera de carga:
+  una fila semanal tipada por participante, con restricciones de base de
+  datos de no negatividad y `onDelete: Restrict` desde `SplitParticipant`.
+  La migracion conserva integramente los datos existentes.
+- Pantallas de introduccion y comprobacion para cada KPI manual
+  (`.../kpis/<origen>/{introducir,comprobar}`, con `<origen>` en
+  `estabilidad`, `cronomagia`, `articulos`, `dedicacion` y `formaciones`),
+  con guardado atomico (sustituye por completo el conjunto anterior de esa
+  semana), validacion en servidor asociada a persona y campo, y estados
+  `Pendiente`/`Cargado` (nunca `Carga parcial`; ninguno de los cinco
+  muestra `VAC` de grupo, salvo Cronomagia por fila).
+- Nueva columna `KPI cargados` en el "Calendario de semanas" del detalle
+  del split (`src/server/services/kpi-load-summary.service.ts`): `n/X` de
+  los KPI activos completos por semana, calculada siempre al consultar con
+  un numero acotado de consultas para todo el calendario (nunca una
+  consulta por KPI y semana), sin persistir el contador.
+- Helpers pequenos y tipados, no un motor generico:
+  `src/server/services/shared/manual-entries.ts` (estado
+  `Pendiente`/`Cargado` y comprobacion de split activo) y
+  `src/server/validation/manual-entry.ts` (parseo y validacion de
+  formularios con errores por persona y campo).
+- Documentacion: `docs/MANUAL_KPI_ENTRY.md` (referencia principal), y
+  actualizacion de `README.md`, `docs/ROADMAP.md`, `docs/DATA_MODEL.md`,
+  `docs/DECISIONS.md`, `docs/KPI_CONFIGURATION.md`,
+  `docs/DISCOVERY-1-SPLIT-8.md`,
+  `docs/IMPORT_ESCALATIONS_QUALITY_VOICE.md` y `CLAUDE.md`.
+- Pruebas de servicio (Vitest) sobre las reglas criticas de esta entrega:
+  caso de regresion sintetico del hotfix de Domador (cero inferido sin
+  contar como VAC, ausencia en ambos origenes como VAC); guardado manual
+  atomico con rechazo en `DRAFT`/`CLOSED` y sin persistir filas parciales;
+  Guardian solo N2 con cero valido y maximo aplicado, y completado sin
+  ningun N2 aplicable; Cronomagia con ratio normal, ratio limitado al
+  100 %, `0/0` como `VAC` y rechazo de `productivas > 0` con `total = 0`;
+  Redactor con entregados/no entregados/propuestas y resultado negativo
+  sin suelo de cero; Estudiante con horas decimales, cero y maximo;
+  Aprendiz con rechazo al superar `targetValue` y calculo dentro del
+  limite; estados manuales pendiente/cargado al cambiar la participacion
+  aplicable; y el contador semanal completo (Productividad sumando dos
+  KPI, Domador exigiendo ambos origenes, KPI inactivos sin contar y
+  `X/X` con los diez KPI completos).
+
+### Fuera de alcance en esta entrega
+
+Nuevos importadores Excel, pegado masivo desde portapapeles, conexion con
+Power BI, cierre irreversible/publicacion/reapertura de semana,
+clasificacion general o individual, portal o autenticacion de
+participantes, PDF o correo, historial de versiones de las entradas
+manuales, vacaciones/bajas como entidad general, motor generico de
+formularios/importaciones/reglas, formulas editables libremente,
+profesiones, objetos, cartas, creditos, renombre, misiones u otros efectos
+de juego, API publica, colas, almacenamiento cloud, microservicios,
+rediseno global y actualizacion general de dependencias. Ver
+`docs/ROADMAP.md`.
+
 ## [0.4.0] - MVP-1C.2 / IMPORT-1B — Escaladas, Calidad y Llamadas
 
 ### Anadido

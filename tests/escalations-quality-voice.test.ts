@@ -284,10 +284,12 @@ describe("Domador de Escaladas: union por semana/participante", () => {
     const checkView = await getEscalationCheckView(testDb, split.id, week.id);
     const byAlias = new Map(checkView.rows.map((row) => [row.alias, row]));
 
-    expect(byAlias.get("Ambos")?.escalationTamer).toMatchObject({ status: "computed", finalPoints: 26.875 });
-    expect(byAlias.get("SoloProd")?.escalationTamer).toEqual({ status: "no_escalation_data" });
+    expect(byAlias.get("Ambos")?.escalationTamer).toMatchObject({ status: "computed", finalPoints: 26.875, inferred: false });
+    // Hotfix MVP-1C.3 / INPUT-1C: la carga de Escalados existe y "SoloProd" tiene
+    // Productividad pero no fila de Escalados -> cero implicito, no "sin dato".
+    expect(byAlias.get("SoloProd")?.escalationTamer).toMatchObject({ status: "computed", finalPoints: 30, inferred: true });
     expect(byAlias.get("SoloEsc")?.escalationTamer).toEqual({ status: "no_productivity_data" });
-    expect(byAlias.get("CeroAct")?.escalationTamer).toEqual({ status: "zero_updates" });
+    expect(byAlias.get("CeroAct")?.escalationTamer).toEqual({ status: "zero_updates", inferred: false });
 
     // Union directa por participante y semana, sin depender de la vista de comprobacion.
     const updatesForBoth = (await testDb.productivityWeeklyRow.findFirstOrThrow({
@@ -302,12 +304,59 @@ describe("Domador de Escaladas: union por semana/participante", () => {
       multiplierN2: 1,
       parameters: { basePoints: 30, ratioPenaltyFactor: 200 },
     };
-    const outcome = resolveEscalationTamerOutcome(config, "N1", 3, updatesForBoth);
+    const outcome = resolveEscalationTamerOutcome(config, "N1", {
+      hasEscalationImport: true,
+      groupReassignments: 3,
+      updates: updatesForBoth,
+    });
     expect(outcome.status).toBe("computed");
 
-    const zeroOutcome = resolveEscalationTamerOutcome(config, "N1", 2, 0);
-    expect(zeroOutcome).toEqual({ status: "zero_updates" });
+    const zeroOutcome = resolveEscalationTamerOutcome(config, "N1", {
+      hasEscalationImport: true,
+      groupReassignments: 2,
+      updates: 0,
+    });
+    expect(zeroOutcome).toEqual({ status: "zero_updates", inferred: false });
     expect(participantZero).toBeDefined();
+  });
+});
+
+describe("Hotfix MVP-1C.3 / INPUT-1C: cero implicito de Escalados", () => {
+  it("infiere cero cuando falta la fila de Escalados con Productividad presente, y VAC solo cuando faltan ambas filas", async () => {
+    const split = await createDraftSplit();
+    const personA = await createPerson(testDb, { fullName: "Participante Sintetico A", email: undefined });
+    const personB = await createPerson(testDb, { fullName: "Participante Sintetico B", email: undefined });
+    const personC = await createPerson(testDb, { fullName: "Participante Sintetico C", email: undefined });
+    await addParticipant(testDb, split.id, { personId: personA.id, alias: "SinteticoA", level: "N1", startWeekSequenceNumber: 1 });
+    await addParticipant(testDb, split.id, { personId: personB.id, alias: "SinteticoB", level: "N1", startWeekSequenceNumber: 1 });
+    await addParticipant(testDb, split.id, { personId: personC.id, alias: "SinteticoC", level: "N1", startWeekSequenceNumber: 1 });
+
+    await activateWithAllThree(split.id);
+    const week = (await listSplitWeeks(testDb, split.id))[0]!;
+
+    // A y C tienen Productividad; B no aparece en ningun fichero.
+    const productivityBuffer = await buildWorkbookBuffer([
+      ["Nombre del actualizador", "Actualizaciones", "Comentarios", "Comentarios públicos", "Comentarios internos", "Tickets actualizados con comentario", "Tickets resueltos", "Tickets creados"],
+      ["Participante Sintetico A", 265, 0, 0, 0, 0, 0, 0],
+      ["Participante Sintetico C", 50, 0, 0, 0, 0, 0, 0],
+    ]);
+    await confirmProductivityImport(testDb, split.id, week.id, { buffer: productivityBuffer, originalFilename: "productividad.xlsx" });
+
+    // La carga de Escalados existe (con fila real solo para C); ni A ni B tienen fila en ella.
+    const escalationBuffer = await buildWorkbookBuffer([ESCALATION_HEADERS, ["Participante Sintetico C", 5]]);
+    await confirmEscalationImport(testDb, split.id, week.id, { buffer: escalationBuffer, originalFilename: "escalados.xlsx" });
+
+    const checkView = await getEscalationCheckView(testDb, split.id, week.id);
+    const byAlias = new Map(checkView.rows.map((row) => [row.alias, row]));
+
+    // A: cero inferido, calculado con la base configurada, no VAC.
+    expect(byAlias.get("SinteticoA")?.escalationTamer).toMatchObject({ status: "computed", finalPoints: 30, inferred: true });
+    // B: sin fila en ninguno de los dos origenes -> VAC, sin puntos.
+    expect(byAlias.get("SinteticoB")?.escalationTamer).toEqual({ status: "vac" });
+
+    const loadStatus = await getEscalationLoadStatus(testDb, split.id, week.id, week.sequenceNumber);
+    expect(loadStatus.status).toBe("LOADED");
+    expect(loadStatus.vacCount).toBe(1);
   });
 });
 

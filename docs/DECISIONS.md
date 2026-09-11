@@ -434,3 +434,83 @@ siempre no negativos.
 tambien mediante restricciones de base de datos "cuando sea viable". Esto
 evita que un futuro cambio en la capa de servicios (o un acceso directo a
 la base de datos) rompa invariantes de negocio sin que nadie lo note.
+
+## Cero implicito de Escalados condicionado a que exista la carga (`MVP-1C.3 / INPUT-1C`)
+
+**Decision:** la ausencia de fila de Escalados para un participante se
+interpreta como reasignaciones `0` (cero implicito) solo cuando ya existe
+una carga de Escalados confirmada (`EscalationImport`) para esa semana **y**
+el participante tiene fila de Productividad. Si no existe la carga de
+Escalados, el resultado sigue siendo "Sin dato de Escalados", exactamente
+como antes de este hotfix. Nunca se inserta una fila artificial en
+`EscalationWeeklyRow`: la inferencia pertenece solo al resultado calculado
+(`resolveEscalationTamerOutcome`, con `inferred: true`).
+
+**Motivo:** el Excel de Escalados real no siempre incluye a una persona
+cuando sus reasignaciones son cero, y tratar esa ausencia como "sin dato"
+ocultaba el calculo real para la mayoria de las personas de una carga ya
+confirmada. Condicionar la inferencia a que la carga exista evita
+inventar datos antes de que el administrador haya cargado nada.
+
+## VAC de Domador de Escaladas solo cuando faltan ambas filas (`MVP-1C.3 / INPUT-1C`)
+
+**Decision:** con ambos origenes (Escalados y Productividad) confirmados
+para la semana, un participante solo se considera `VAC` (sin puntos, y
+solo el contribuye al `vacCount` del grupo) cuando no tiene fila ni en
+Escalados ni en Productividad. Quien tiene fila real de Escalados sin
+Productividad sigue siendo "Falta Productividad" (dependencia incompleta),
+nunca VAC.
+
+**Motivo:** el `vacCount` anterior usaba una condicion "o" (faltar en
+Escalados o en Productividad), lo que contaba erroneamente como VAC a
+quien solo le faltaba uno de los dos origenes pero cuya situacion ya tenia
+un estado propio y mas preciso ("Falta Productividad" o cero implicito).
+
+## Formularios manuales completos, atomicos y sin motor generico (`MVP-1C.3 / INPUT-1C`)
+
+**Decision:** los cinco KPI que se introducen a mano (Guardian de la
+Estabilidad, Cronomagia laboral, Redactor estrella, Estudiante entusiasta,
+Aprendiz experto) se guardan mediante una unica accion de servidor por
+KPI y semana, sin paso de "Analizar". El guardado sustituye por completo,
+dentro de una transaccion, el conjunto anterior de ese modelo y esa
+semana; todos los campos visibles son obligatorios, y un campo vacio nunca
+se convierte en cero. Se comparten solo helpers pequenos y tipados
+(`src/server/services/shared/manual-entries.ts`,
+`src/server/validation/manual-entry.ts`), nunca un motor generico de
+formularios.
+
+**Motivo:** el encargo pide explicitamente permitir helpers pequenos para
+formularios manuales, pero prohibe un constructor generico. Cada KPI
+manual sigue declarando sus propios campos, validaciones y calculo en su
+propio dominio y servicio, igual que los origenes de Excel.
+
+## `0/0` de Cronomagia como VAC, nunca como occupancy cero
+
+**Decision:** en Cronomagia laboral, una fila con `totalHours = 0`
+significa vacaciones toda la semana: se muestra como `VAC`, no recibe
+puntos y tiene prioridad sobre el calculo (nunca se convierte en occupancy
+`0`). La fila se guarda igual y cuenta como completa para el estado
+`Cargado` del grupo. Es el unico de los cinco KPI manuales que usa `VAC`
+(por fila, no como contador de grupo); los otros cuatro nunca lo muestran,
+porque en ellos el cero es un dato normal y completo.
+
+**Motivo:** dividir productivas entre unas horas totales de cero no tiene
+sentido matematico, y tratarlo como "0 % de ocupacion" ocultaria que la
+persona no trabajo esa semana. Es el comportamiento explicito pedido por
+el encargo para este KPI concreto.
+
+## Contador semanal de "KPI cargados" calculado, nunca persistido (`MVP-1C.3 / INPUT-1C`)
+
+**Decision:** la columna "KPI cargados" del calendario de semanas
+(`getWeeklyKpiLoadSummary`) se calcula siempre al consultar, con un numero
+acotado de consultas para todo el calendario del split (participantes, KPI
+activos, y una consulta por cada uno de los nueve origenes de datos).
+Nunca se guarda un campo `loadedKpiCount` en `SplitWeek` ni en ninguna otra
+tabla.
+
+**Motivo:** el numero de KPI activos, la participacion aplicable y las
+cargas existentes cambian con frecuencia (activar/desactivar un KPI,
+anadir un participante, sustituir una carga). Persistir un contador se
+volveria obsoleto en cualquiera de esos casos sin que nadie lo notara; el
+encargo pide explicitamente no persistirlo y evitar una consulta por KPI y
+semana.

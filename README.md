@@ -10,8 +10,9 @@ resultados y clasificacion.
 
 **MVP-1A — Personas y creacion de splits**, **MVP-1B — KPI activos y
 configuracion**, **IMPORT-1A / MVP-1C.1 — Carga semanal de
-Productividad** y **MVP-1C.2 / IMPORT-1B — Carga semanal de Escalados,
-Calidad y Llamadas** (ver `docs/ROADMAP.md`).
+Productividad**, **MVP-1C.2 / IMPORT-1B — Carga semanal de Escalados,
+Calidad y Llamadas** y **MVP-1C.3 / INPUT-1C — Cargas manuales y
+completitud semanal** (ver `docs/ROADMAP.md`).
 
 Estas entregas implementan:
 
@@ -36,12 +37,21 @@ Estas entregas implementan:
   queda verde aunque falten participantes (`n VAC`); el amarillo queda
   reservado para la dependencia de Domador (ver
   `docs/IMPORT_ESCALATIONS_QUALITY_VOICE.md`).
+- Entrada manual de los cinco KPI restantes — Guardian de la Estabilidad,
+  Cronomagia laboral, Redactor estrella, Estudiante entusiasta y Aprendiz
+  experto —, sin Excel, con guardado atomico y estados
+  `Pendiente`/`Cargado`. **Los diez KPI de Split 8 tienen ya introduccion
+  de datos funcional** (ver `docs/MANUAL_KPI_ENTRY.md`).
+- Nueva columna `KPI cargados` en el "Calendario de semanas" de cada split
+  (`n/X` de los KPI activos completos por semana, calculada al consultar).
+- Hotfix: Domador de Escaladas ahora infiere reasignaciones `0` cuando la
+  carga de Escalados ya existe y la persona no aparece en ella, siempre que
+  tenga Productividad; si tampoco tiene Productividad, se muestra `VAC`.
 
-Todavia **no** incluye el resto de origenes de carga (Estabilidad,
-Cronomagia, Articulos, Dedicacion, Formaciones), clasificacion, vista
-individual, autenticacion ni ninguna capa de juego adicional (facciones,
-profesiones, objetos, economia, renombre...). Consulta `docs/ROADMAP.md`
-para el plan completo.
+Todavia **no** incluye cierre irreversible ni publicacion de semana,
+clasificacion general, vista individual, autenticacion ni ninguna capa de
+juego adicional (facciones, profesiones, objetos, economia, renombre...).
+Consulta `docs/ROADMAP.md` para el plan completo.
 
 ## Pila tecnologica
 
@@ -310,6 +320,46 @@ split activo, en la misma semana usada para Productividad:
 8. Cierra el split y verifica que `Comprobar` sigue disponible en los tres
    grupos, pero `Cargar` queda deshabilitado.
 
+## Cargas manuales y completitud semanal (MVP-1C.3 / INPUT-1C)
+
+Con los cinco KPI restantes activos, la pantalla semanal muestra un boton
+`Introducir datos` en vez de `Cargar` para Guardian de la Estabilidad,
+Cronomagia laboral, Redactor estrella, Estudiante entusiasta y Aprendiz
+experto. Cada uno abre su propio formulario
+(`.../kpis/<origen>/introducir`) con los participantes aplicables
+precargados (Guardian, solo N2) y su propia comprobacion
+(`.../kpis/<origen>/comprobar`). El "Calendario de semanas" del detalle del
+split muestra ademas una columna `KPI cargados` (`n/X`). Detalle completo
+en `docs/MANUAL_KPI_ENTRY.md`.
+
+### Comprobar manualmente
+
+1. Con Productividad y Escalados cargados, deja fuera del Excel de
+   Escalados a alguien que si tenga Productividad esa semana: en
+   `Comprobar Domador de Escaladas` debe verse `0 (inferido)` con ayuda
+   accesible, calcular puntos y no sumar al contador `n VAC`. Deja a otra
+   persona fuera de ambos ficheros: debe verse `VAC`.
+2. Pulsa `Introducir datos` en Guardian de la Estabilidad: solo deben
+   aparecer los participantes N2; guarda un `0` y comprueba que se
+   conserva como resultado real (no como vacaciones).
+3. Introduce Cronomagia con un ratio normal (por ejemplo `38,5 / 40`), uno
+   superior al 100 % (por ejemplo `46,7 / 40`) y un `0 / 0`: revisa el
+   porcentaje, el limite al 100 % y el `VAC` respectivamente en
+   `Comprobar`.
+4. Introduce Redactor con entregados, no entregados y propuestas en la
+   misma semana, y revisa que el multiplicador solo afecta a los
+   entregados.
+5. Introduce horas de Estudiante, incluido un `0`.
+6. Introduce formaciones de Aprendiz e intenta superar el maximo
+   configurado: debe rechazarse con un mensaje claro.
+7. Edita de nuevo cada formulario (el boton pasa a `Actualizar datos`) y
+   comprueba que precarga sus propios valores y no toca los demas KPI.
+8. Observa el "Calendario de semanas" avanzar de `0/X` a `X/X` a medida
+   que completas cada KPI, quedando en verde con el texto accesible
+   "Carga semanal completa" al llegar a `X/X`.
+9. Cierra el split: las pantallas `Comprobar` siguen siendo consultables,
+   pero ninguna accion de guardado esta disponible.
+
 ## Documentos del proyecto
 
 - [`docs/PROJECT_CONTEXT.md`](docs/PROJECT_CONTEXT.md) — objetivo del
@@ -326,6 +376,9 @@ split activo, en la misma semana usada para Productividad:
 - [`docs/IMPORT_ESCALATIONS_QUALITY_VOICE.md`](docs/IMPORT_ESCALATIONS_QUALITY_VOICE.md)
   — carga semanal de los Excel de Escalados, Calidad y Llamadas, y calculo
   de Domador de Escaladas, Maestro Artesano y Embajador de voz.
+- [`docs/MANUAL_KPI_ENTRY.md`](docs/MANUAL_KPI_ENTRY.md) — hotfix del cero
+  implicito de Domador de Escaladas, entrada manual de los cinco KPI
+  restantes y el contador `KPI cargados` del calendario de semanas.
 - [`docs/DECISIONS.md`](docs/DECISIONS.md) — decisiones tecnicas y de
   producto registradas.
 - [`CHANGELOG.md`](CHANGELOG.md) — historial de cambios.

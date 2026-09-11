@@ -1,13 +1,15 @@
-# Modelo de datos — MVP-1A, MVP-1B, IMPORT-1A / MVP-1C.1 y MVP-1C.2 / IMPORT-1B
+# Modelo de datos — MVP-1A a MVP-1C.3 / INPUT-1C
 
 Fuente de verdad: `prisma/schema.prisma` y las migraciones
 `prisma/migrations/20260910133815_init/migration.sql` (MVP-1A),
 `prisma/migrations/20260910202939_add_kpi_configuration/migration.sql`
 (MVP-1B),
 `prisma/migrations/20260911082446_add_productivity_import/migration.sql`
-(IMPORT-1A / MVP-1C.1) y
+(IMPORT-1A / MVP-1C.1),
 `prisma/migrations/20260911100002_add_escalations_quality_voice_import/migration.sql`
-(MVP-1C.2 / IMPORT-1B). Este documento describe y explica ese esquema; en
+(MVP-1C.2 / IMPORT-1B) y
+`prisma/migrations/20260911111623_add_manual_kpi_entries/migration.sql`
+(MVP-1C.3 / INPUT-1C). Este documento describe y explica ese esquema; en
 caso de discrepancia, el esquema real manda.
 
 ## Diagrama entidad-relacion
@@ -31,6 +33,16 @@ erDiagram
     SplitWeek ||--o| VoiceImport : "tiene carga vigente"
     VoiceImport ||--o{ VoiceWeeklyRow : "contiene"
     SplitParticipant ||--o{ VoiceWeeklyRow : "tiene fila en"
+    SplitWeek ||--o{ StabilityWeeklyEntry : "tiene entrada"
+    SplitParticipant ||--o{ StabilityWeeklyEntry : "tiene fila en"
+    SplitWeek ||--o{ ChronomancyWeeklyEntry : "tiene entrada"
+    SplitParticipant ||--o{ ChronomancyWeeklyEntry : "tiene fila en"
+    SplitWeek ||--o{ WriterWeeklyEntry : "tiene entrada"
+    SplitParticipant ||--o{ WriterWeeklyEntry : "tiene fila en"
+    SplitWeek ||--o{ StudentWeeklyEntry : "tiene entrada"
+    SplitParticipant ||--o{ StudentWeeklyEntry : "tiene fila en"
+    SplitWeek ||--o{ ApprenticeWeeklyEntry : "tiene entrada"
+    SplitParticipant ||--o{ ApprenticeWeeklyEntry : "tiene fila en"
 
     Person {
         string id PK
@@ -183,6 +195,54 @@ erDiagram
         decimal segmentWrapUpTimeHours "trazabilidad, no puntua"
         decimal segmentTalkTimeMinutes "trazabilidad, no puntua"
         decimal segmentWrapUpTimeMinutes "trazabilidad, no puntua"
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    StabilityWeeklyEntry {
+        string id PK
+        string splitWeekId FK
+        string splitParticipantId FK "onDelete Restrict"
+        decimal resultValue "no negativo; 0 es un dato real"
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    ChronomancyWeeklyEntry {
+        string id PK
+        string splitWeekId FK
+        string splitParticipantId FK "onDelete Restrict"
+        decimal productiveHours "no negativo"
+        decimal totalHours "no negativo; 0 = VAC"
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    WriterWeeklyEntry {
+        string id PK
+        string splitWeekId FK
+        string splitParticipantId FK "onDelete Restrict"
+        int deliveredArticles "no negativo"
+        int undeliveredArticles "no negativo, conteo positivo"
+        int proposedArticles "no negativo"
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    StudentWeeklyEntry {
+        string id PK
+        string splitWeekId FK
+        string splitParticipantId FK "onDelete Restrict"
+        decimal dedicatedHours "no negativo"
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    ApprenticeWeeklyEntry {
+        string id PK
+        string splitWeekId FK
+        string splitParticipantId FK "onDelete Restrict"
+        int completedTrainings "no negativo; maximo targetValue validado en servicio"
         datetime createdAt
         datetime updatedAt
     }
@@ -371,6 +431,39 @@ Los puntos de los tres KPI, igual que Productividad, **no** se guardan:
 se calculan al consultar a partir de estos conteos, el nivel del
 participante y `SplitKpiConfig`.
 
+### Las cinco entradas manuales (`MVP-1C.3 / INPUT-1C`)
+
+Sin fichero, cabecera de carga, hash ni nombre de origen: una fila semanal
+tipada por participante, guardada directamente por el administrador (ver
+`docs/MANUAL_KPI_ENTRY.md`). Las cinco comparten la misma forma: `id`
+(UUID), `splitWeekId` (`onDelete: Cascade` desde `SplitWeek`),
+`splitParticipantId` (`onDelete: Restrict` desde `SplitParticipant`, igual
+que las filas de importacion), timestamps, restriccion unica
+`[splitWeekId, splitParticipantId]` (una fila por participante y semana) y
+restricciones SQL de no negatividad. Ninguna guarda puntos, porcentajes,
+estados, `VAC`, maximos ni contadores derivados: todo se calcula al
+consultar.
+
+- **`StabilityWeeklyEntry`**: `resultValue` (`Decimal(12,4)`, no negativo).
+  Alimenta Guardian de la Estabilidad (`STABILITY_GUARDIAN`).
+- **`ChronomancyWeeklyEntry`**: `productiveHours` y `totalHours`
+  (`Decimal(12,4)`, no negativos). Alimenta Cronomagia laboral
+  (`WORK_CHRONOMANCY`). No tiene columna `occupancy`: se calcula al
+  consultar.
+- **`WriterWeeklyEntry`**: `deliveredArticles`, `undeliveredArticles`,
+  `proposedArticles` (`Int`, no negativos). Alimenta Redactor estrella
+  (`STAR_WRITER`).
+- **`StudentWeeklyEntry`**: `dedicatedHours` (`Decimal(12,4)`, no
+  negativo). Alimenta Estudiante entusiasta (`ENTHUSIASTIC_STUDENT`).
+- **`ApprenticeWeeklyEntry`**: `completedTrainings` (`Int`, no negativo).
+  Alimenta Aprendiz experto (`EXPERT_APPRENTICE`). El maximo
+  (`targetValue` de `SplitKpiConfig`) se valida en el servicio, no en la
+  base de datos: un cambio posterior de `targetValue` no modifica ni
+  recorta silenciosamente los valores ya guardados.
+
+Migracion `add_manual_kpi_entries`, compatible con los datos existentes de
+`0.4.0`.
+
 ## Decisiones sobre fechas
 
 - Todas las fechas de negocio (`Split.startDate`, `SplitWeek.startDate`,
@@ -402,16 +495,16 @@ Estas entidades aparecen en el contexto funcional del producto pero
 **no** se han creado todavia. Se documentan para que una futura entrega no
 tenga que redescubrirlas:
 
-- Resultados calculados de los KPI distintos de Productividad, Escalados,
-  Calidad y Llamadas (`MVP-1C`).
-- Registros de carga de datos de los origenes restantes (Estabilidad,
-  Cronomagia, Articulos, Dedicacion, Formaciones; ver `IMPORT-1`). Las
-  cargas de Productividad, Escalados, Calidad y Llamadas ya existen:
-  `ProductivityImport`/`ProductivityWeeklyRow`,
-  `EscalationImport`/`EscalationWeeklyRow`,
-  `QualityImport`/`QualityWeeklyRow` y `VoiceImport`/`VoiceWeeklyRow`,
-  arriba.
+- Cierre irreversible o publicacion de una semana o split (`MVP-1C`).
 - Clasificacion general y su calculo acumulado (`MVP-1C`).
+- Vista individual del resultado de cada participante (`MVP-1C`).
 - Usuarios, autenticacion y sesiones.
 - Facciones, profesiones, localizaciones, objetos, economia de creditos y
   renombre.
+
+Con `MVP-1C.3 / INPUT-1C`, los diez KPI de Split 8 tienen ya su propio
+origen de datos funcional: `ProductivityImport`/`ProductivityWeeklyRow`,
+`EscalationImport`/`EscalationWeeklyRow`, `QualityImport`/`QualityWeeklyRow`,
+`VoiceImport`/`VoiceWeeklyRow` y las cinco entradas manuales
+(`StabilityWeeklyEntry`, `ChronomancyWeeklyEntry`, `WriterWeeklyEntry`,
+`StudentWeeklyEntry`, `ApprenticeWeeklyEntry`).

@@ -88,6 +88,11 @@ model SplitWeek {
   escalationImport         EscalationImport?
   qualityImport            QualityImport?
   voiceImport              VoiceImport?
+  stabilityEntries         StabilityWeeklyEntry[]
+  chronomancyEntries       ChronomancyWeeklyEntry[]
+  writerEntries            WriterWeeklyEntry[]
+  studentEntries           StudentWeeklyEntry[]
+  apprenticeEntries        ApprenticeWeeklyEntry[]
 
   @@unique([splitId, sequenceNumber])
 }
@@ -119,6 +124,11 @@ model SplitParticipant {
   escalationRows   EscalationWeeklyRow[]
   qualityRows      QualityWeeklyRow[]
   voiceRows        VoiceWeeklyRow[]
+  stabilityEntries    StabilityWeeklyEntry[]
+  chronomancyEntries  ChronomancyWeeklyEntry[]
+  writerEntries       WriterWeeklyEntry[]
+  studentEntries      StudentWeeklyEntry[]
+  apprenticeEntries   ApprenticeWeeklyEntry[]
 
   // Una persona solo puede aparecer una vez en un mismo split.
   @@unique([splitId, personId])
@@ -324,4 +334,96 @@ model VoiceWeeklyRow {
   splitParticipant SplitParticipant @relation(fields: [splitParticipantId], references: [id], onDelete: Restrict)
 
   @@unique([voiceImportId, splitParticipantId])
+}
+
+/// Entrada manual semanal de Guardian de la Estabilidad (`STABILITY_GUARDIAN`,
+/// ver docs/MANUAL_KPI_ENTRY.md). Sin fichero ni cabecera de carga: el
+/// administrador escribe directamente una fila por participante y semana.
+/// Solo aplica a participantes N2, pero el modelo no restringe el nivel: la
+/// aplicabilidad se valida en el servicio.
+model StabilityWeeklyEntry {
+  id                 String   @id @default(uuid())
+  splitWeekId        String
+  splitParticipantId String
+  /// Resultado de estabilidad. Un valor 0 es un dato real, no vacaciones.
+  resultValue        Decimal  @db.Decimal(12, 4)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  splitWeek        SplitWeek        @relation(fields: [splitWeekId], references: [id], onDelete: Cascade)
+  splitParticipant SplitParticipant @relation(fields: [splitParticipantId], references: [id], onDelete: Restrict)
+
+  @@unique([splitWeekId, splitParticipantId])
+}
+
+/// Entrada manual semanal de Cronomagia laboral (`WORK_CHRONOMANCY`, ver
+/// docs/MANUAL_KPI_ENTRY.md). `totalHours = 0` significa vacaciones toda la
+/// semana (VAC, sin puntos); el occupancy no se guarda, se calcula al
+/// consultar.
+model ChronomancyWeeklyEntry {
+  id                 String   @id @default(uuid())
+  splitWeekId        String
+  splitParticipantId String
+  productiveHours    Decimal  @db.Decimal(12, 4)
+  totalHours         Decimal  @db.Decimal(12, 4)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  splitWeek        SplitWeek        @relation(fields: [splitWeekId], references: [id], onDelete: Cascade)
+  splitParticipant SplitParticipant @relation(fields: [splitParticipantId], references: [id], onDelete: Restrict)
+
+  @@unique([splitWeekId, splitParticipantId])
+}
+
+/// Entrada manual semanal de Redactor estrella (`STAR_WRITER`, ver
+/// docs/MANUAL_KPI_ENTRY.md). Los articulos no entregados se escriben como
+/// conteo positivo; el calculo aplica la resta.
+model WriterWeeklyEntry {
+  id                  String   @id @default(uuid())
+  splitWeekId         String
+  splitParticipantId  String
+  deliveredArticles   Int
+  undeliveredArticles Int
+  proposedArticles    Int
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  splitWeek        SplitWeek        @relation(fields: [splitWeekId], references: [id], onDelete: Cascade)
+  splitParticipant SplitParticipant @relation(fields: [splitParticipantId], references: [id], onDelete: Restrict)
+
+  @@unique([splitWeekId, splitParticipantId])
+}
+
+/// Entrada manual semanal de Estudiante entusiasta (`ENTHUSIASTIC_STUDENT`,
+/// ver docs/MANUAL_KPI_ENTRY.md).
+model StudentWeeklyEntry {
+  id                 String   @id @default(uuid())
+  splitWeekId        String
+  splitParticipantId String
+  dedicatedHours     Decimal  @db.Decimal(12, 4)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  splitWeek        SplitWeek        @relation(fields: [splitWeekId], references: [id], onDelete: Cascade)
+  splitParticipant SplitParticipant @relation(fields: [splitParticipantId], references: [id], onDelete: Restrict)
+
+  @@unique([splitWeekId, splitParticipantId])
+}
+
+/// Entrada manual semanal de Aprendiz experto (`EXPERT_APPRENTICE`, ver
+/// docs/MANUAL_KPI_ENTRY.md). El maximo permitido (`targetValue` de
+/// `SplitKpiConfig`) se valida en el servicio, no en la base de datos: el
+/// valor configurado puede cambiar despues de guardar una entrada.
+model ApprenticeWeeklyEntry {
+  id                  String   @id @default(uuid())
+  splitWeekId         String
+  splitParticipantId  String
+  completedTrainings  Int
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  splitWeek        SplitWeek        @relation(fields: [splitWeekId], references: [id], onDelete: Cascade)
+  splitParticipant SplitParticipant @relation(fields: [splitParticipantId], references: [id], onDelete: Restrict)
+
+  @@unique([splitWeekId, splitParticipantId])
 }
