@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import type { KpiCode } from "@/domain/kpis/catalog";
+import { ALLOWED_BONUS_PERCENTS, isAllowedBonusPercent } from "@/domain/bonus-percent";
 
 /**
  * Bonus de localizacion semanal (`0.8.5` / MVP-2C, ver
@@ -18,12 +19,17 @@ import type { KpiCode } from "@/domain/kpis/catalog";
  * `weekly-results.service.ts`.
  */
 
-/** Conjunto cerrado de porcentajes permitidos. Unica fuente de verdad para validacion, selector y pruebas. */
-export const LOCATION_BONUS_PERCENTS = [10, 20, 30, 40, 50] as const;
+/**
+ * Conjunto cerrado de porcentajes permitidos. Reexporta la lista tipada
+ * compartida con el bonus de objetos de equipo (`0.9.0` / MVP-2D, ver
+ * `src/domain/bonus-percent.ts`): misma fuente de verdad, sin acoplar las
+ * dos entidades entre si.
+ */
+export const LOCATION_BONUS_PERCENTS = ALLOWED_BONUS_PERCENTS;
 export type LocationBonusPercent = (typeof LOCATION_BONUS_PERCENTS)[number];
 
 export function isAllowedLocationBonusPercent(value: number): value is LocationBonusPercent {
-  return (LOCATION_BONUS_PERCENTS as readonly number[]).includes(value);
+  return isAllowedBonusPercent(value);
 }
 
 /** Texto canonico del bonus para un porcentaje concreto, para no repetirlo literal en la interfaz. */
