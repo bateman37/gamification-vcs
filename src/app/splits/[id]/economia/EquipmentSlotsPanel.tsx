@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import {
   createEquipmentSlotAction,
@@ -134,6 +134,26 @@ export function EquipmentSlotsPanel({ splitId, slots, locked, maxSlots }: { spli
   const [, startTransition] = useTransition();
   const createWithId = createEquipmentSlotAction.bind(null, splitId);
   const [createState, createAction] = useFormState(createWithId, initialActionState);
+  const createFormRef = useRef<HTMLFormElement>(null);
+  const createSubmitted = useRef(false);
+
+  // `orderedSlots` solo existe para el reordenamiento optimista local; la
+  // fuente de verdad sigue siendo `slots` (props del servidor). Sin este
+  // efecto, una creacion/renombrado/eliminado/recarga tras `revalidatePath`
+  // nunca llegaba a la lista mostrada porque `useState(slots)` solo toma el
+  // valor inicial una vez, en el primer render.
+  useEffect(() => {
+    setOrderedSlots(slots);
+  }, [slots]);
+
+  useEffect(() => {
+    if (createState.ok && createSubmitted.current) {
+      createFormRef.current?.reset();
+    }
+    if (createState.ok || createState.error) {
+      createSubmitted.current = false;
+    }
+  }, [createState]);
 
   function handleMove(index: number, direction: -1 | 1) {
     const target = index + direction;
@@ -187,7 +207,14 @@ export function EquipmentSlotsPanel({ splitId, slots, locked, maxSlots }: { spli
       )}
 
       {!locked && orderedSlots.length < maxSlots && (
-        <form action={createAction} className="flex flex-wrap items-end gap-2 rounded-card border border-dashed border-border-strong bg-surface p-3">
+        <form
+          ref={createFormRef}
+          action={createAction}
+          onSubmit={() => {
+            createSubmitted.current = true;
+          }}
+          className="flex flex-wrap items-end gap-2 rounded-card border border-dashed border-border-strong bg-surface p-3"
+        >
           <div>
             <label htmlFor="new-slot-name" className="block text-xs font-medium text-ink">
               Nueva ranura
