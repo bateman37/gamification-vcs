@@ -1,7 +1,7 @@
 import type { Prisma, PrismaClient, SplitKpiConfig } from "@prisma/client";
 import { DomainError } from "@/lib/errors";
 import { KPI_CATALOG_LIST, KPI_CATALOG, type KpiCode } from "@/domain/kpis/catalog";
-import type { UpdateKpiConfigInput } from "@/server/validation/kpi";
+import type { UpdateKpiConfigInput, BulkKpiConfigUpdate } from "@/server/validation/kpi";
 import { assertSplitConfigurationIsEditable } from "@/server/services/shared/split-configuration-lock";
 import { findFutureLocationsUsingKpi } from "@/server/services/location.service";
 import { findStoreItemsUsingKpi } from "@/server/services/store-item.service";
@@ -42,6 +42,71 @@ export async function countActiveKpiConfigs(db: Db, splitId: string): Promise<nu
 }
 
 /**
+ * Aplica la actualizacion de un unico KPI dentro de una transaccion ya
+ * abierta (comparte reglas y comprobaciones entre el guardado individual y
+ * el guardado conjunto, `1.0.1`, parte H del encargo: ninguno de los dos
+ * duplica esta logica).
+ */
+async function applyKpiConfigUpdate(
+  tx: Prisma.TransactionClient,
+  splitId: string,
+  kpiCode: KpiCode,
+  input: UpdateKpiConfigInput,
+): Promise<SplitKpiConfig> {
+  const existing = await tx.splitKpiConfig.findUnique({
+    where: { splitId_kpiCode: { splitId, kpiCode } },
+  });
+  if (!existing) {
+    throw new DomainError(`La configuracion de "${KPI_CATALOG[kpiCode].name}" no existe para este split.`);
+  }
+
+  // Desactivar un KPI usado por una localizacion futura la dejaria potenciando un KPI
+  // inactivo: se rechaza identificando las semanas afectadas, sin tocar la localizacion
+  // en silencio (seccion 8 del encargo, ver docs/WEEKLY_LOCATIONS.md).
+  if (existing.isActive && !input.isActive) {
+    const affected = await findFutureLocationsUsingKpi(tx, splitId, kpiCode);
+    if (affected.length > 0) {
+      const weeksText = affected.map((usage) => `semana ${usage.sequenceNumber} ("${usage.locationName}")`).join(", ");
+      throw new DomainError(
+        `No se puede desactivar "${KPI_CATALOG[kpiCode].name}": lo potencia la localizacion de ${weeksText}. Edita o elimina antes esa localizacion.`,
+      );
+    }
+
+    // Un objeto a la venta, comprado o equipado que potencie este KPI tambien bloquea la
+    // desactivacion (`0.9.0` / MVP-2D, ver docs/ECONOMY_INVENTORY_AND_EQUIPMENT.md, seccion 14
+    // del encargo): nunca se desactivan objetos ni se desequipa a nadie en silencio.
+    const affectedItems = await findStoreItemsUsingKpi(tx, splitId, kpiCode);
+    if (affectedItems.length > 0) {
+      const itemsText = affectedItems.map((usage) => `"${usage.itemName}"`).join(", ");
+      throw new DomainError(
+        `No se puede desactivar "${KPI_CATALOG[kpiCode].name}": lo potencian los objetos ${itemsText}. Retiralos de la venta o cambia su KPI (si nadie los ha comprado) antes de desactivarlo.`,
+      );
+    }
+  }
+
+  return tx.splitKpiConfig.update({
+    where: { splitId_kpiCode: { splitId, kpiCode } },
+    data: {
+      isActive: input.isActive,
+      baseMax: input.baseMax,
+      multiplierN0: input.multiplierN0 ?? null,
+      multiplierN1: input.multiplierN1 ?? null,
+      multiplierN2: input.multiplierN2 ?? null,
+      parameters: input.parameters,
+    },
+  });
+}
+
+async function loadEditableSplitOrThrow(tx: Prisma.TransactionClient, splitId: string) {
+  const split = await tx.split.findUnique({ where: { id: splitId } });
+  if (!split) {
+    throw new DomainError("El split indicado no existe.");
+  }
+  await assertSplitConfigurationIsEditable(tx, split);
+  return split;
+}
+
+/**
  * Actualiza la configuracion de un KPI de un split. Bloqueada por completo
  * (activacion, maximo, multiplicadores y parametros) desde que el split
  * tiene al menos una semana publicada, ademas de en un split `CLOSED`
@@ -58,53 +123,30 @@ export async function updateKpiConfig(
   input: UpdateKpiConfigInput,
 ): Promise<SplitKpiConfig> {
   return db.$transaction(async (tx) => {
-    const split = await tx.split.findUnique({ where: { id: splitId } });
-    if (!split) {
-      throw new DomainError("El split indicado no existe.");
+    await loadEditableSplitOrThrow(tx, splitId);
+    return applyKpiConfigUpdate(tx, splitId, kpiCode, input);
+  });
+}
+
+/**
+ * Guarda de una vez la configuracion de varios KPI ("Guardar todos los
+ * KPI", `1.0.1`, parte H del encargo): misma transaccion, mismo bloqueo de
+ * primera publicacion (comprobado una sola vez para todo el lote) y misma
+ * regla de localizaciones/objetos por KPI que el guardado individual
+ * (`applyKpiConfigUpdate`). Si cualquier entrada falla, toda la
+ * transaccion se revierte: no se guarda ninguna.
+ */
+export async function updateAllKpiConfigs(
+  db: PrismaClient,
+  splitId: string,
+  updates: BulkKpiConfigUpdate[],
+): Promise<SplitKpiConfig[]> {
+  return db.$transaction(async (tx) => {
+    await loadEditableSplitOrThrow(tx, splitId);
+    const results: SplitKpiConfig[] = [];
+    for (const update of updates) {
+      results.push(await applyKpiConfigUpdate(tx, splitId, update.kpiCode, update.input));
     }
-    await assertSplitConfigurationIsEditable(tx, split);
-
-    const existing = await tx.splitKpiConfig.findUnique({
-      where: { splitId_kpiCode: { splitId, kpiCode } },
-    });
-    if (!existing) {
-      throw new DomainError("La configuracion de este KPI no existe para este split.");
-    }
-
-    // Desactivar un KPI usado por una localizacion futura la dejaria potenciando un KPI
-    // inactivo: se rechaza identificando las semanas afectadas, sin tocar la localizacion
-    // en silencio (seccion 8 del encargo, ver docs/WEEKLY_LOCATIONS.md).
-    if (existing.isActive && !input.isActive) {
-      const affected = await findFutureLocationsUsingKpi(tx, splitId, kpiCode);
-      if (affected.length > 0) {
-        const weeksText = affected.map((usage) => `semana ${usage.sequenceNumber} ("${usage.locationName}")`).join(", ");
-        throw new DomainError(
-          `No se puede desactivar "${KPI_CATALOG[kpiCode].name}": lo potencia la localizacion de ${weeksText}. Edita o elimina antes esa localizacion.`,
-        );
-      }
-
-      // Un objeto a la venta, comprado o equipado que potencie este KPI tambien bloquea la
-      // desactivacion (`0.9.0` / MVP-2D, ver docs/ECONOMY_INVENTORY_AND_EQUIPMENT.md, seccion 14
-      // del encargo): nunca se desactivan objetos ni se desequipa a nadie en silencio.
-      const affectedItems = await findStoreItemsUsingKpi(tx, splitId, kpiCode);
-      if (affectedItems.length > 0) {
-        const itemsText = affectedItems.map((usage) => `"${usage.itemName}"`).join(", ");
-        throw new DomainError(
-          `No se puede desactivar "${KPI_CATALOG[kpiCode].name}": lo potencian los objetos ${itemsText}. Retiralos de la venta o cambia su KPI (si nadie los ha comprado) antes de desactivarlo.`,
-        );
-      }
-    }
-
-    return tx.splitKpiConfig.update({
-      where: { splitId_kpiCode: { splitId, kpiCode } },
-      data: {
-        isActive: input.isActive,
-        baseMax: input.baseMax,
-        multiplierN0: input.multiplierN0 ?? null,
-        multiplierN1: input.multiplierN1 ?? null,
-        multiplierN2: input.multiplierN2 ?? null,
-        parameters: input.parameters,
-      },
-    });
+    return results;
   });
 }
