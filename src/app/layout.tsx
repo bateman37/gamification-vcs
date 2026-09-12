@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
+import { Inter } from "next/font/google";
 import type { ReactNode } from "react";
-import { Nav } from "@/components/Nav";
+import { AppShell } from "@/components/AppShell";
 import { Providers } from "./providers";
 import "./globals.css";
+
+const inter = Inter({ subsets: ["latin"], variable: "--font-app", display: "swap" });
 
 export const metadata: Metadata = {
   title: "Gamification VCS",
@@ -11,11 +14,10 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="es">
+    <html lang="es" className={inter.variable}>
       <body>
         <Providers>
-          <Nav />
-          <main className="mx-auto w-full max-w-[1920px] px-4 py-8 sm:px-6 lg:px-10 2xl:px-16">{children}</main>
+          <AppShell>{children}</AppShell>
         </Providers>
       </body>
     </html>

@@ -45,14 +45,14 @@ function SlotRowItem({
 
   if (editing) {
     return (
-      <li className="rounded-md border border-slate-200 bg-white p-3">
+      <li className="rounded-md border border-border bg-surface p-3">
         <form action={renameAction} className="flex flex-wrap items-center gap-2">
           <input
             name="name"
             defaultValue={slot.name}
             required
             maxLength={60}
-            className="rounded-md border border-slate-300 px-2 py-1 text-sm"
+            className="rounded-control border border-border-strong px-2 py-1 text-sm"
           />
           <SubmitButton pending={false} className="px-3 py-1">
             Guardar
@@ -60,7 +60,7 @@ function SlotRowItem({
           <button
             type="button"
             onClick={() => setEditing(false)}
-            className="rounded-md border border-slate-300 px-3 py-1 text-sm"
+            className="rounded-control border border-border-strong px-3 py-1 text-sm"
           >
             Cancelar
           </button>
@@ -72,10 +72,10 @@ function SlotRowItem({
   }
 
   return (
-    <li className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-slate-200 bg-white p-3">
+    <li className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-surface p-3">
       <div>
-        <span className="font-medium text-slate-800">{slot.name}</span>
-        <span className="ml-2 text-xs text-slate-500">
+        <span className="font-medium text-ink">{slot.name}</span>
+        <span className="ml-2 text-xs text-text-muted">
           {slot.storeItemCount} objeto{slot.storeItemCount === 1 ? "" : "s"}
         </span>
       </div>
@@ -85,7 +85,7 @@ function SlotRowItem({
             type="button"
             disabled={index === 0}
             onClick={() => onMove(index, -1)}
-            className="rounded-md border border-slate-300 px-2 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded-control border border-border-strong px-2 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-40"
             aria-label={`Subir ${slot.name}`}
           >
             ↑
@@ -94,7 +94,7 @@ function SlotRowItem({
             type="button"
             disabled={index === total - 1}
             onClick={() => onMove(index, 1)}
-            className="rounded-md border border-slate-300 px-2 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded-control border border-border-strong px-2 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-40"
             aria-label={`Bajar ${slot.name}`}
           >
             ↓
@@ -102,7 +102,7 @@ function SlotRowItem({
           <button
             type="button"
             onClick={() => setEditing(true)}
-            className="rounded-md border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+            className="rounded-control border border-border-strong px-3 py-1 text-xs font-medium text-ink hover:bg-surface-muted"
           >
             Renombrar
           </button>
@@ -111,7 +111,7 @@ function SlotRowItem({
               type="submit"
               disabled={slot.storeItemCount > 0}
               title={slot.storeItemCount > 0 ? "No se puede eliminar: tiene objetos asociados." : undefined}
-              className="rounded-md border border-red-300 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
+              className="rounded-control border border-danger/30 px-3 py-1 text-xs font-medium text-danger-ink hover:bg-danger-soft disabled:cursor-not-allowed disabled:opacity-40"
             >
               Eliminar
             </button>
@@ -154,12 +154,12 @@ export function EquipmentSlotsPanel({ splitId, slots, locked, maxSlots }: { spli
   return (
     <div className="space-y-3">
       <h3 className="text-base font-semibold">Ranuras de equipo</h3>
-      <p className="text-sm text-slate-600">
+      <p className="text-sm text-text-muted">
         El numero y el nombre de las ranuras los decides tu: no hay ranuras predeterminadas. Cada objeto del catalogo
         pertenece exactamente a una ranura, y cada participante puede equipar como maximo un objeto por ranura.
       </p>
       {locked && (
-        <p className="text-sm text-amber-700">
+        <p className="text-sm text-reward-ink">
           No se pueden crear, renombrar, reordenar ni eliminar ranuras mientras el mercado este abierto o el split este
           cerrado.
         </p>
@@ -167,7 +167,7 @@ export function EquipmentSlotsPanel({ splitId, slots, locked, maxSlots }: { spli
       {reorderError && <ErrorMessage>{reorderError}</ErrorMessage>}
 
       {orderedSlots.length === 0 ? (
-        <p className="rounded-md border border-dashed border-slate-300 px-4 py-6 text-center text-sm text-slate-500">
+        <p className="rounded-card border border-dashed border-border-strong px-4 py-6 text-center text-sm text-text-muted">
           Todavia no hay ninguna ranura de equipo configurada.
         </p>
       ) : (
@@ -187,9 +187,9 @@ export function EquipmentSlotsPanel({ splitId, slots, locked, maxSlots }: { spli
       )}
 
       {!locked && orderedSlots.length < maxSlots && (
-        <form action={createAction} className="flex flex-wrap items-end gap-2 rounded-md border border-dashed border-slate-300 bg-white p-3">
+        <form action={createAction} className="flex flex-wrap items-end gap-2 rounded-card border border-dashed border-border-strong bg-surface p-3">
           <div>
-            <label htmlFor="new-slot-name" className="block text-xs font-medium text-slate-700">
+            <label htmlFor="new-slot-name" className="block text-xs font-medium text-ink">
               Nueva ranura
             </label>
             <input
@@ -198,7 +198,7 @@ export function EquipmentSlotsPanel({ splitId, slots, locked, maxSlots }: { spli
               required
               maxLength={60}
               placeholder="Por ejemplo: Artefacto"
-              className="mt-1 rounded-md border border-slate-300 px-2 py-1 text-sm"
+              className="mt-1 rounded-control border border-border-strong px-2 py-1 text-sm"
             />
           </div>
           <CreateSlotButton />
@@ -208,7 +208,7 @@ export function EquipmentSlotsPanel({ splitId, slots, locked, maxSlots }: { spli
       {!createState.ok && createState.error && <ErrorMessage>{createState.error}</ErrorMessage>}
       {createState.ok && <SuccessMessage>Ranura guardada correctamente.</SuccessMessage>}
       {!locked && orderedSlots.length >= maxSlots && (
-        <p className="text-xs text-slate-500">Limite tecnico de {maxSlots} ranuras por split alcanzado.</p>
+        <p className="text-xs text-text-muted">Limite tecnico de {maxSlots} ranuras por split alcanzado.</p>
       )}
     </div>
   );

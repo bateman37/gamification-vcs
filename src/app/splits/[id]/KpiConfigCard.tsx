@@ -34,7 +34,7 @@ function MultiplierField({
 }) {
   return (
     <div>
-      <label htmlFor={id} className="block text-xs font-medium text-slate-600">
+      <label htmlFor={id} className="block text-xs font-medium text-text-muted">
         {label}
       </label>
       <input
@@ -45,7 +45,7 @@ function MultiplierField({
         defaultValue={value === null ? "" : formatNumber(value)}
         placeholder="No aplica"
         disabled={disabled}
-        className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1 text-sm disabled:bg-slate-100"
+        className="mt-1 w-full rounded-control border border-border-strong px-2 py-1 text-sm disabled:bg-surface-muted"
       />
       <FieldError message={error} />
     </div>
@@ -81,7 +81,7 @@ export function KpiConfigCard({
   ];
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-4">
+    <div className="rounded-card border border-border bg-surface p-4">
       <div className="lg:flex lg:items-start lg:gap-6">
         <div className="lg:w-72 lg:flex-none">
           <div className="flex items-center gap-2">
@@ -90,26 +90,26 @@ export function KpiConfigCard({
               {config.isActive ? "Activo" : "Inactivo"}
             </Badge>
           </div>
-          <p className="mt-1 text-sm text-slate-600">{description}</p>
-          <p className="mt-1 text-xs text-slate-500">{calculationExplanation}</p>
+          <p className="mt-1 text-sm text-text-muted">{description}</p>
+          <p className="mt-1 text-xs text-text-muted">{calculationExplanation}</p>
         </div>
 
         <div className="mt-4 lg:mt-0 lg:min-w-0 lg:flex-1">
           {readOnly ? (
             <dl className="flex flex-wrap gap-x-6 gap-y-3 text-sm">
               <div className="w-24">
-                <dt className="text-xs font-medium text-slate-500">Maximo base</dt>
+                <dt className="text-xs font-medium text-text-muted">Maximo base</dt>
                 <dd>{formatNumber(config.baseMax)}</dd>
               </div>
               {multipliers.map(({ level, value }) => (
                 <div key={level} className="w-28">
-                  <dt className="text-xs font-medium text-slate-500">Multiplicador {level}</dt>
+                  <dt className="text-xs font-medium text-text-muted">Multiplicador {level}</dt>
                   <dd>{value === null ? "No aplica" : formatNumber(value)}</dd>
                 </div>
               ))}
               {parameterDefs.map((parameter) => (
                 <div key={parameter.key} className="w-32">
-                  <dt className="text-xs font-medium text-slate-500">{parameter.label}</dt>
+                  <dt className="text-xs font-medium text-text-muted">{parameter.label}</dt>
                   <dd>{formatNumber(config.parameters[parameter.key] ?? parameter.defaultValue)}</dd>
                 </div>
               ))}
@@ -117,13 +117,13 @@ export function KpiConfigCard({
           ) : (
             <form action={formAction} className="space-y-3">
               <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
-                <label className="flex items-center gap-2 pb-1 text-sm font-medium text-slate-700">
+                <label className="flex items-center gap-2 pb-1 text-sm font-medium text-ink">
                   <input type="checkbox" name="isActive" defaultChecked={config.isActive} className="h-4 w-4" />
                   Activo
                 </label>
 
                 <div className="w-24">
-                  <label htmlFor={`${kpiCode}-baseMax`} className="block text-xs font-medium text-slate-600">
+                  <label htmlFor={`${kpiCode}-baseMax`} className="block text-xs font-medium text-text-muted">
                     Maximo base
                   </label>
                   <input
@@ -133,7 +133,7 @@ export function KpiConfigCard({
                     inputMode="decimal"
                     defaultValue={formatNumber(config.baseMax)}
                     required
-                    className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
+                    className="mt-1 w-full rounded-control border border-border-strong px-2 py-1 text-sm"
                   />
                   <FieldError message={state.fieldErrors?.baseMax} />
                 </div>
@@ -155,7 +155,7 @@ export function KpiConfigCard({
                   <div key={parameter.key} className="w-32">
                     <label
                       htmlFor={`${kpiCode}-${parameter.key}`}
-                      className="block text-xs font-medium text-slate-600"
+                      className="block text-xs font-medium text-text-muted"
                     >
                       {parameter.label}
                     </label>
@@ -166,7 +166,7 @@ export function KpiConfigCard({
                       inputMode="decimal"
                       defaultValue={formatNumber(config.parameters[parameter.key] ?? parameter.defaultValue)}
                       required
-                      className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
+                      className="mt-1 w-full rounded-control border border-border-strong px-2 py-1 text-sm"
                     />
                     <FieldError message={state.fieldErrors?.[`parameters.${parameter.key}`]} />
                   </div>
@@ -177,7 +177,7 @@ export function KpiConfigCard({
                 </div>
               </div>
               <FieldError message={state.fieldErrors?.isActive} />
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-text-muted">
                 Deja un multiplicador vacio para indicar que ese nivel no aplica a este KPI.
               </p>
               {!state.ok && state.error && <ErrorMessage>{state.error}</ErrorMessage>}

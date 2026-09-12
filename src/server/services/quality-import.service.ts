@@ -8,6 +8,7 @@ import { toKpiConfigView, type KpiConfigView } from "@/domain/kpis/mapping";
 import { resolveMasterCraftsmanOutcome, toMasterCraftsmanOutcomeView, type MasterCraftsmanOutcomeView } from "@/domain/kpis/quality";
 import type { LoadCoverageStatus } from "@/domain/kpis/loadGroups";
 import { readQualityWorkbook, type QualitySourceRow } from "@/server/services/quality/excel-reader";
+import { notifyIfWeekReadyToReview } from "@/server/services/news-week-ready.service";
 import { formatXlsxRowError } from "@/server/services/shared/xlsx";
 import { isAmbiguousMatch, isFoundMatch, isIgnoredMatch, matchRowsToParticipants } from "@/server/services/shared/matching";
 
@@ -179,6 +180,8 @@ export async function confirmQualityImport(db: PrismaClient, splitId: string, we
         badSatisfactionTickets: match.row.badSatisfactionTickets,
       })),
     });
+
+    await notifyIfWeekReadyToReview(tx, splitId, resolvedWeekId);
   });
 }
 

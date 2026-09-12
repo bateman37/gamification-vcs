@@ -1,7 +1,16 @@
+import { randomUUID } from "node:crypto";
 import { Prisma, type PrismaClient, type SplitEconomySettings } from "@prisma/client";
 import { DomainError } from "@/lib/errors";
 import { KPI_CATALOG } from "@/domain/kpis/catalog";
 import { isAllowedEquipmentBonusPercent } from "@/domain/equipment-bonus";
+import { createNewsWithDeliveries, resolveActiveAdminUserIds, resolveAllParticipantsForSplit } from "@/server/services/news.service";
+import { buildNewsActionPath } from "@/domain/news-links";
+import {
+  marketOpenedNewsTemplateForParticipant,
+  marketClosedNewsTemplateForParticipant,
+  adminMarketOpenedNewsTemplate,
+  adminMarketClosedNewsTemplate,
+} from "@/domain/news-templates";
 
 /**
  * Mercado del split (`0.9.0` / MVP-2D, ver
@@ -84,16 +93,47 @@ export async function openMarket(db: PrismaClient, splitId: string): Promise<Spl
       if (!split) throw new DomainError("El split indicado no existe.");
       assertSplitAllowsMarketToggle(split);
 
+      const current = await getEconomySettings(tx, splitId);
+      if (current.marketStatus === "OPEN") {
+        // Sin cambio real (`OPEN -> OPEN`): nunca se notifica (seccion 48 del encargo).
+        return tx.splitEconomySettings.upsert({ where: { splitId }, create: { splitId, marketStatus: "OPEN" }, update: { marketStatus: "OPEN" } });
+      }
+
       const issues = await collectMarketOpenIssues(tx, splitId);
       if (issues.length > 0) {
         throw new DomainError(`No se puede abrir el mercado: ${issues.join(" ")}`);
       }
 
-      return tx.splitEconomySettings.upsert({
+      const settings = await tx.splitEconomySettings.upsert({
         where: { splitId },
         create: { splitId, marketStatus: "OPEN" },
         update: { marketStatus: "OPEN" },
       });
+
+      const itemCount = await tx.splitStoreItem.count({ where: { splitId, isForSale: true } });
+      const operationId = randomUUID();
+
+      const participants = await resolveAllParticipantsForSplit(tx, splitId);
+      if (participants.length > 0) {
+        const text = marketOpenedNewsTemplateForParticipant({ itemCount });
+        await createNewsWithDeliveries(
+          tx,
+          { splitId, splitNameSnapshot: split.name, origin: "AUTOMATIC", category: "MARKET", title: text.title, body: text.body, eventKey: `market-opened:${operationId}` },
+          participants.map((p) => ({ personId: p.personId, actionPath: buildNewsActionPath({ kind: "MARKET", splitParticipantId: p.splitParticipantId }, "PERSON") })),
+        );
+      }
+
+      const adminUserIds = await resolveActiveAdminUserIds(tx);
+      if (adminUserIds.length > 0) {
+        const adminText = adminMarketOpenedNewsTemplate({ splitName: split.name, itemCount });
+        await createNewsWithDeliveries(
+          tx,
+          { splitId, splitNameSnapshot: split.name, origin: "AUTOMATIC", category: "ADMIN", title: adminText.title, body: adminText.body, eventKey: `admin-market-opened:${operationId}` },
+          adminUserIds.map((userId) => ({ userId, actionPath: buildNewsActionPath({ kind: "SPLIT_ECONOMY_ADMIN", splitId }, "USER") })),
+        );
+      }
+
+      return settings;
     },
     { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
   );
@@ -106,11 +146,40 @@ export async function closeMarket(db: PrismaClient, splitId: string): Promise<Sp
       if (!split) throw new DomainError("El split indicado no existe.");
       assertSplitAllowsMarketToggle(split);
 
-      return tx.splitEconomySettings.upsert({
+      const current = await getEconomySettings(tx, splitId);
+      if (current.marketStatus === "CLOSED") {
+        return tx.splitEconomySettings.upsert({ where: { splitId }, create: { splitId, marketStatus: "CLOSED" }, update: { marketStatus: "CLOSED" } });
+      }
+
+      const settings = await tx.splitEconomySettings.upsert({
         where: { splitId },
         create: { splitId, marketStatus: "CLOSED" },
         update: { marketStatus: "CLOSED" },
       });
+
+      const operationId = randomUUID();
+
+      const participants = await resolveAllParticipantsForSplit(tx, splitId);
+      if (participants.length > 0) {
+        const text = marketClosedNewsTemplateForParticipant();
+        await createNewsWithDeliveries(
+          tx,
+          { splitId, splitNameSnapshot: split.name, origin: "AUTOMATIC", category: "MARKET", title: text.title, body: text.body, eventKey: `market-closed:${operationId}` },
+          participants.map((p) => ({ personId: p.personId, actionPath: buildNewsActionPath({ kind: "MARKET", splitParticipantId: p.splitParticipantId }, "PERSON") })),
+        );
+      }
+
+      const adminUserIds = await resolveActiveAdminUserIds(tx);
+      if (adminUserIds.length > 0) {
+        const adminText = adminMarketClosedNewsTemplate({ splitName: split.name });
+        await createNewsWithDeliveries(
+          tx,
+          { splitId, splitNameSnapshot: split.name, origin: "AUTOMATIC", category: "ADMIN", title: adminText.title, body: adminText.body, eventKey: `admin-market-closed:${operationId}` },
+          adminUserIds.map((userId) => ({ userId, actionPath: buildNewsActionPath({ kind: "SPLIT_ECONOMY_ADMIN", splitId }, "USER") })),
+        );
+      }
+
+      return settings;
     },
     { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
   );

@@ -13,21 +13,21 @@ export function HistoryPanel({ ledger, weekLocations }: { ledger: LedgerEntryVie
   return (
     <div className="space-y-6">
       <div>
-        <h4 className="text-sm font-semibold text-slate-700">Movimientos de creditos</h4>
+        <h4 className="text-sm font-semibold text-ink">Movimientos de creditos</h4>
         {ledger.length === 0 ? (
           <EmptyState>Todavia no tienes ningun movimiento.</EmptyState>
         ) : (
-          <ul className="mt-2 divide-y divide-slate-100 rounded-md border border-slate-200 bg-white text-sm">
+          <ul className="mt-2 divide-y divide-border rounded-md border border-border bg-surface text-sm">
             {ledger.map((entry) => (
               <li key={entry.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
                 <span>
-                  <span className={entry.amount >= 0 ? "font-medium text-green-700" : "font-medium text-red-700"}>
+                  <span className={entry.amount >= 0 ? "font-medium text-success" : "font-medium text-danger-ink"}>
                     {entry.amount >= 0 ? "+" : ""}
                     {entry.amount}
                   </span>{" "}
                   · {TYPE_LABEL[entry.type]}: {entry.description}
                 </span>
-                <span className="text-xs text-slate-500">{formatCalendarDateEs(entry.createdAt)}</span>
+                <span className="text-xs text-text-muted">{formatCalendarDateEs(entry.createdAt)}</span>
               </li>
             ))}
           </ul>
@@ -35,15 +35,15 @@ export function HistoryPanel({ ledger, weekLocations }: { ledger: LedgerEntryVie
       </div>
 
       <div>
-        <h4 className="text-sm font-semibold text-slate-700">Localizaciones por semana</h4>
+        <h4 className="text-sm font-semibold text-ink">Localizaciones por semana</h4>
         {weekLocations.length === 0 ? (
           <EmptyState>Este split todavia no tiene semanas.</EmptyState>
         ) : (
-          <ul className="mt-2 divide-y divide-slate-100 rounded-md border border-slate-200 bg-white text-sm">
+          <ul className="mt-2 divide-y divide-border rounded-md border border-border bg-surface text-sm">
             {weekLocations.map((row) => (
               <li key={row.weekSequenceNumber} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
                 <span>{formatCalendarDateEs(row.weekStartDate)}</span>
-                <span className="text-slate-600">
+                <span className="text-text-muted">
                   {row.location ? `${row.location.name} · ${row.location.kpiName} · +${row.location.bonusPercent} %` : "Sin localizacion"}
                 </span>
               </li>

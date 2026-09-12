@@ -18,16 +18,16 @@ export default async function PersonasPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-xl font-semibold">Personas</h1>
-        <p className="text-sm text-slate-600">
+        <p className="text-sm text-text-muted">
           Registro global de personas. Una persona puede participar en cero, uno o varios splits.
         </p>
       </div>
 
       <PersonCreateForm />
 
-      <div className="rounded-lg border border-slate-200 bg-white">
+      <div className="rounded-card border border-border bg-surface">
         <table className="w-full text-left text-sm">
-          <thead className="border-b border-slate-200 bg-slate-50 text-slate-600">
+          <thead className="border-b border-border bg-canvas text-text-muted">
             <tr>
               <th className="px-3 py-2 font-medium">Nombre</th>
               <th className="px-3 py-2 font-medium">Correo</th>

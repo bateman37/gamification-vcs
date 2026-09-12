@@ -93,6 +93,18 @@ pero se documentan para el futuro y no se construyen antes de tiempo. Ver
 `docs/ROADMAP.md` y `docs/DISCOVERY-1-SPLIT-8.md` (apartado de
 funcionalidades historicas aplazadas).
 
+## Comunicacion y presentacion (`1.0.0` / MVP-3)
+
+Con el nucleo y las cuatro capas de juego (facciones, profesiones,
+localizaciones, economia) ya construidas, la `1.0.0` cierra la primera
+version estable con dos bloques de comunicacion y usabilidad, no de
+mecanica de juego: un **centro de noticias** interno que informa de los
+eventos reales de cada split (ver `docs/NEWS_CENTER.md`) y una
+**renovacion visual** unica llamada "Prisma competitivo" (ver
+`docs/DESIGN_SYSTEM.md`), aplicada a toda la aplicacion existente sin
+alterar ninguna regla de negocio. `Noticias` pasa a ser el punto de
+entrada tras iniciar sesion.
+
 ## Resumen funcional del Split 8
 
 El Split 8 es la campana real que se ha auditado para disenar el nucleo

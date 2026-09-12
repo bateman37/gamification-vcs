@@ -1,5 +1,8 @@
 import { Prisma, type PrismaClient } from "@prisma/client";
 import { DomainError } from "@/lib/errors";
+import { createNewsWithDeliveries } from "@/server/services/news.service";
+import { buildNewsActionPath } from "@/domain/news-links";
+import { purchaseCompletedNewsTemplate } from "@/domain/news-templates";
 
 /**
  * Compra de un objeto del catalogo (`0.9.0` / MVP-2D, ver
@@ -97,6 +100,26 @@ export async function purchaseStoreItem(
             purchaseId: purchase.id,
           },
         });
+
+        const remainingBalance = balance - item.priceCredits;
+        const { title, body } = purchaseCompletedNewsTemplate({
+          itemName: item.name,
+          priceCredits: item.priceCredits,
+          remainingBalance,
+        });
+        await createNewsWithDeliveries(
+          tx,
+          {
+            splitId: participant.splitId,
+            splitNameSnapshot: participant.split.name,
+            origin: "AUTOMATIC",
+            category: "PURCHASE",
+            title,
+            body,
+            eventKey: `purchase:${purchase.id}`,
+          },
+          [{ personId, actionPath: buildNewsActionPath({ kind: "MARKET", splitParticipantId }, "PERSON") }],
+        );
 
         return { purchaseId: purchase.id };
       },

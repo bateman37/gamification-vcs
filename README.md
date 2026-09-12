@@ -17,8 +17,9 @@ formularios manuales y configuracion compacta del split**, **`0.6.0` /
 MVP-1C — Resultados, publicacion y clasificacion**, **`0.7.0` / MVP-2A —
 Facciones, clasificacion de facciones y consolidacion de UX**, **`0.8.0` /
 MVP-2B — Profesiones, bonus de KPI y fichas de participante**, **`0.8.5` /
-MVP-2C — Localizaciones semanales** y **`0.9.0` / MVP-2D — Economia,
-inventario y equipo** (ver `docs/ROADMAP.md`). Version actual: `0.9.0`.
+MVP-2C — Localizaciones semanales**, **`0.9.0` / MVP-2D — Economia,
+inventario y equipo** y **`1.0.0` / MVP-3 — Centro de noticias y
+renovacion visual** (ver `docs/ROADMAP.md`). Version actual: `1.0.0`.
 
 Estas entregas implementan:
 
@@ -802,6 +803,58 @@ Cuarta capa de juego. Detalle funcional exhaustivo en
 14. Cierra el split y confirma que mercado y equipo quedan en solo
     lectura.
 
+## Centro de noticias y renovacion visual (`1.0.0` / MVP-3)
+
+Cierre de la primera version estable. Detalle funcional exhaustivo en
+[`docs/NEWS_CENTER.md`](docs/NEWS_CENTER.md) y
+[`docs/DESIGN_SYSTEM.md`](docs/DESIGN_SYSTEM.md).
+
+- **Centro de noticias interno** (`NewsItem`/`NewsDelivery`): bandeja
+  privada `/noticias` para cualquier usuario autenticado (pestañas
+  `Todas`/`No leídas`/`Archivadas`, filtros de split y categoria,
+  paginacion por cursor), campana global con contador y vista previa, y
+  envio manual segmentado desde `/noticias/administrar` (todo el split,
+  una faccion o una persona).
+- Noticias automaticas generadas desde los servicios de negocio reales:
+  alta de participante, activacion de split, facciones, profesiones,
+  localizaciones, mercado, compra y publicacion semanal (un unico resumen
+  personalizado por participante). Sin backfill historico.
+- Atomica e idempotente: la noticia se escribe en la misma transaccion que
+  el hecho de negocio, con claves idempotentes que impiden duplicados por
+  reintento o carrera.
+- **Renovacion visual "Prisma competitivo"**: paleta y tipografia
+  centralizadas en tokens, sistema de componentes ampliado, app shell con
+  barra lateral en escritorio y menu en movil, aplicada a toda la
+  aplicacion existente sin alterar ninguna regla de negocio.
+- El acceso raiz `/` redirige a `/noticias` para cualquier usuario
+  autenticado.
+
+### Comprobar manualmente
+
+1. Migra una copia de una base `0.9.0` y confirma que no aparecen
+   noticias historicas artificiales.
+2. Crea un split, activalo y revisa las noticias de participantes y de
+   administracion (incluida "fichas incompletas" si procede).
+3. Cambia una faccion/profesion real durante el split activo y confirma
+   una noticia por cambio; guarda el mismo valor y confirma que no
+   duplica.
+4. Crea, modifica y elimina una localizacion en un split activo; confirma
+   que solo notifica a los participantes aplicables.
+5. Abre y cierra el mercado, compra un objeto y revisa noticia, precio y
+   saldo; simula una compra fallida y confirma que no genera noticia.
+6. Completa todos los KPI de una semana y confirma el aviso administrativo
+   unico; publica la semana y revisa el resumen personalizado de dos
+   participantes distintos, sin datos privados del compañero.
+7. Abre la campana, marca leida/no leida, archiva y restaura; confirma que
+   afecta solo a tu propia bandeja.
+8. Como `ADMIN`, envia una noticia manual a todo el split, una faccion y
+   una persona; confirma el contador de destinatarios antes de enviar y
+   que un doble envio no duplica el mensaje.
+9. Recorre login, personas, splits, cargas, resultados, fichas, economia y
+   cuenta comprobando que no queda ninguna pantalla con el estilo gris
+   anterior, y que la vista funciona en movil, `1366px`, `1920px` y
+   `2560px`.
+
 ## Reinicio opcional y destructivo del entorno local
 
 **Solo para una base de datos local ficticia.** Este comando **borra
@@ -867,6 +920,12 @@ estan excluidos en `.gitignore`).
   — economia de creditos por split, mercado, ranuras, catalogo de objetos,
   inventario, equipo, tercer bonus de resultados, configuracion privada del
   personaje y vista con/sin gamificacion (`0.9.0` / MVP-2D).
+- [`docs/NEWS_CENTER.md`](docs/NEWS_CENTER.md) — centro de noticias:
+  modelo, matriz de eventos automaticos, envio manual, idempotencia y
+  privacidad (`1.0.0` / MVP-3).
+- [`docs/DESIGN_SYSTEM.md`](docs/DESIGN_SYSTEM.md) — sistema visual
+  "Prisma competitivo": paleta, tokens, app shell y componentes
+  compartidos (`1.0.0` / MVP-3).
 - [`docs/DECISIONS.md`](docs/DECISIONS.md) — decisiones tecnicas y de
   producto registradas.
 - [`CHANGELOG.md`](CHANGELOG.md) — historial de cambios.

@@ -11,6 +11,7 @@ import {
 } from "@/domain/kpis/student";
 import type { LoadCoverageStatus } from "@/domain/kpis/loadGroups";
 import { parseNonNegativeNumberDefaultZero, ManualEntryValidationError, type ManualEntryFieldError } from "@/server/validation/manual-entry";
+import { notifyIfWeekReadyToReview } from "@/server/services/news-week-ready.service";
 
 /**
  * Entrada manual semanal de Estudiante entusiasta
@@ -78,10 +79,12 @@ export async function saveStudentEntries(db: PrismaClient, splitId: string, week
 
   await db.$transaction(async (tx) => {
     await tx.studentWeeklyEntry.deleteMany({ where: { splitWeekId: resolvedWeekId } });
-    if (rows.length === 0) return;
-    await tx.studentWeeklyEntry.createMany({
-      data: rows.map((row) => ({ splitWeekId: resolvedWeekId, splitParticipantId: row.splitParticipantId, dedicatedHours: row.dedicatedHours })),
-    });
+    if (rows.length > 0) {
+      await tx.studentWeeklyEntry.createMany({
+        data: rows.map((row) => ({ splitWeekId: resolvedWeekId, splitParticipantId: row.splitParticipantId, dedicatedHours: row.dedicatedHours })),
+      });
+    }
+    await notifyIfWeekReadyToReview(tx, splitId, resolvedWeekId);
   });
 }
 

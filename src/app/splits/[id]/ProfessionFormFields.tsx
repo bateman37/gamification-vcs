@@ -28,7 +28,7 @@ export function ProfessionFormFields({
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
       <div className="sm:col-span-2">
-        <label htmlFor={`${idPrefix}-name`} className="block text-sm font-medium text-slate-700">
+        <label htmlFor={`${idPrefix}-name`} className="block text-sm font-medium text-ink">
           Nombre de la profesion
         </label>
         <input
@@ -38,13 +38,13 @@ export function ProfessionFormFields({
           required
           maxLength={60}
           defaultValue={defaults?.name ?? ""}
-          className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+          className="mt-1 w-full rounded-control border border-border-strong px-3 py-2 text-sm"
         />
         <FieldError message={fieldErrors?.name} />
       </div>
 
       <fieldset className="sm:col-span-2">
-        <legend className="text-sm font-medium text-slate-700">Niveles disponibles</legend>
+        <legend className="text-sm font-medium text-ink">Niveles disponibles</legend>
         <div className="mt-1 flex flex-wrap gap-4 text-sm">
           {(["N0", "N1", "N2"] as const).map((level) => (
             <label key={level} className="flex items-center gap-2">
@@ -63,7 +63,7 @@ export function ProfessionFormFields({
       </fieldset>
 
       <div>
-        <label htmlFor={`${idPrefix}-kpiCodeA`} className="block text-sm font-medium text-slate-700">
+        <label htmlFor={`${idPrefix}-kpiCodeA`} className="block text-sm font-medium text-ink">
           Primer KPI potenciado
         </label>
         <select
@@ -71,7 +71,7 @@ export function ProfessionFormFields({
           name="kpiCodeA"
           required
           defaultValue={defaults?.kpiCodeA ?? ""}
-          className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+          className="mt-1 w-full rounded-control border border-border-strong px-3 py-2 text-sm"
         >
           <option value="" disabled>
             Selecciona un KPI
@@ -86,7 +86,7 @@ export function ProfessionFormFields({
       </div>
 
       <div>
-        <label htmlFor={`${idPrefix}-kpiCodeB`} className="block text-sm font-medium text-slate-700">
+        <label htmlFor={`${idPrefix}-kpiCodeB`} className="block text-sm font-medium text-ink">
           Segundo KPI potenciado
         </label>
         <select
@@ -94,7 +94,7 @@ export function ProfessionFormFields({
           name="kpiCodeB"
           required
           defaultValue={defaults?.kpiCodeB ?? ""}
-          className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+          className="mt-1 w-full rounded-control border border-border-strong px-3 py-2 text-sm"
         >
           <option value="" disabled>
             Selecciona un KPI
@@ -108,8 +108,8 @@ export function ProfessionFormFields({
         <FieldError message={fieldErrors?.kpiCodeB} />
       </div>
 
-      <p className="sm:col-span-2 rounded-md bg-slate-50 px-3 py-2 text-sm text-slate-600">
-        Bonus: <span className="font-medium text-slate-800">{PROFESSION_BONUS_LABEL}</span>. Es fijo: no se puede editar.
+      <p className="sm:col-span-2 rounded-md bg-canvas px-3 py-2 text-sm text-text-muted">
+        Bonus: <span className="font-medium text-ink">{PROFESSION_BONUS_LABEL}</span>. Es fijo: no se puede editar.
       </p>
     </div>
   );

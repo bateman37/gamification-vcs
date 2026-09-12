@@ -47,7 +47,7 @@ export function AddParticipantForm({
   const availableProfessions = professions.filter((profession) => isAvailableForLevel(profession, level));
 
   return (
-    <form action={formAction} className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
+    <form action={formAction} className="space-y-4 rounded-card border border-border bg-surface p-4">
       <h2 className="text-base font-semibold">Anadir participante</h2>
 
       <div className="flex gap-4 text-sm">
@@ -69,13 +69,13 @@ export function AddParticipantForm({
       <div className="flex flex-wrap items-end gap-4">
         {!creatingPerson ? (
           <div className="w-full sm:w-64">
-            <label htmlFor="personId" className="block text-sm font-medium text-slate-700">
+            <label htmlFor="personId" className="block text-sm font-medium text-ink">
               Persona
             </label>
             <select
               id="personId"
               name="personId"
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="mt-1 w-full rounded-control border border-border-strong px-3 py-2 text-sm"
               defaultValue=""
             >
               <option value="" disabled>
@@ -92,32 +92,32 @@ export function AddParticipantForm({
         ) : (
           <div className="grid w-full grid-cols-1 gap-3 sm:w-auto sm:grid-cols-2 sm:gap-4">
             <div className="sm:w-56">
-              <label htmlFor="newPersonFullName" className="block text-sm font-medium text-slate-700">
+              <label htmlFor="newPersonFullName" className="block text-sm font-medium text-ink">
                 Nombre completo
               </label>
               <input
                 id="newPersonFullName"
                 name="newPersonFullName"
                 type="text"
-                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                className="mt-1 w-full rounded-control border border-border-strong px-3 py-2 text-sm"
               />
             </div>
             <div className="sm:w-56">
-              <label htmlFor="newPersonEmail" className="block text-sm font-medium text-slate-700">
+              <label htmlFor="newPersonEmail" className="block text-sm font-medium text-ink">
                 Correo (opcional)
               </label>
               <input
                 id="newPersonEmail"
                 name="newPersonEmail"
                 type="email"
-                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                className="mt-1 w-full rounded-control border border-border-strong px-3 py-2 text-sm"
               />
             </div>
           </div>
         )}
 
         <div className="w-full sm:w-40">
-          <label htmlFor="alias" className="block text-sm font-medium text-slate-700">
+          <label htmlFor="alias" className="block text-sm font-medium text-ink">
             Alias en este split
           </label>
           <input
@@ -125,13 +125,13 @@ export function AddParticipantForm({
             name="alias"
             type="text"
             required
-            className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="mt-1 w-full rounded-control border border-border-strong px-3 py-2 text-sm"
           />
           <FieldError message={state.fieldErrors?.alias} />
         </div>
 
         <div className="w-full sm:w-28">
-          <label htmlFor="level" className="block text-sm font-medium text-slate-700">
+          <label htmlFor="level" className="block text-sm font-medium text-ink">
             Nivel tecnico
           </label>
           <select
@@ -139,7 +139,7 @@ export function AddParticipantForm({
             name="level"
             value={level}
             onChange={(event) => setLevel(event.target.value as ParticipantLevel)}
-            className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="mt-1 w-full rounded-control border border-border-strong px-3 py-2 text-sm"
           >
             <option value="N0">N0</option>
             <option value="N1">N1</option>
@@ -149,7 +149,7 @@ export function AddParticipantForm({
 
         {professions.length > 0 && (
           <div className="w-full sm:w-64">
-            <label htmlFor="professionId" className="block text-sm font-medium text-slate-700">
+            <label htmlFor="professionId" className="block text-sm font-medium text-ink">
               {professionRequired ? "Profesión *" : "Profesión (opcional hasta publicar)"}
             </label>
             <select
@@ -157,7 +157,7 @@ export function AddParticipantForm({
               name="professionId"
               required={professionRequired}
               defaultValue=""
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="mt-1 w-full rounded-control border border-border-strong px-3 py-2 text-sm"
             >
               <option value="">{professionRequired ? "Selecciona una profesion" : "Sin elegir"}</option>
               {availableProfessions.map((profession) => (
@@ -166,9 +166,9 @@ export function AddParticipantForm({
                 </option>
               ))}
             </select>
-            <p className="mt-1 text-xs text-slate-500">{PROFESSION_BONUS_LABEL}</p>
+            <p className="mt-1 text-xs text-text-muted">{PROFESSION_BONUS_LABEL}</p>
             {availableProfessions.length === 0 && (
-              <p className="mt-1 text-xs text-amber-700">No hay ninguna profesion disponible para el nivel {level}.</p>
+              <p className="mt-1 text-xs text-reward-ink">No hay ninguna profesion disponible para el nivel {level}.</p>
             )}
             <FieldError message={state.fieldErrors?.professionId} />
           </div>
@@ -176,7 +176,7 @@ export function AddParticipantForm({
 
         {factions.length > 0 && (
           <div className="w-full sm:w-44">
-            <label htmlFor="factionId" className="block text-sm font-medium text-slate-700">
+            <label htmlFor="factionId" className="block text-sm font-medium text-ink">
               Faccion *
             </label>
             <select
@@ -184,7 +184,7 @@ export function AddParticipantForm({
               name="factionId"
               required
               defaultValue=""
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="mt-1 w-full rounded-control border border-border-strong px-3 py-2 text-sm"
             >
               <option value="" disabled>
                 Selecciona una faccion
@@ -200,7 +200,7 @@ export function AddParticipantForm({
         )}
 
         <div className="w-full sm:w-44">
-          <label htmlFor="startWeekSequenceNumber" className="block text-sm font-medium text-slate-700">
+          <label htmlFor="startWeekSequenceNumber" className="block text-sm font-medium text-ink">
             Semana inicial *
           </label>
           <select
@@ -208,7 +208,7 @@ export function AddParticipantForm({
             name="startWeekSequenceNumber"
             defaultValue="1"
             aria-describedby="startWeekSequenceNumber-help"
-            className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="mt-1 w-full rounded-control border border-border-strong px-3 py-2 text-sm"
           >
             {weeks.map((week) => (
               <option key={week.sequenceNumber} value={week.sequenceNumber}>
@@ -227,7 +227,7 @@ export function AddParticipantForm({
       {/* Fix (`0.8.5` / MVP-2C): esta nota debe mostrarse siempre, con "Persona existente" y con
           "Nueva persona", porque el label "Semana inicial *" conserva el asterisco en ambos modos y
           sin depender del estado del split; antes solo aparecia cuando splitStatus === "ACTIVE". */}
-      <p id="startWeekSequenceNumber-help" className="text-xs text-slate-500">
+      <p id="startWeekSequenceNumber-help" className="text-xs text-text-muted">
         * En un split activo, indica desde que semana empieza a competir esta persona.
       </p>
 

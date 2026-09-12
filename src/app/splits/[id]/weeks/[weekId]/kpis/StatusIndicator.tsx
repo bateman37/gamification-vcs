@@ -2,9 +2,9 @@ import type { LoadGroupStatus } from "@/domain/kpis/loadGroups";
 import { formatAvisoCount } from "@/domain/kpi-load-status-display";
 
 const STATUS_CONFIG: Record<LoadGroupStatus, { label: string; dotClassName: string; textClassName: string }> = {
-  PENDING: { label: "Pendiente", dotClassName: "bg-red-500", textClassName: "text-red-700" },
-  PARTIAL: { label: "Carga parcial", dotClassName: "bg-amber-500", textClassName: "text-amber-700" },
-  LOADED: { label: "Cargado", dotClassName: "bg-green-600", textClassName: "text-green-700" },
+  PENDING: { label: "Pendiente", dotClassName: "bg-danger", textClassName: "text-danger-ink" },
+  PARTIAL: { label: "Carga parcial", dotClassName: "bg-reward", textClassName: "text-reward-ink" },
+  LOADED: { label: "Cargado", dotClassName: "bg-success", textClassName: "text-success" },
 };
 
 const AVISO_TITLE =
@@ -25,7 +25,7 @@ export function StatusIndicator({ status, vacCount = 0 }: { status: LoadGroupSta
       <span className={`h-2.5 w-2.5 rounded-full ${config.dotClassName}`} aria-hidden="true" />
       {config.label}
       {showAviso && (
-        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600" title={AVISO_TITLE}>
+        <span className="rounded-full bg-surface-muted px-2 py-0.5 text-xs font-medium text-text-muted" title={AVISO_TITLE}>
           {formatAvisoCount(vacCount)}
         </span>
       )}

@@ -41,25 +41,25 @@ export function PositionPointsSection({
   return (
     <section id="puntos-posicion" className="scroll-mt-20 space-y-3">
       <h2 className="text-lg font-semibold">Puntos por posicion semanal</h2>
-      <p className="text-sm text-slate-600">
+      <p className="text-sm text-text-muted">
         Configura los puntos que recibira cada posicion (1 a 15) al calcular la clasificacion semanal.
       </p>
       {splitStatus === "CLOSED" ? (
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-text-muted">
           El split esta cerrado: los puntos por posicion se muestran en modo solo lectura.
         </p>
       ) : (
         locked && (
-          <p className="text-sm text-amber-700">
+          <p className="text-sm text-reward-ink">
             La configuracion quedo bloqueada al publicar la primera semana del split.
           </p>
         )
       )}
 
-      <form action={readOnly ? undefined : formAction} className="rounded-lg border border-slate-200 bg-white p-4">
-        <div className="overflow-x-auto rounded-md border border-slate-200">
+      <form action={readOnly ? undefined : formAction} className="rounded-card border border-border bg-surface p-4">
+        <div className="overflow-x-auto rounded-card border border-border">
           <table className="w-full text-left text-sm">
-            <thead className="border-b border-slate-200 bg-slate-100 text-slate-600">
+            <thead className="border-b border-border bg-surface-muted text-text-muted">
               <tr>
                 <th className="px-3 py-2 font-medium">Posicion</th>
                 <th className="px-3 py-2 font-medium">Puntos</th>
@@ -69,7 +69,7 @@ export function PositionPointsSection({
               {sortedRules.map((rule) => {
                 const errorMessage = fieldErrorMessage(state, rule.position);
                 return (
-                  <tr key={rule.position} className="border-b border-slate-100">
+                  <tr key={rule.position} className="border-b border-border">
                     <td className="px-3 py-2">{rule.position}</td>
                     <td className="px-3 py-2">
                       {readOnly ? (
@@ -83,7 +83,7 @@ export function PositionPointsSection({
                             defaultValue={rule.points}
                             aria-label={`Puntos de la posicion ${rule.position}`}
                             aria-invalid={errorMessage ? "true" : undefined}
-                            className="w-20 rounded-md border border-slate-300 px-2 py-1 text-sm"
+                            className="w-20 rounded-control border border-border-strong px-2 py-1 text-sm"
                           />
                           <FieldError message={errorMessage} />
                         </>

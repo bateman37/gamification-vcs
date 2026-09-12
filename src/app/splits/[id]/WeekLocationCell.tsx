@@ -25,13 +25,13 @@ export function WeekLocationCell({
     <div className="flex flex-col gap-1">
       {location ? (
         <div>
-          <span className="block font-medium text-slate-800">{location.name}</span>
-          <span className="block text-xs text-slate-500">
+          <span className="block font-medium text-ink">{location.name}</span>
+          <span className="block text-xs text-text-muted">
             {KPI_CATALOG[location.kpiCode].name} · +{location.bonusPercent} %
           </span>
         </div>
       ) : (
-        <span className="text-xs text-slate-400">Sin localizacion</span>
+        <span className="text-xs text-text-muted">Sin localizacion</span>
       )}
 
       <div className="flex flex-wrap items-center gap-1.5">
@@ -39,18 +39,18 @@ export function WeekLocationCell({
         {(status === "FINALIZADA" || status === "PUBLICADA") && <Badge tone="gray">Bloqueada</Badge>}
 
         {editable ? (
-          <Link href={href} className="text-xs font-medium text-slate-700 underline hover:text-slate-900">
+          <Link href={href} className="text-xs font-medium text-ink underline hover:text-ink">
             {location ? "Editar" : "Configurar"}
           </Link>
         ) : (
           location && (
-            <Link href={href} className="text-xs text-slate-600 underline hover:text-slate-900">
+            <Link href={href} className="text-xs text-text-muted underline hover:text-ink">
               Ver
             </Link>
           )
         )}
         {isNextWeek && editable && !location && (
-          <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-medium text-indigo-800">
+          <span className="rounded-full bg-game-soft px-2 py-0.5 text-[10px] font-medium text-game-ink">
             Proxima semana
           </span>
         )}

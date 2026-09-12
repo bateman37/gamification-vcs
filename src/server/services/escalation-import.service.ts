@@ -11,6 +11,7 @@ import type { LoadCoverageStatus } from "@/domain/kpis/loadGroups";
 import { readEscalationWorkbook, type EscalationSourceRow } from "@/server/services/escalation/excel-reader";
 import { formatXlsxRowError } from "@/server/services/shared/xlsx";
 import { isAmbiguousMatch, isFoundMatch, isIgnoredMatch, matchRowsToParticipants } from "@/server/services/shared/matching";
+import { notifyIfWeekReadyToReview } from "@/server/services/news-week-ready.service";
 
 /**
  * Carga semanal de Escalados y calculo de Domador de Escaladas (ver
@@ -209,6 +210,8 @@ export async function confirmEscalationImport(
         groupReassignments: match.row.groupReassignments,
       })),
     });
+
+    await notifyIfWeekReadyToReview(tx, splitId, resolvedWeekId);
   });
 }
 

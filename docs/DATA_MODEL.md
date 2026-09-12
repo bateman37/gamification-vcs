@@ -1113,3 +1113,14 @@ desglose de `PublishedKpiResult` (ver
 backfill idempotente de `CreditLedgerEntry`/`creditsEarned` para toda
 publicacion anterior a esta version, a partir exclusivamente de
 `totalKpiPoints` ya publicado.
+
+Con `1.0.0` / MVP-3 se anaden `NewsItem` (contenido inmutable de una
+noticia: origen, categoria, prioridad, titulo, cuerpo, `eventKey` de
+idempotencia, y datos de envio manual) y `NewsDelivery` (entrega privada
+a exactamente un destinatario: una `Person` para noticias de jugador o un
+`User` para noticias de administracion, con `readAt`/`archivedAt` y el
+`actionPath` ya construido en servidor). Ninguna otra tabla existente
+cambia: las noticias se generan leyendo el resultado de operaciones ya
+persistidas por los servicios de negocio (alta de participante,
+activacion, facciones, profesiones, localizaciones, mercado, compra y
+publicacion), nunca al reves. Ver `docs/NEWS_CENTER.md`.

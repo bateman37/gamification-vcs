@@ -27,7 +27,7 @@ function CreateAccountForm({ personId }: { personId: string }) {
 
   if (!open) {
     return (
-      <button type="button" onClick={() => setOpen(true)} className="text-xs font-medium text-slate-600 underline hover:text-slate-900">
+      <button type="button" onClick={() => setOpen(true)} className="text-xs font-medium text-text-muted underline hover:text-ink">
         Crear cuenta
       </button>
     );
@@ -41,7 +41,7 @@ function CreateAccountForm({ personId }: { personId: string }) {
         name="email"
         required
         placeholder="Correo de la cuenta"
-        className="w-full rounded-md border border-slate-300 px-2 py-1 text-xs"
+        className="w-full rounded-control border border-border-strong px-2 py-1 text-xs"
       />
       <input
         type="password"
@@ -49,12 +49,12 @@ function CreateAccountForm({ personId }: { personId: string }) {
         required
         minLength={8}
         placeholder="Contrasena temporal (min. 8)"
-        className="w-full rounded-md border border-slate-300 px-2 py-1 text-xs"
+        className="w-full rounded-control border border-border-strong px-2 py-1 text-xs"
       />
       {!state.ok && state.error && <FieldError message={state.error} />}
       <div className="flex gap-2">
         <SaveButton label="Crear" />
-        <button type="button" onClick={() => setOpen(false)} className="text-xs text-slate-500 underline">
+        <button type="button" onClick={() => setOpen(false)} className="text-xs text-text-muted underline">
           Cancelar
         </button>
       </div>
@@ -68,12 +68,12 @@ function ResetPasswordForm({ userId }: { userId: string }) {
   const [state, formAction] = useFormState(resetWithId, initialSimpleActionState);
 
   if (state.ok && state.saved) {
-    return <span className="text-xs text-green-700">Contrasena restablecida</span>;
+    return <span className="text-xs text-success">Contrasena restablecida</span>;
   }
 
   if (!open) {
     return (
-      <button type="button" onClick={() => setOpen(true)} className="text-xs font-medium text-slate-600 underline hover:text-slate-900">
+      <button type="button" onClick={() => setOpen(true)} className="text-xs font-medium text-text-muted underline hover:text-ink">
         Restablecer contrasena
       </button>
     );
@@ -88,12 +88,12 @@ function ResetPasswordForm({ userId }: { userId: string }) {
         required
         minLength={8}
         placeholder="Nueva contrasena temporal"
-        className="w-full rounded-md border border-slate-300 px-2 py-1 text-xs"
+        className="w-full rounded-control border border-border-strong px-2 py-1 text-xs"
       />
       {!state.ok && state.error && <FieldError message={state.error} />}
       <div className="flex gap-2">
         <SaveButton label="Guardar" />
-        <button type="button" onClick={() => setOpen(false)} className="text-xs text-slate-500 underline">
+        <button type="button" onClick={() => setOpen(false)} className="text-xs text-text-muted underline">
           Cancelar
         </button>
       </div>
@@ -109,13 +109,13 @@ export function PersonAccountCell({ personId, account }: { personId: string; acc
   return (
     <div className="space-y-1">
       <div className="flex flex-wrap items-center gap-1">
-        <span className="text-xs text-slate-600">{account.email}</span>
+        <span className="text-xs text-text-muted">{account.email}</span>
         <Badge tone={account.isActive ? "green" : "gray"}>{account.isActive ? "Activa" : "Inactiva"}</Badge>
         {account.mustChangePassword && <Badge tone="amber">Debe cambiar contrasena</Badge>}
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <form action={setAccountActiveAction.bind(null, account.id, !account.isActive)}>
-          <button type="submit" className="text-xs font-medium text-slate-600 underline hover:text-slate-900">
+          <button type="submit" className="text-xs font-medium text-text-muted underline hover:text-ink">
             {account.isActive ? "Desactivar" : "Activar"}
           </button>
         </form>

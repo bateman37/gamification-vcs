@@ -276,10 +276,19 @@ publicada.
    (con el desglose de los bonus de profesion, localizacion y objetos por
    KPI), una fila `PublishedEquippedItem` por objeto equipado, y el
    movimiento `WEEKLY_EARNING` vinculado de forma unica a ese resultado;
-5. una carrera concurrente (restriccion unica sobre `splitWeekId`, o
+5. crea tambien, en la misma transaccion, exactamente una noticia
+   (`NewsItem`, categoria `RESULTS`) por participante publicado con su
+   resumen personalizado (posicion, puntos KPI, puntos por posicion,
+   creditos y faccion si el split la usa) y, si hay administradores, un
+   aviso administrativo unico de "semana publicada" y, cuando proceda, uno
+   de "proxima localizacion pendiente" (`1.0.0` / MVP-3, ver
+   `docs/NEWS_CENTER.md`); estas noticias usan el mismo `results.participants`
+   ya calculado, sin una segunda consulta de agregados;
+6. una carrera concurrente (restriccion unica sobre `splitWeekId`, o
    fallo de serializacion) no se propaga como error: si al comprobar de
    nuevo ya existe una publicacion, se devuelve como resultado idempotente
-   (`alreadyPublished: true`), nunca una segunda publicacion.
+   (`alreadyPublished: true`), nunca una segunda publicacion (ni una
+   segunda tanda de noticias).
 
 La autorizacion (`ADMIN`) se comprueba en la accion de servidor
 (`src/server/actions/publish.actions.ts`) antes de llamar al servicio.

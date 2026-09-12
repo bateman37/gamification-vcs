@@ -17,28 +17,28 @@ export default async function ApprenticeEntryPage({ params }: { params: { id: st
   return (
     <div className="space-y-6">
       <div>
-        <Link href={backHref} className="text-sm text-slate-600 underline hover:text-slate-900">
+        <Link href={backHref} className="text-sm text-text-muted underline hover:text-ink">
           Volver a las cargas de la semana
         </Link>
         <h1 className="mt-2 text-xl font-semibold">Introducir Aprendiz experto</h1>
-        <p className="mt-1 text-sm text-slate-600">
+        <p className="mt-1 text-sm text-text-muted">
           {split.name} - Semana {week.sequenceNumber} ({formatCalendarDate(week.startDate)} a{" "}
           {formatCalendarDate(week.endDate)})
         </p>
-        <p className="mt-2 text-sm text-slate-600">
+        <p className="mt-2 text-sm text-text-muted">
           Formaciones completadas. El valor <strong>0</strong> es válido; no puede superar el máximo configurado
           para el split.
         </p>
         <Link
           href={`/splits/${split.id}#kpi-configuracion`}
-          className="mt-1 inline-block text-sm text-slate-600 underline hover:text-slate-900"
+          className="mt-1 inline-block text-sm text-text-muted underline hover:text-ink"
         >
           Ir a la configuracion de KPI
         </Link>
       </div>
 
       {split.status !== "ACTIVE" ? (
-        <p className="rounded-md border border-dashed border-slate-300 px-4 py-6 text-center text-sm text-slate-500">
+        <p className="rounded-card border border-dashed border-border-strong px-4 py-6 text-center text-sm text-text-muted">
           Solo se puede introducir o actualizar Aprendiz experto en un split activo.
         </p>
       ) : (

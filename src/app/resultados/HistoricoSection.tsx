@@ -46,11 +46,11 @@ export async function HistoricoSection({
       {history.groups.length === 0 ? (
         <EmptyState>No hay semanas publicadas para este filtro.</EmptyState>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+        <div className="overflow-x-auto rounded-card border border-border bg-surface">
           <table className="w-full text-left text-sm">
-            <thead className="border-b border-slate-200 bg-slate-50 text-slate-600">
+            <thead className="border-b border-border bg-canvas text-text-muted">
               <tr>
-                <th className="sticky left-0 z-10 whitespace-normal bg-slate-50 px-3 py-2 font-medium">Periodo</th>
+                <th className="sticky left-0 z-10 whitespace-normal bg-canvas px-3 py-2 font-medium">Periodo</th>
                 {history.availableKpis.map((kpi) => (
                   <th key={kpi.code} className="whitespace-normal px-3 py-2 text-center font-medium">
                     {kpi.name}
@@ -67,18 +67,18 @@ export async function HistoricoSection({
               {history.groups.map((group) => {
                 const kpiByCode = new Map(group.perKpi.map((kpi) => [kpi.kpiCode, kpi]));
                 return (
-                  <tr key={group.periodKey} className="border-b border-slate-100 align-top">
-                    <td className="sticky left-0 z-10 bg-white px-3 py-2 font-medium">
+                  <tr key={group.periodKey} className="border-b border-border align-top">
+                    <td className="sticky left-0 z-10 bg-surface px-3 py-2 font-medium">
                       {group.periodLabel}
                       {group.periodSecondaryLabel && (
-                        <span className="block text-xs font-normal text-slate-500">{group.periodSecondaryLabel}</span>
+                        <span className="block text-xs font-normal text-text-muted">{group.periodSecondaryLabel}</span>
                       )}
                     </td>
                     {history.availableKpis.map((kpi) => {
                       const cell = kpiByCode.get(kpi.code);
                       if (!cell) {
                         return (
-                          <td key={kpi.code} className="px-3 py-2 text-center text-slate-400">
+                          <td key={kpi.code} className="px-3 py-2 text-center text-text-muted">
                             —
                           </td>
                         );
@@ -98,17 +98,17 @@ export async function HistoricoSection({
                           <div className="font-semibold">{formatPoints(cellSum)}</div>
                           <div className="text-xs opacity-80">media {formatPoints(cellAverage)}</div>
                           {gamificationMode === "con" && cell.professionBonusSum > 0 && (
-                            <div className="text-xs font-medium text-indigo-800">
+                            <div className="text-xs font-medium text-game-ink">
                               +{formatPoints(cell.professionBonusSum)} por profesion
                             </div>
                           )}
                           {gamificationMode === "con" && cell.locationBonusSum > 0 && (
-                            <div className="text-xs font-medium text-teal-800">
+                            <div className="text-xs font-medium text-info-ink">
                               +{formatPoints(cell.locationBonusSum)} localizacion
                             </div>
                           )}
                           {gamificationMode === "con" && cell.equipmentBonusSum > 0 && (
-                            <div className="text-xs font-medium text-amber-800">+{formatPoints(cell.equipmentBonusSum)} objetos</div>
+                            <div className="text-xs font-medium text-reward-ink">+{formatPoints(cell.equipmentBonusSum)} objetos</div>
                           )}
                         </td>
                       );
@@ -117,20 +117,20 @@ export async function HistoricoSection({
                     <td className="px-3 py-2 text-center font-semibold">
                       {formatPoints(resolveGamificationDisplayTotal(gamificationMode, group.sumKpiPoints, groupBonusSum(group)))}
                       {gamificationMode === "con" && group.professionBonusSum > 0 && (
-                        <span className="block text-xs font-medium text-indigo-800">
+                        <span className="block text-xs font-medium text-game-ink">
                           Bonus profesion: {formatPoints(group.professionBonusSum)}
                         </span>
                       )}
                       {gamificationMode === "con" && group.locationBonusSum > 0 && (
-                        <span className="block text-xs font-medium text-teal-800">
+                        <span className="block text-xs font-medium text-info-ink">
                           +{formatPoints(group.locationBonusSum)} localizacion
                         </span>
                       )}
                       {gamificationMode === "con" && group.equipmentBonusSum > 0 && (
-                        <span className="block text-xs font-medium text-amber-800">+{formatPoints(group.equipmentBonusSum)} objetos</span>
+                        <span className="block text-xs font-medium text-reward-ink">+{formatPoints(group.equipmentBonusSum)} objetos</span>
                       )}
                       {gamificationMode === "sin" && groupBonusSum(group) > 0 && (
-                        <span className="block text-xs font-normal text-slate-500">
+                        <span className="block text-xs font-normal text-text-muted">
                           Impacto: +
                           {formatPoints(
                             computeGamificationImpact(

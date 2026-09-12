@@ -13,10 +13,10 @@ export interface SplitDetailNavItem {
 export function SplitDetailNav({ items }: { items: SplitDetailNavItem[] }) {
   return (
     <nav aria-label="Secciones del split" className="mb-6 lg:sticky lg:top-6 lg:mb-0 lg:self-start">
-      <ul className="flex flex-wrap gap-x-4 gap-y-2 text-sm lg:flex-col lg:gap-y-1 lg:border-r lg:border-slate-200 lg:pr-4">
+      <ul className="flex flex-wrap gap-x-4 gap-y-2 text-sm lg:flex-col lg:gap-y-1 lg:border-r lg:border-border lg:pr-4">
         {items.map((item) => (
           <li key={item.href}>
-            <a href={item.href} className="text-slate-600 underline hover:text-slate-900">
+            <a href={item.href} className="text-text-muted underline hover:text-ink">
               {item.label}
             </a>
           </li>

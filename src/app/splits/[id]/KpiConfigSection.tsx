@@ -25,12 +25,12 @@ export function KpiConfigSection({
     <section id="kpi-configuracion" className="scroll-mt-6 space-y-3">
       <h2 className="text-lg font-semibold">KPI del split</h2>
       {splitStatus === "CLOSED" ? (
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-text-muted">
           El split esta cerrado: la configuracion de KPI se muestra en modo solo lectura.
         </p>
       ) : (
         locked && (
-          <p className="text-sm text-amber-700">
+          <p className="text-sm text-reward-ink">
             La configuracion quedo bloqueada al publicar la primera semana del split.
           </p>
         )

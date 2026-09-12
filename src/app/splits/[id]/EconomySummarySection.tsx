@@ -21,15 +21,15 @@ export function EconomySummarySection({
   return (
     <section id="economia" className="scroll-mt-20 space-y-3">
       <h2 className="text-lg font-semibold">Economia y mercado</h2>
-      <div className="flex flex-wrap items-center gap-3 rounded-lg border border-slate-200 bg-white p-4">
+      <div className="flex flex-wrap items-center gap-3 rounded-card border border-border bg-surface p-4">
         <Badge tone={marketStatus === "OPEN" ? "green" : "gray"}>
           {marketStatus === "OPEN" ? "Mercado abierto" : "Mercado cerrado"}
         </Badge>
-        <span className="text-sm text-slate-600">
+        <span className="text-sm text-text-muted">
           {slotCount} ranura{slotCount === 1 ? "" : "s"} de equipo, {itemCount} objeto{itemCount === 1 ? "" : "s"} en el
           catalogo.
         </span>
-        <Link href={`/splits/${splitId}/economia`} className="text-sm font-medium text-slate-700 underline hover:text-slate-900">
+        <Link href={`/splits/${splitId}/economia`} className="text-sm font-medium text-ink underline hover:text-ink">
           Administrar economia y mercado
         </Link>
       </div>

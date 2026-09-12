@@ -47,11 +47,11 @@ export default async function WeekLocationPage({ params }: { params: { id: strin
   return (
     <div className="space-y-6">
       <div>
-        <Link href={backHref} className="text-sm text-slate-600 underline hover:text-slate-900">
+        <Link href={backHref} className="text-sm text-text-muted underline hover:text-ink">
           Volver al split
         </Link>
         <h1 className="mt-2 text-xl font-semibold">Localizacion de la semana {week.sequenceNumber}</h1>
-        <p className="mt-1 text-sm text-slate-600">
+        <p className="mt-1 text-sm text-text-muted">
           {split.name} · {formatCalendarDateEs(week.startDate)} — {formatCalendarDateEs(week.endDate)}
         </p>
         <div className="mt-2">
@@ -69,17 +69,17 @@ export default async function WeekLocationPage({ params }: { params: { id: strin
           initialLocation={location}
         />
       ) : (
-        <div className="max-w-lg space-y-3 rounded-lg border border-slate-200 bg-white p-4 text-sm">
+        <div className="max-w-lg space-y-3 rounded-card border border-border bg-surface p-4 text-sm">
           {location ? (
             <>
               <p className="text-base font-semibold">{location.name}</p>
-              <p className="text-slate-600">Potencia: {KPI_CATALOG[location.kpiCode].name}</p>
-              <p className="text-slate-600">Bonus para todos los participantes: {locationBonusLabel(location.bonusPercent)}</p>
+              <p className="text-text-muted">Potencia: {KPI_CATALOG[location.kpiCode].name}</p>
+              <p className="text-text-muted">Bonus para todos los participantes: {locationBonusLabel(location.bonusPercent)}</p>
             </>
           ) : (
-            <p className="text-slate-500">Esta semana no tiene localizacion.</p>
+            <p className="text-text-muted">Esta semana no tiene localizacion.</p>
           )}
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-text-muted">
             {window.status === "PUBLICADA"
               ? "Esta semana ya esta publicada: su localizacion es de solo lectura."
               : split.status === "CLOSED"

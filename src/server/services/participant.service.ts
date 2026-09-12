@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { Person, Prisma, PrismaClient, SplitParticipant, SplitProfession } from "@prisma/client";
 import { DomainError } from "@/lib/errors";
 import { normalizeAlias } from "@/lib/normalize";
@@ -8,6 +9,11 @@ import {
   splitUsesProfessions,
 } from "@/server/services/profession.service";
 import { isProfessionAvailableForLevel } from "@/domain/profession-bonus";
+import { PROFESSION_BONUS_PERCENT } from "@/domain/profession-bonus";
+import { createNewsWithDeliveries } from "@/server/services/news.service";
+import { buildNewsActionPath } from "@/domain/news-links";
+import { participantAddedNewsTemplate, factionReassignedNewsTemplate, professionAssignedNewsTemplate } from "@/domain/news-templates";
+import { KPI_CATALOG } from "@/domain/kpis/catalog";
 
 type Db = PrismaClient | Prisma.TransactionClient;
 
@@ -30,7 +36,7 @@ function prismaErrorTargetIncludes(error: unknown, code: string, target: string)
  * perteneciente al mismo split (nunca se acepta una faccion de otro
  * split). Devuelve `null` cuando el split todavia no usa facciones.
  */
-async function resolveFactionIdOrThrow(db: PrismaClient, splitId: string, factionId: string | undefined): Promise<string | null> {
+async function resolveFactionIdOrThrow(db: Db, splitId: string, factionId: string | undefined): Promise<string | null> {
   // Un factionId enviado desde el cliente se valida siempre, incluso si este split concreto todavia no tiene
   // ninguna faccion propia: nunca se acepta una faccion perteneciente a otro split.
   if (factionId) {
@@ -83,19 +89,47 @@ export async function addParticipant(
     requiredWhenAvailable: await splitHasAnyPublication(db, splitId),
   });
   const aliasNormalized = normalizeAlias(input.alias);
+  const splitUsesProf = await splitUsesProfessions(db, splitId);
+  const faction = factionId ? await db.splitFaction.findUnique({ where: { id: factionId } }) : null;
 
   try {
-    return await db.splitParticipant.create({
-      data: {
-        splitId,
-        personId: input.personId,
-        alias: input.alias.trim(),
-        aliasNormalized,
-        level: input.level,
-        startWeekSequenceNumber: input.startWeekSequenceNumber,
-        factionId,
-        professionId,
-      },
+    return await db.$transaction(async (tx) => {
+      const participant = await tx.splitParticipant.create({
+        data: {
+          splitId,
+          personId: input.personId,
+          alias: input.alias.trim(),
+          aliasNormalized,
+          level: input.level,
+          startWeekSequenceNumber: input.startWeekSequenceNumber,
+          factionId,
+          professionId,
+        },
+      });
+
+      // Alta de participante (seccion 30 del encargo): siempre exactamente una noticia para la
+      // persona anadida, tenga ya cuenta o no (se entrega a `Person`, ver docs/NEWS_CENTER.md).
+      const { title, body } = participantAddedNewsTemplate({
+        splitName: split.name,
+        factionName: faction?.name ?? null,
+        needsAvatar: true,
+        needsProfession: splitUsesProf && !professionId,
+      });
+      await createNewsWithDeliveries(
+        tx,
+        {
+          splitId,
+          splitNameSnapshot: split.name,
+          origin: "AUTOMATIC",
+          category: "PROFILE",
+          title,
+          body,
+          eventKey: `participant-added:${participant.id}`,
+        },
+        [{ personId: participant.personId, actionPath: buildNewsActionPath({ kind: "PROFILE", splitParticipantId: participant.id }, "PERSON") }],
+      );
+
+      return participant;
     });
   } catch (error) {
     if (prismaErrorTargetIncludes(error, UNIQUE_CONSTRAINT_ERROR_CODE, "personId")) {
@@ -127,7 +161,7 @@ export async function addParticipant(
  *   eliminarla ni cambiarla automaticamente.
  */
 async function resolveProfessionIdForUpdate(
-  db: PrismaClient,
+  db: Db,
   existing: SplitParticipant & { profession: SplitProfession | null },
   input: UpdateParticipantInput,
 ): Promise<string | null> {
@@ -172,20 +206,79 @@ export async function updateParticipant(
   if (!existing) {
     throw new DomainError("El participante indicado no existe.");
   }
+  const split = await db.split.findUnique({ where: { id: existing.splitId } });
+  if (!split) {
+    throw new DomainError("El split indicado no existe.");
+  }
   const factionId = await resolveFactionIdOrThrow(db, existing.splitId, input.factionId ?? existing.factionId ?? undefined);
   const professionId = await resolveProfessionIdForUpdate(db, existing, input);
   const aliasNormalized = normalizeAlias(input.alias);
 
+  // Solo se notifican cambios reales durante un split activo (seccion 30/37 del encargo): las
+  // tareas de preparacion en `DRAFT` nunca generan noticias de jugador.
+  const factionChanged = split.status === "ACTIVE" && factionId !== (existing.factionId ?? null) && factionId !== null;
+  const professionChanged =
+    split.status === "ACTIVE" && professionId !== (existing.professionId ?? null) && professionId !== null;
+  const newFaction = factionChanged && factionId ? await db.splitFaction.findUnique({ where: { id: factionId } }) : null;
+  const newProfession = professionChanged && professionId ? await db.splitProfession.findUnique({ where: { id: professionId } }) : null;
+  // Identificador de operacion unico, generado una sola vez fuera de la transaccion (seccion 47 del
+  // encargo): un reasignar/cambiar es un evento repetible, asi que la clave idempotente no puede ser
+  // solo el id del participante.
+  const operationId = randomUUID();
+
   try {
-    return await db.splitParticipant.update({
-      where: { id: participantId },
-      data: {
-        alias: input.alias.trim(),
-        aliasNormalized,
-        level: input.level,
-        factionId,
-        professionId,
-      },
+    return await db.$transaction(async (tx) => {
+      const updated = await tx.splitParticipant.update({
+        where: { id: participantId },
+        data: {
+          alias: input.alias.trim(),
+          aliasNormalized,
+          level: input.level,
+          factionId,
+          professionId,
+        },
+      });
+
+      if (newFaction) {
+        const { title, body } = factionReassignedNewsTemplate({ factionName: newFaction.name });
+        await createNewsWithDeliveries(
+          tx,
+          {
+            splitId: existing.splitId,
+            splitNameSnapshot: split.name,
+            origin: "AUTOMATIC",
+            category: "FACTION",
+            title,
+            body,
+            eventKey: `faction-reassigned:${operationId}`,
+          },
+          [{ personId: existing.personId, actionPath: buildNewsActionPath({ kind: "PROFILE", splitParticipantId: participantId }, "PERSON") }],
+        );
+      }
+
+      if (newProfession) {
+        const { title, body } = professionAssignedNewsTemplate({
+          professionName: newProfession.name,
+          kpiNameA: KPI_CATALOG[newProfession.kpiCodeA].name,
+          kpiNameB: KPI_CATALOG[newProfession.kpiCodeB].name,
+          bonusPercent: PROFESSION_BONUS_PERCENT,
+        });
+        await createNewsWithDeliveries(
+          tx,
+          {
+            splitId: existing.splitId,
+            splitNameSnapshot: split.name,
+            origin: "AUTOMATIC",
+            category: "PROFESSION",
+            title,
+            body,
+            eventKey: `profession-assigned:${operationId}`,
+          },
+          [{ personId: existing.personId, actionPath: buildNewsActionPath({ kind: "PROFILE", splitParticipantId: participantId }, "PERSON") }],
+        );
+      }
+
+      return updated;
     });
   } catch (error) {
     if (prismaErrorTargetIncludes(error, UNIQUE_CONSTRAINT_ERROR_CODE, "aliasNormalized")) {

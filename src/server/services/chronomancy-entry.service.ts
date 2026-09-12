@@ -11,6 +11,7 @@ import {
 } from "@/domain/kpis/chronomancy";
 import type { LoadCoverageStatus } from "@/domain/kpis/loadGroups";
 import { parseNonNegativeNumberDefaultZero, ManualEntryValidationError, type ManualEntryFieldError } from "@/server/validation/manual-entry";
+import { notifyIfWeekReadyToReview } from "@/server/services/news-week-ready.service";
 
 /**
  * Entrada manual semanal de Cronomagia laboral (`WORK_CHRONOMANCY`, ver
@@ -104,15 +105,17 @@ export async function saveChronomancyEntries(db: PrismaClient, splitId: string, 
 
   await db.$transaction(async (tx) => {
     await tx.chronomancyWeeklyEntry.deleteMany({ where: { splitWeekId: resolvedWeekId } });
-    if (rows.length === 0) return;
-    await tx.chronomancyWeeklyEntry.createMany({
-      data: rows.map((row) => ({
-        splitWeekId: resolvedWeekId,
-        splitParticipantId: row.splitParticipantId,
-        productiveHours: row.productiveHours,
-        totalHours: row.totalHours,
-      })),
-    });
+    if (rows.length > 0) {
+      await tx.chronomancyWeeklyEntry.createMany({
+        data: rows.map((row) => ({
+          splitWeekId: resolvedWeekId,
+          splitParticipantId: row.splitParticipantId,
+          productiveHours: row.productiveHours,
+          totalHours: row.totalHours,
+        })),
+      });
+    }
+    await notifyIfWeekReadyToReview(tx, splitId, resolvedWeekId);
   });
 }
 

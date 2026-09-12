@@ -22,13 +22,13 @@ export function HistoryFilters({
   const formRef = useRef<HTMLFormElement>(null);
 
   return (
-    <form ref={formRef} method="get" className="flex flex-wrap items-end gap-4 rounded-lg border border-slate-200 bg-white p-4">
+    <form ref={formRef} method="get" className="flex flex-wrap items-end gap-4 rounded-card border border-border bg-surface p-4">
       {personId && <input type="hidden" name="persona" value={personId} />}
       <input type="hidden" name="vista" value="historico" />
       {gamificationMode && <input type="hidden" name="gamificacion" value={gamificationMode} />}
 
       <div>
-        <label htmlFor="anio" className="block text-xs font-medium text-slate-600">
+        <label htmlFor="anio" className="block text-xs font-medium text-text-muted">
           Anio
         </label>
         <select
@@ -36,7 +36,7 @@ export function HistoryFilters({
           name="anio"
           defaultValue={selectedYear}
           onChange={() => formRef.current?.requestSubmit()}
-          className="mt-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+          className="mt-1 rounded-control border border-border-strong px-2 py-1.5 text-sm"
         >
           <option value="todos">Todos</option>
           {years.map((year) => (
@@ -48,7 +48,7 @@ export function HistoryFilters({
       </div>
 
       <div>
-        <label htmlFor="splitFiltro" className="block text-xs font-medium text-slate-600">
+        <label htmlFor="splitFiltro" className="block text-xs font-medium text-text-muted">
           Split
         </label>
         <select
@@ -56,7 +56,7 @@ export function HistoryFilters({
           name="splitFiltro"
           defaultValue={selectedSplitId}
           onChange={() => formRef.current?.requestSubmit()}
-          className="mt-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+          className="mt-1 rounded-control border border-border-strong px-2 py-1.5 text-sm"
         >
           <option value="todos">Todos</option>
           {splits.map((split) => (
@@ -68,7 +68,7 @@ export function HistoryFilters({
       </div>
 
       <div>
-        <label htmlFor="agrupacion" className="block text-xs font-medium text-slate-600">
+        <label htmlFor="agrupacion" className="block text-xs font-medium text-text-muted">
           Agrupacion
         </label>
         <select
@@ -76,7 +76,7 @@ export function HistoryFilters({
           name="agrupacion"
           defaultValue={selectedGrouping}
           onChange={() => formRef.current?.requestSubmit()}
-          className="mt-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+          className="mt-1 rounded-control border border-border-strong px-2 py-1.5 text-sm"
         >
           <option value="semana">Semana</option>
           <option value="mes">Mes</option>

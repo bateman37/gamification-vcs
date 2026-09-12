@@ -33,6 +33,10 @@ export async function resetDatabase(): Promise<void> {
   // WeekPublication en cascada borra PublishedParticipantWeeklyResult y PublishedKpiResult; debe
   // borrarse antes que SplitParticipant/SplitWeek/Split/Person, a los que esas filas restringen el borrado.
   await testDb.weekPublication.deleteMany();
+  // Centro de noticias (`1.0.0` / MVP-3): NewsDelivery restringe el borrado de Person y User;
+  // NewsItem restringe el borrado de User (autor de envios manuales). Se borran antes que ambos.
+  await testDb.newsDelivery.deleteMany();
+  await testDb.newsItem.deleteMany();
   await testDb.user.deleteMany();
   // El avatar cae en cascada con su participante, pero se borra explicitamente para no depender de ello.
   await testDb.splitParticipantAvatar.deleteMany();

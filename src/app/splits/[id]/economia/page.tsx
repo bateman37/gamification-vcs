@@ -57,7 +57,7 @@ export default async function SplitEconomyPage({ params }: { params: { id: strin
   return (
     <div className="space-y-8">
       <div>
-        <Link href={`/splits/${split.id}`} className="text-sm text-slate-600 underline hover:text-slate-900">
+        <Link href={`/splits/${split.id}`} className="text-sm text-text-muted underline hover:text-ink">
           &larr; Volver a {split.name}
         </Link>
         <div className="mt-2 flex flex-wrap items-center gap-3">
@@ -66,7 +66,7 @@ export default async function SplitEconomyPage({ params }: { params: { id: strin
             {settings.marketStatus === "OPEN" ? "Mercado abierto" : "Mercado cerrado"}
           </Badge>
         </div>
-        <p className="mt-1 text-sm text-slate-600">
+        <p className="mt-1 text-sm text-text-muted">
           1 credito equivale a 1 punto KPI completo publicado. Los creditos se generan exclusivamente al publicar una
           semana.
         </p>
@@ -76,15 +76,15 @@ export default async function SplitEconomyPage({ params }: { params: { id: strin
         <MarketToggleButton splitId={split.id} marketStatus={settings.marketStatus} openIssues={openIssues} />
       </section>
 
-      <section className="space-y-3 border-t border-slate-200 pt-6">
+      <section className="space-y-3 border-t border-border pt-6">
         <EquipmentSlotsPanel splitId={split.id} slots={slotRows} locked={structureLocked} maxSlots={MAX_EQUIPMENT_SLOTS_PER_SPLIT} />
       </section>
 
-      <section className="space-y-3 border-t border-slate-200 pt-6">
+      <section className="space-y-3 border-t border-border pt-6">
         <StoreItemsPanel splitId={split.id} items={itemRows} locked={structureLocked} activeKpis={activeKpis} slots={slotOptions} />
       </section>
 
-      <section className="space-y-3 border-t border-slate-200 pt-6">
+      <section className="space-y-3 border-t border-border pt-6">
         <h3 className="text-base font-semibold">Resumen de compras y creditos</h3>
         <EconomySummaryPanel summary={summary} />
       </section>

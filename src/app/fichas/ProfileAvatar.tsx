@@ -27,7 +27,7 @@ export function ProfileAvatar({
       <span
         role="img"
         aria-label={`Sin avatar para ${alias}`}
-        className="flex shrink-0 items-center justify-center rounded-full bg-slate-200 font-semibold text-slate-600"
+        className="flex shrink-0 items-center justify-center rounded-full bg-surface-muted font-semibold text-text-muted"
         style={{ width: size, height: size, fontSize: Math.round(size / 2.8) }}
       >
         {initials || "?"}
@@ -42,7 +42,7 @@ export function ProfileAvatar({
       alt={`Avatar de ${alias}`}
       width={size}
       height={size}
-      className="shrink-0 rounded-full border border-slate-200 object-cover"
+      className="shrink-0 rounded-full border border-border object-cover"
       style={{ width: size, height: size }}
     />
   );

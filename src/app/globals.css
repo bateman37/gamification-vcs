@@ -2,6 +2,66 @@
 @tailwind components;
 @tailwind utilities;
 
+/**
+ * Tokens del sistema visual "Prisma competitivo" (`1.0.0` / MVP-3, ver
+ * docs/DESIGN_SYSTEM.md). Unica paleta fisica de toda la aplicacion:
+ * `tailwind.config.ts` solo expone estos nombres semanticos. Valores como
+ * "R G B" (sin `rgb()`) para poder combinarse con opacidad Tailwind.
+ */
+:root {
+  --color-canvas: 247 248 252; /* #F7F8FC */
+  --color-surface: 255 255 255; /* #FFFFFF */
+  --color-surface-muted: 243 245 249; /* derivado, panel secundario */
+  --color-ink: 23 32 51; /* #172033 */
+  --color-text-muted: 102 112 133; /* #667085 */
+  --color-border: 228 231 236; /* #E4E7EC */
+  --color-border-strong: 208 213 221; /* #D0D5DD */
+
+  --color-primary: 37 99 235; /* #2563EB */
+  --color-primary-hover: 29 78 216; /* #1D4ED8 */
+  --color-primary-soft: 239 246 255; /* #EFF6FF */
+
+  --color-game: 109 74 255; /* #6D4AFF */
+  --color-game-ink: 91 33 182; /* #5B21B6 */
+  --color-game-soft: 245 243 255; /* #F5F3FF */
+
+  --color-info: 15 157 138; /* #0F9D8A */
+  --color-info-ink: 15 118 110; /* #0F766E */
+  --color-info-soft: 240 253 250; /* #F0FDFA */
+
+  --color-reward: 244 183 64; /* #F4B740 */
+  --color-reward-ink: 146 64 14; /* #92400E */
+  --color-reward-soft: 255 251 235; /* #FFFBEB */
+
+  --color-success: 22 163 74; /* #16A34A */
+  --color-success-soft: 240 253 244; /* #F0FDF4 */
+
+  --color-danger: 232 93 93; /* #E85D5D */
+  --color-danger-ink: 180 35 24; /* #B42318 */
+  --color-danger-soft: 254 242 242; /* #FEF2F2 */
+}
+
 body {
-  @apply bg-slate-50 text-slate-900;
+  @apply bg-canvas text-ink antialiased;
+}
+
+/* Numeros de KPI, creditos, porcentajes, posiciones y tablas: siempre tabulares (seccion 11 del encargo). */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+*:focus-visible {
+  outline: 2px solid rgb(var(--color-primary));
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

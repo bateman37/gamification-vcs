@@ -33,15 +33,15 @@ export function LimitedFactionClassificationTable({
 
   return (
     <div id="clasificacion-facciones-resultados" className="scroll-mt-6 space-y-3">
-      <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+      <div className="overflow-x-auto rounded-card border border-border bg-surface">
         <table className="w-full text-left text-sm">
-          <thead className="border-b border-slate-200 bg-slate-50 text-slate-600">
+          <thead className="border-b border-border bg-canvas text-text-muted">
             <tr>
-              <th className="sticky left-0 z-10 bg-slate-50 px-3 py-2 font-medium">Pos.</th>
-              <th className="sticky left-10 z-10 bg-slate-50 px-3 py-2 font-medium">Faccion</th>
+              <th className="sticky left-0 z-10 bg-canvas px-3 py-2 font-medium">Pos.</th>
+              <th className="sticky left-10 z-10 bg-canvas px-3 py-2 font-medium">Faccion</th>
               {weeks.map((week) => (
                 <th key={week.splitWeekId} className="px-3 py-2 text-center font-medium">
-                  <Link href={weekHref(week.splitWeekId)} className="underline hover:text-slate-900">
+                  <Link href={weekHref(week.splitWeekId)} className="underline hover:text-ink">
                     S{week.weekSequenceNumber}
                   </Link>
                 </th>
@@ -53,17 +53,17 @@ export function LimitedFactionClassificationTable({
             {accumulated.map((entry) => {
               const isSelf = entry.factionId === selfFactionId;
               return (
-                <tr key={entry.factionId} className={`border-b border-slate-100 ${isSelf ? "bg-amber-50" : ""}`}>
+                <tr key={entry.factionId} className={`border-b border-border ${isSelf ? "bg-reward-soft" : ""}`}>
                   <td className="sticky left-0 z-10 bg-inherit px-3 py-2 font-medium">{entry.rank}</td>
                   <td className="sticky left-10 z-10 bg-inherit px-3 py-2 font-medium">
                     <span className="inline-flex items-center gap-1.5">
-                      <span aria-hidden className="h-3 w-3 rounded-full border border-slate-300" style={{ backgroundColor: entry.color }} />
+                      <span aria-hidden className="h-3 w-3 rounded-full border border-border-strong" style={{ backgroundColor: entry.color }} />
                       {entry.name}
-                      {isSelf && <span className="ml-1 text-xs text-amber-700">(tu faccion)</span>}
+                      {isSelf && <span className="ml-1 text-xs text-reward-ink">(tu faccion)</span>}
                     </span>
                   </td>
                   {weeks.map((week) => (
-                    <td key={week.splitWeekId} className="px-3 py-2 text-center text-slate-600">
+                    <td key={week.splitWeekId} className="px-3 py-2 text-center text-text-muted">
                       {entry.scoreByWeek.get(week.splitWeekId) ?? "—"}
                     </td>
                   ))}
@@ -76,9 +76,9 @@ export function LimitedFactionClassificationTable({
       </div>
 
       {weekEntry && (
-        <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+        <div className="overflow-x-auto rounded-card border border-border bg-surface">
           <table className="w-full text-left text-sm">
-            <thead className="border-b border-slate-200 bg-slate-50 text-slate-600">
+            <thead className="border-b border-border bg-canvas text-text-muted">
               <tr>
                 <th className="px-3 py-2 font-medium">Pos.</th>
                 <th className="px-3 py-2 font-medium">Faccion</th>
@@ -88,15 +88,15 @@ export function LimitedFactionClassificationTable({
             </thead>
             <tbody>
               {weekEntry.entries.map((entry) => (
-                <tr key={entry.factionId} className={`border-b border-slate-100 ${entry.factionId === selfFactionId ? "bg-amber-50" : ""}`}>
+                <tr key={entry.factionId} className={`border-b border-border ${entry.factionId === selfFactionId ? "bg-reward-soft" : ""}`}>
                   <td className="px-3 py-2 font-medium">{entry.weeklyRank}</td>
                   <td className="px-3 py-2">
                     <span className="inline-flex items-center gap-1.5">
-                      <span aria-hidden className="h-3 w-3 rounded-full border border-slate-300" style={{ backgroundColor: entry.color }} />
+                      <span aria-hidden className="h-3 w-3 rounded-full border border-border-strong" style={{ backgroundColor: entry.color }} />
                       {entry.name}
                     </span>
                   </td>
-                  <td className="px-3 py-2 text-slate-600">
+                  <td className="px-3 py-2 text-text-muted">
                     {entry.topContributors.map((contributor) => `${contributor.alias} (${formatPoints(contributor.positionPoints)})`).join(", ")}
                   </td>
                   <td className="px-3 py-2 text-center font-semibold">{formatPoints(entry.weeklyScore)}</td>

@@ -8,7 +8,7 @@ import { ErrorMessage, FieldError, SubmitButton, SuccessMessage } from "@/compon
 function SaveAliasButton() {
   const { pending } = useFormStatus();
   return (
-    <SubmitButton pending={pending} className="bg-slate-700 hover:bg-slate-600">
+    <SubmitButton pending={pending} className="bg-ink/90 hover:bg-ink/80">
       Guardar alias
     </SubmitButton>
   );
@@ -21,7 +21,7 @@ export function ProfileAliasForm({ splitParticipantId, alias }: { splitParticipa
 
   return (
     <form action={formAction} className="space-y-2">
-      <label htmlFor={`alias-${splitParticipantId}`} className="block text-xs font-medium text-slate-600">
+      <label htmlFor={`alias-${splitParticipantId}`} className="block text-xs font-medium text-text-muted">
         Alias en este split
       </label>
       <div className="flex flex-wrap items-start gap-2">
@@ -32,7 +32,7 @@ export function ProfileAliasForm({ splitParticipantId, alias }: { splitParticipa
           required
           maxLength={100}
           defaultValue={alias}
-          className="min-w-0 flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm"
+          className="min-w-0 flex-1 rounded-control border border-border-strong px-3 py-2 text-sm"
         />
         <SaveAliasButton />
       </div>

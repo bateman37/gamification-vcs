@@ -139,6 +139,11 @@ limpia.
   a leer el estado dentro de su propia transaccion serializable, ver
   seccion 10): un boton deshabilitado o una peticion manipulada nunca
   compran con el mercado cerrado.
+- Abrir o cerrar el mercado genera, dentro de la misma transaccion, una
+  unica noticia por participante (nunca una por objeto) con el numero de
+  objetos disponibles, y un unico aviso administrativo (`1.0.0` / MVP-3,
+  ver `docs/NEWS_CENTER.md`). Un `OPEN -> OPEN` o `CLOSED -> CLOSED` (sin
+  cambio real) no genera ninguna noticia.
 
 ## 7. Ranuras de equipo configurables
 
@@ -222,6 +227,11 @@ navegador. Un doble clic o dos compras concurrentes no duplican el objeto
 ni gastan el mismo saldo dos veces: la restriccion unica y el fallo de
 serializacion se traducen en un `DomainError` legible, nunca en un estado
 parcial.
+
+La misma transaccion crea, ademas, la noticia de compra (`1.0.0` / MVP-3,
+categoria `PURCHASE`) con el nombre del objeto, el precio exacto y el
+saldo posterior; si la compra falla, no existe ni compra, ni debito, ni
+noticia (ver `docs/NEWS_CENTER.md`).
 
 ## 11. Inventario permanente
 

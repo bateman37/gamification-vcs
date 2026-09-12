@@ -111,18 +111,18 @@ export default async function SplitDetailPage({ params }: { params: { id: string
             <h1 className="text-xl font-semibold">{split.name}</h1>
             <Badge tone={STATUS_TONE[split.status]}>{SPLIT_STATUS_LABELS[split.status]}</Badge>
           </div>
-          {split.description && <p className="mt-1 text-sm text-slate-600">{split.description}</p>}
-          <p className="mt-1 text-sm text-slate-600">
+          {split.description && <p className="mt-1 text-sm text-text-muted">{split.description}</p>}
+          <p className="mt-1 text-sm text-text-muted">
             Inicio: {formatCalendarDate(split.startDate)} - {split.numberOfWeeks} semanas
           </p>
-          <p className="mt-2 text-sm text-slate-600">
+          <p className="mt-2 text-sm text-text-muted">
             KPI activos: {activeKpiCount} de {TOTAL_KPI_COUNT}.{" "}
-            <a href="#kpi-configuracion" className="underline hover:text-slate-900">
+            <a href="#kpi-configuracion" className="underline hover:text-ink">
               Ir a la configuracion de KPI
             </a>
           </p>
           {activeKpiCount === 0 && (
-            <p className="mt-1 text-sm text-amber-700">
+            <p className="mt-1 text-sm text-reward-ink">
               Este split no tiene ningun KPI activo. Configura al menos uno en la seccion &quot;KPI del
               split&quot;.
             </p>
@@ -133,7 +133,7 @@ export default async function SplitDetailPage({ params }: { params: { id: string
               {canActivate ? (
                 <ActivateSplitButton splitId={split.id} />
               ) : (
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-text-muted">
                   {participants.length === 0 && activeKpiCount === 0
                     ? "Anade al menos un participante y activa al menos un KPI para poder activar el split."
                     : participants.length === 0
@@ -147,9 +147,9 @@ export default async function SplitDetailPage({ params }: { params: { id: string
 
         <section id="calendario-semanas" className="scroll-mt-6 space-y-3">
           <h2 className="text-lg font-semibold">Calendario de semanas</h2>
-          <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+          <div className="overflow-x-auto rounded-card border border-border bg-surface">
             <table className="w-full text-left text-sm">
-              <thead className="border-b border-slate-200 bg-slate-50 text-slate-600">
+              <thead className="border-b border-border bg-canvas text-text-muted">
                 <tr>
                   <th className="px-3 py-2 font-medium">Semana</th>
                   <th className="px-3 py-2 font-medium">Inicio</th>
@@ -167,7 +167,7 @@ export default async function SplitDetailPage({ params }: { params: { id: string
                   const location = locationByWeekId.get(week.id) ?? null;
                   const locationWindow = resolveWeekLocationWindow(now, week, publishedAt !== null);
                   return (
-                    <tr key={week.id} className={`border-b border-slate-100 ${publishedAt ? "bg-sky-50/60" : ""}`}>
+                    <tr key={week.id} className={`border-b border-border ${publishedAt ? "bg-success-soft/60" : ""}`}>
                       <td className="px-3 py-2">{week.sequenceNumber}</td>
                       <td className="px-3 py-2">{formatCalendarDate(week.startDate)}</td>
                       <td className="px-3 py-2">{formatCalendarDate(week.endDate)}</td>
@@ -220,9 +220,9 @@ export default async function SplitDetailPage({ params }: { params: { id: string
 
         <section id="participantes" className="scroll-mt-6 space-y-3">
           <h2 className="text-lg font-semibold">Participantes</h2>
-          <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+          <div className="overflow-x-auto rounded-card border border-border bg-surface">
             <table className="w-full text-left text-sm">
-              <thead className="border-b border-slate-200 bg-slate-50 text-slate-600">
+              <thead className="border-b border-border bg-canvas text-text-muted">
                 <tr>
                   <th className="px-3 py-2 font-medium">Persona</th>
                   <th className="px-3 py-2 font-medium">Alias</th>

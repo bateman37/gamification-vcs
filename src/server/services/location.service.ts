@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { Prisma, PrismaClient, SplitWeekLocation } from "@prisma/client";
 import { DomainError } from "@/lib/errors";
 import { currentCalendarDate } from "@/lib/dates";
@@ -5,6 +6,10 @@ import { resolveWeekLocationWindow, type WeekLocationWindow } from "@/domain/loc
 import { KPI_CATALOG, type KpiCode } from "@/domain/kpis/catalog";
 import type { WeekLocationFormInput } from "@/server/validation/location";
 import { getSplitWeek } from "@/server/services/split.service";
+import { listApplicableParticipantsForWeek } from "@/server/services/participant.service";
+import { createNewsWithDeliveries } from "@/server/services/news.service";
+import { buildNewsActionPath } from "@/domain/news-links";
+import { locationCreatedNewsTemplate, locationUpdatedNewsTemplate, locationDeletedNewsTemplate } from "@/domain/news-templates";
 
 /**
  * Localizaciones semanales (`0.8.5` / MVP-2C, ver docs/WEEKLY_LOCATIONS.md).
@@ -48,11 +53,7 @@ export async function listWeekLocationsForSplit(db: Db, splitId: string): Promis
   return db.splitWeekLocation.findMany({ where: { splitWeek: { splitId } } });
 }
 
-async function assertLocationMutationAllowed(
-  db: Db,
-  splitId: string,
-  weekId: string,
-): Promise<{ splitStatus: string }> {
+async function assertLocationMutationAllowed(db: Db, splitId: string, weekId: string) {
   const split = await getSplitOrThrow(db, splitId);
   if (split.status === "CLOSED") {
     throw new DomainError("No se puede modificar la localizacion de un split cerrado.");
@@ -74,7 +75,29 @@ async function assertLocationMutationAllowed(
     }
     throw new DomainError("Esta semana no admite cambios de localizacion.");
   }
-  return { splitStatus: split.status };
+  return { split, week };
+}
+
+/** Personas aplicables a la semana de la localizacion, para las noticias automaticas (seccion 32 del encargo). */
+async function notifyLocationChangeToApplicableParticipants(
+  db: Db,
+  splitId: string,
+  splitName: string,
+  weekSequenceNumber: number,
+  eventKey: string,
+  category: "LOCATION",
+  text: { title: string; body: string },
+): Promise<void> {
+  const participants = await listApplicableParticipantsForWeek(db, splitId, weekSequenceNumber);
+  if (participants.length === 0) return;
+  await createNewsWithDeliveries(
+    db,
+    { splitId, splitNameSnapshot: splitName, origin: "AUTOMATIC", category, title: text.title, body: text.body, eventKey },
+    participants.map((participant) => ({
+      personId: participant.personId,
+      actionPath: buildNewsActionPath({ kind: "PROFILE", splitParticipantId: participant.id }, "PERSON"),
+    })),
+  );
 }
 
 export async function upsertWeekLocation(
@@ -83,7 +106,7 @@ export async function upsertWeekLocation(
   weekId: string,
   input: WeekLocationFormInput,
 ): Promise<SplitWeekLocation> {
-  await assertLocationMutationAllowed(db, splitId, weekId);
+  const { split, week } = await assertLocationMutationAllowed(db, splitId, weekId);
 
   const kpiConfig = await db.splitKpiConfig.findUnique({
     where: { splitId_kpiCode: { splitId, kpiCode: input.kpiCode } },
@@ -95,25 +118,58 @@ export async function upsertWeekLocation(
     );
   }
 
-  return db.splitWeekLocation.upsert({
-    where: { splitWeekId: weekId },
-    create: {
-      splitWeekId: weekId,
-      name: input.name.trim(),
-      kpiCode: input.kpiCode,
-      bonusPercent: input.bonusPercent,
-    },
-    update: {
-      name: input.name.trim(),
-      kpiCode: input.kpiCode,
-      bonusPercent: input.bonusPercent,
-    },
+  const existing = await db.splitWeekLocation.findUnique({ where: { splitWeekId: weekId } });
+  const name = input.name.trim();
+  // Sin cambios reales: nunca se notifica un upsert identico (seccion 48 del encargo).
+  const isNoop = existing !== null && existing.name === name && existing.kpiCode === input.kpiCode && existing.bonusPercent === input.bonusPercent;
+
+  return db.$transaction(async (tx) => {
+    const location = await tx.splitWeekLocation.upsert({
+      where: { splitWeekId: weekId },
+      create: { splitWeekId: weekId, name, kpiCode: input.kpiCode, bonusPercent: input.bonusPercent },
+      update: { name, kpiCode: input.kpiCode, bonusPercent: input.bonusPercent },
+    });
+
+    if (split.status === "ACTIVE" && !isNoop) {
+      const kpiName = KPI_CATALOG[input.kpiCode].name;
+      const text = existing
+        ? locationUpdatedNewsTemplate({ weekStartDate: week.startDate, name, kpiName, bonusPercent: input.bonusPercent })
+        : locationCreatedNewsTemplate({ weekStartDate: week.startDate, name, kpiName, bonusPercent: input.bonusPercent });
+      await notifyLocationChangeToApplicableParticipants(
+        tx,
+        splitId,
+        split.name,
+        week.sequenceNumber,
+        `location-${existing ? "updated" : "created"}:${location.id}:${randomUUID()}`,
+        "LOCATION",
+        text,
+      );
+    }
+
+    return location;
   });
 }
 
 export async function deleteWeekLocation(db: PrismaClient, splitId: string, weekId: string): Promise<void> {
-  await assertLocationMutationAllowed(db, splitId, weekId);
-  await db.splitWeekLocation.deleteMany({ where: { splitWeekId: weekId } });
+  const { split, week } = await assertLocationMutationAllowed(db, splitId, weekId);
+  const existing = await db.splitWeekLocation.findUnique({ where: { splitWeekId: weekId } });
+  if (!existing) return;
+
+  await db.$transaction(async (tx) => {
+    await tx.splitWeekLocation.deleteMany({ where: { splitWeekId: weekId } });
+
+    if (split.status === "ACTIVE") {
+      await notifyLocationChangeToApplicableParticipants(
+        tx,
+        splitId,
+        split.name,
+        week.sequenceNumber,
+        `location-deleted:${existing.id}`,
+        "LOCATION",
+        locationDeletedNewsTemplate({ weekStartDate: week.startDate, name: existing.name }),
+      );
+    }
+  });
 }
 
 export interface FutureLocationUsage {

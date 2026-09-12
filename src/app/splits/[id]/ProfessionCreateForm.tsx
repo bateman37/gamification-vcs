@@ -16,8 +16,8 @@ export function ProfessionCreateForm({ splitId }: { splitId: string }) {
   const [state, formAction] = useFormState(createWithId, initialActionState);
 
   return (
-    <form action={formAction} className="space-y-3 rounded-lg border border-dashed border-slate-300 bg-white p-4">
-      <h3 className="text-sm font-semibold text-slate-700">Nueva profesion</h3>
+    <form action={formAction} className="space-y-3 rounded-card border border-dashed border-border-strong bg-surface p-4">
+      <h3 className="text-sm font-semibold text-ink">Nueva profesion</h3>
       <ProfessionFormFields idPrefix="profession-new" fieldErrors={state.fieldErrors} />
       <CreateProfessionButton />
       {!state.ok && state.error && <ErrorMessage>{state.error}</ErrorMessage>}

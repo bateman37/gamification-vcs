@@ -48,8 +48,11 @@ cuando se navega desde la interfaz:
   previsualizacion de resultados y la clasificacion detallada) exigen
   `role = ADMIN`; si un `PARTICIPANT` lo intenta, se redirige a
   `/resultados`;
-- `/resultados/*`, `/fichas/*` (`0.8.0` / MVP-2B) y `/cuenta/*` son para
-  cualquier usuario autenticado.
+- `/resultados/*`, `/fichas/*` (`0.8.0` / MVP-2B), `/cuenta/*` y
+  `/noticias/*` (`1.0.0` / MVP-3) son para cualquier usuario autenticado;
+  `/noticias/administrar/*` exige ademas `role = ADMIN` (mismo trato que
+  `/personas`/`/splits`), redirigiendo a `/noticias` si un `PARTICIPANT`
+  lo intenta.
 
 Dentro de paginas y acciones de servidor, `src/lib/session.ts`
 (`requireSession`, `requireAdminSession`) es la segunda capa de defensa: se
@@ -159,15 +162,24 @@ esta entrega: el administrador es quien fija la contrasena temporal.
 | Comprar o equipar en nombre de otro participante | No | No |
 | Editar precio, bonus, ranuras o estado del mercado desde la ficha | No | No |
 | Ver el saldo, inventario o historial de otro participante | No | No |
+| Leer, marcar leida/no leida o archivar su propia noticia | Si | Si |
+| Leer, marcar o archivar una noticia de otro destinatario | No | No |
+| Enviar una noticia manual (`/noticias/administrar`) | Si | No |
+| Ver el historico de envios manuales o el numero de destinatarios | Si | No |
+| Ver quien ha leido una noticia (recibo individual) | No (fuera de alcance) | No |
 
 ## Navegacion segun sesion
 
 - **Administrador:** `Personas`, `Splits` (incluida `Economia y mercado`
-  dentro de cada split, `0.9.0` / MVP-2D), `Resultados`, `Fichas` (solo si
-  su cuenta esta vinculada a una persona), gestion de cuenta/sesion.
-- **Participante:** `Resultados`, `Fichas` (con `Configurar personaje` por
-  cada participacion, `0.9.0` / MVP-2D), gestion de cuenta/sesion.
+  dentro de cada split, `0.9.0` / MVP-2D), `Resultados`, `Noticias`
+  (con envio manual, `1.0.0` / MVP-3), `Fichas` (solo si su cuenta esta
+  vinculada a una persona), gestion de cuenta/sesion.
+- **Participante:** `Noticias`, `Resultados`, `Fichas` (con `Configurar
+  personaje` por cada participacion, `0.9.0` / MVP-2D), gestion de
+  cuenta/sesion.
 - **Sin autenticar:** solo `Login`.
+- El acceso raiz `/` redirige a `/noticias` para cualquier sesion valida
+  (`1.0.0` / MVP-3, ver `docs/NEWS_CENTER.md`).
 
 ## Limitaciones conocidas de esta entrega
 

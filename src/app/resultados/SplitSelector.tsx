@@ -22,7 +22,7 @@ export function SplitSelector({
       <input type="hidden" name="vista" value="por-split" />
       {gamificationMode && <input type="hidden" name="gamificacion" value={gamificationMode} />}
       <div>
-        <label htmlFor="split" className="block text-xs font-medium text-slate-600">
+        <label htmlFor="split" className="block text-xs font-medium text-text-muted">
           Split
         </label>
         <select
@@ -30,7 +30,7 @@ export function SplitSelector({
           name="split"
           defaultValue={selectedSplitId ?? ""}
           onChange={() => formRef.current?.requestSubmit()}
-          className="mt-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+          className="mt-1 rounded-control border border-border-strong px-2 py-1.5 text-sm"
         >
           {splits.map((split) => (
             <option key={split.splitId} value={split.splitId}>

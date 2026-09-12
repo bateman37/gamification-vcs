@@ -12,6 +12,7 @@ import {
 } from "@/domain/kpis/apprentice";
 import type { LoadCoverageStatus } from "@/domain/kpis/loadGroups";
 import { parseNonNegativeNumberDefaultZero, ManualEntryValidationError, type ManualEntryFieldError } from "@/server/validation/manual-entry";
+import { notifyIfWeekReadyToReview } from "@/server/services/news-week-ready.service";
 
 /**
  * Entrada manual semanal de Aprendiz experto (`EXPERT_APPRENTICE`, ver
@@ -109,14 +110,16 @@ export async function saveApprenticeEntries(db: PrismaClient, splitId: string, w
 
   await db.$transaction(async (tx) => {
     await tx.apprenticeWeeklyEntry.deleteMany({ where: { splitWeekId: resolvedWeekId } });
-    if (rows.length === 0) return;
-    await tx.apprenticeWeeklyEntry.createMany({
-      data: rows.map((row) => ({
-        splitWeekId: resolvedWeekId,
-        splitParticipantId: row.splitParticipantId,
-        completedTrainings: row.completedTrainings,
-      })),
-    });
+    if (rows.length > 0) {
+      await tx.apprenticeWeeklyEntry.createMany({
+        data: rows.map((row) => ({
+          splitWeekId: resolvedWeekId,
+          splitParticipantId: row.splitParticipantId,
+          completedTrainings: row.completedTrainings,
+        })),
+      });
+    }
+    await notifyIfWeekReadyToReview(tx, splitId, resolvedWeekId);
   });
 }
 

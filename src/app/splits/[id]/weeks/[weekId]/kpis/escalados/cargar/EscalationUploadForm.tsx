@@ -25,7 +25,7 @@ function ConfirmSubmit({ confirmFormAction, label }: { confirmFormAction: (formD
       type="submit"
       formAction={confirmFormAction}
       disabled={pending}
-      className="rounded-md bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800 disabled:cursor-not-allowed disabled:opacity-60"
+      className="rounded-control bg-success px-4 py-2 text-sm font-medium text-white hover:bg-success/90 disabled:cursor-not-allowed disabled:opacity-60"
     >
       {pending ? "Guardando..." : label}
     </button>
@@ -49,28 +49,28 @@ function formatRawOutcome(outcome: EscalationTamerOutcomeView | null): string {
 
 function PreviewSummary({ preview, weekId, splitId }: { preview: EscalationPreview; weekId: string; splitId: string }) {
   return (
-    <div className="space-y-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
+    <div className="space-y-4 rounded-card border border-border bg-canvas p-4">
       <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
         <div>
-          <dt className="text-xs font-medium text-slate-500">Archivo</dt>
+          <dt className="text-xs font-medium text-text-muted">Archivo</dt>
           <dd>{preview.originalFilename}</dd>
         </div>
         <div>
-          <dt className="text-xs font-medium text-slate-500">Filas fuente</dt>
+          <dt className="text-xs font-medium text-text-muted">Filas fuente</dt>
           <dd>{preview.sourceRowCount}</dd>
         </div>
         <div>
-          <dt className="text-xs font-medium text-slate-500">Encontradas</dt>
+          <dt className="text-xs font-medium text-text-muted">Encontradas</dt>
           <dd>{preview.found.length}</dd>
         </div>
         <div>
-          <dt className="text-xs font-medium text-slate-500">Ignoradas</dt>
+          <dt className="text-xs font-medium text-text-muted">Ignoradas</dt>
           <dd>{preview.ignoredRows.length}</dd>
         </div>
       </div>
 
       {preview.existingImport && (
-        <p className="text-sm text-amber-700">
+        <p className="text-sm text-reward-ink">
           Ya existe una carga de Escalados para esta semana ({preview.existingImport.originalFilename},{" "}
           {preview.existingImport.importedRowCount} filas). Confirmar la sustituira por completo.
         </p>
@@ -88,8 +88,8 @@ function PreviewSummary({ preview, weekId, splitId }: { preview: EscalationPrevi
 
       {preview.missingParticipants.length > 0 && (
         <div className="text-sm">
-          <p className="font-medium text-slate-700">Participantes aplicables sin dato:</p>
-          <ul className="mt-1 list-disc pl-4 text-slate-600">
+          <p className="font-medium text-ink">Participantes aplicables sin dato:</p>
+          <ul className="mt-1 list-disc pl-4 text-text-muted">
             {preview.missingParticipants.map((participant) => (
               <li key={participant.participantId}>
                 {participant.alias} ({participant.fullName})
@@ -101,8 +101,8 @@ function PreviewSummary({ preview, weekId, splitId }: { preview: EscalationPrevi
 
       {preview.ambiguousRows.length > 0 && (
         <div className="text-sm">
-          <p className="font-medium text-slate-700">Filas ambiguas:</p>
-          <ul className="mt-1 list-disc pl-4 text-slate-600">
+          <p className="font-medium text-ink">Filas ambiguas:</p>
+          <ul className="mt-1 list-disc pl-4 text-text-muted">
             {preview.ambiguousRows.map((row) => (
               <li key={row.rowNumber}>
                 Fila {row.rowNumber} ({row.sourceAgentName}): podria ser {row.candidateAliases.join(", ")}
@@ -114,8 +114,8 @@ function PreviewSummary({ preview, weekId, splitId }: { preview: EscalationPrevi
 
       {preview.ignoredRows.length > 0 && (
         <div className="text-sm">
-          <p className="font-medium text-slate-700">Filas ignoradas (no pertenecen al split):</p>
-          <ul className="mt-1 list-disc pl-4 text-slate-600">
+          <p className="font-medium text-ink">Filas ignoradas (no pertenecen al split):</p>
+          <ul className="mt-1 list-disc pl-4 text-text-muted">
             {preview.ignoredRows.map((row) => (
               <li key={row.rowNumber}>
                 Fila {row.rowNumber}: {row.sourceAgentName}
@@ -126,9 +126,9 @@ function PreviewSummary({ preview, weekId, splitId }: { preview: EscalationPrevi
       )}
 
       {preview.found.length > 0 && (
-        <div className="overflow-x-auto rounded-md border border-slate-200 bg-white">
+        <div className="overflow-x-auto rounded-card border border-border bg-surface">
           <table className="w-full text-left text-sm">
-            <thead className="border-b border-slate-200 bg-slate-100 text-slate-600">
+            <thead className="border-b border-border bg-surface-muted text-text-muted">
               <tr>
                 <th className="px-3 py-2 font-medium">Nombre fuente</th>
                 <th className="px-3 py-2 font-medium">Alias</th>
@@ -142,7 +142,7 @@ function PreviewSummary({ preview, weekId, splitId }: { preview: EscalationPrevi
             </thead>
             <tbody>
               {preview.found.map((row) => (
-                <tr key={row.participantId} className="border-b border-slate-100">
+                <tr key={row.participantId} className="border-b border-border">
                   <td className="px-3 py-2">{row.sourceAgentName}</td>
                   <td className="px-3 py-2">{row.alias}</td>
                   <td className="px-3 py-2">{row.level}</td>
@@ -152,7 +152,7 @@ function PreviewSummary({ preview, weekId, splitId }: { preview: EscalationPrevi
                     <td className="px-3 py-2">
                       {formatRawOutcome(row.escalationTamer)} / {formatOutcome(row.escalationTamer)}
                       {row.escalationTamer?.status === "computed" && row.escalationTamer.capped && (
-                        <span className="ml-1 text-xs text-amber-700">(maximo aplicado)</span>
+                        <span className="ml-1 text-xs text-reward-ink">(maximo aplicado)</span>
                       )}
                     </td>
                   )}
@@ -165,7 +165,7 @@ function PreviewSummary({ preview, weekId, splitId }: { preview: EscalationPrevi
 
       <Link
         href={`/splits/${splitId}/weeks/${weekId}/kpis`}
-        className="inline-block text-sm text-slate-600 underline hover:text-slate-900"
+        className="inline-block text-sm text-text-muted underline hover:text-ink"
       >
         Volver a la lista de cargas
       </Link>
@@ -191,7 +191,7 @@ export function EscalationUploadForm({ splitId, weekId }: { splitId: string; wee
         <SuccessMessage>Carga de Escalados confirmada correctamente.</SuccessMessage>
         <Link
           href={`/splits/${splitId}/weeks/${weekId}/kpis/escalados/comprobar`}
-          className="inline-block text-sm text-slate-600 underline hover:text-slate-900"
+          className="inline-block text-sm text-text-muted underline hover:text-ink"
         >
           Ir a Comprobar
         </Link>
@@ -202,9 +202,9 @@ export function EscalationUploadForm({ splitId, weekId }: { splitId: string; wee
   const preview = analyzeState.preview;
 
   return (
-    <form action={analyzeFormAction} className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
+    <form action={analyzeFormAction} className="space-y-4 rounded-card border border-border bg-surface p-4">
       <div>
-        <label htmlFor="file" className="block text-sm font-medium text-slate-700">
+        <label htmlFor="file" className="block text-sm font-medium text-ink">
           Archivo Excel (.xlsx)
         </label>
         <input
@@ -213,7 +213,7 @@ export function EscalationUploadForm({ splitId, weekId }: { splitId: string; wee
           type="file"
           accept=".xlsx"
           required
-          className="mt-1 block w-full text-sm text-slate-700"
+          className="mt-1 block w-full text-sm text-ink"
         />
       </div>
 

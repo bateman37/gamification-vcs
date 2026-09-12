@@ -49,7 +49,7 @@ export default async function ResultadosPage({
     <div className="space-y-6">
       <div>
         <h1 className="text-xl font-semibold">Resultados</h1>
-        <p className="text-sm text-slate-600">Evolucion y clasificacion a partir de las semanas publicadas.</p>
+        <p className="text-sm text-text-muted">Evolucion y clasificacion a partir de las semanas publicadas.</p>
       </div>
 
       {isAdmin && <PersonSelector persons={persons} selectedPersonId={personId} gamificationMode={gamificationMode} />}
@@ -58,17 +58,17 @@ export default async function ResultadosPage({
         <EmptyState>Selecciona una persona para consultar sus resultados.</EmptyState>
       ) : (
         <>
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-3">
-            <nav className="flex gap-4 text-sm font-medium text-slate-600">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3">
+            <nav className="flex gap-4 text-sm font-medium text-text-muted">
               <Link
                 href={buildTabHref("por-split", personId, isAdmin, gamificationMode)}
-                className={`-mb-px border-b-2 px-1 py-2 ${vista === "por-split" ? "border-slate-900 text-slate-900" : "border-transparent hover:text-slate-900"}`}
+                className={`-mb-px border-b-2 px-1 py-2 ${vista === "por-split" ? "border-ink text-ink" : "border-transparent hover:text-ink"}`}
               >
                 Por split
               </Link>
               <Link
                 href={buildTabHref("historico", personId, isAdmin, gamificationMode)}
-                className={`-mb-px border-b-2 px-1 py-2 ${vista === "historico" ? "border-slate-900 text-slate-900" : "border-transparent hover:text-slate-900"}`}
+                className={`-mb-px border-b-2 px-1 py-2 ${vista === "historico" ? "border-ink text-ink" : "border-transparent hover:text-ink"}`}
               >
                 Historico general
               </Link>

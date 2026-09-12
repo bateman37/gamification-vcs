@@ -1,8 +1,51 @@
 # Changelog
 
 Formato inspirado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/).
-Este proyecto usa versionado `0.x` mientras se construye el nucleo
-funcional; la primera version publicada es `0.1.0`.
+La primera version publicada es `0.1.0`; `1.0.0` cierra la primera version
+estable del producto (nucleo funcional y las cuatro capas de juego, mas
+comunicacion y renovacion visual).
+
+## [1.0.0] - MVP-3 — Centro de noticias y renovacion visual
+
+### Anadido
+
+- **Centro de noticias interno** (`NewsItem`/`NewsDelivery`,
+  migracion `20260912143314_add_news_center`): bandeja privada
+  `/noticias` para cualquier usuario autenticado (pestañas `Todas`/`No
+  leídas`/`Archivadas`, filtro de split y categoria, paginacion por
+  cursor de 20), campana global con contador (`99+`) y vista previa de
+  las cinco mas recientes, acciones de leer/no leer/archivar/restaurar y
+  "marcar todas como leidas".
+- **Noticias automaticas** generadas desde los servicios de negocio reales
+  dentro de la misma transaccion que el hecho que notifican: alta de
+  participante, activacion de split, facciones (reasignada/renombrada),
+  profesion elegida/cambiada, localizaciones (solo en split `ACTIVE`),
+  mercado abierto/cerrado, compra completada y publicacion semanal (un
+  unico resumen personalizado por participante, mas los avisos
+  administrativos de "semana lista para revisar", "semana publicada" y
+  "proxima localizacion pendiente"). Claves idempotentes que impiden
+  duplicados por reintento o carrera; sin backfill historico.
+- **Envio manual segmentado** (`/noticias/administrar`, solo `ADMIN`): todo
+  el split, una faccion o una persona, con prioridad normal/importante,
+  destino cerrado (sin enlace, Resultados, Ficha o Mercado), previsualizacion
+  del numero de destinatarios, historico de envios (sin recibos
+  individuales de lectura) y proteccion de doble envio por clave de
+  idempotencia.
+- **Sistema visual "Prisma competitivo"**: paleta y tipografia
+  centralizadas en tokens semanticos (`tailwind.config.ts`,
+  `src/app/globals.css`, tipografia `Inter` autoalojada), sistema de
+  componentes ampliado (`src/components/ui.tsx`: `Button`/`LinkButton`/
+  `IconButton` con variantes, `Card`/`StatCard`, `PageHeader`/
+  `SectionHeader`, `Alert`, `TableContainer`, `Skeleton`...), app shell
+  con barra lateral en escritorio y cabecera+menu en movil
+  (`src/components/AppShell.tsx`), marca abstracta en SVG (`BrandMark.tsx`).
+  Aplicado a toda la aplicacion existente sin alterar ninguna regla de
+  negocio, ruta ni formula.
+- El acceso raiz `/` redirige a `/noticias` para cualquier usuario
+  autenticado.
+- Dependencia nueva: `lucide-react` (iconografia estructural).
+
+Detalle completo en `docs/NEWS_CENTER.md` y `docs/DESIGN_SYSTEM.md`.
 
 ## [0.9.0] - MVP-2D — Economia, inventario y equipo
 

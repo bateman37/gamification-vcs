@@ -28,11 +28,11 @@ export function LoginForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
+    <form onSubmit={handleSubmit} className="space-y-4 rounded-card border border-border bg-surface p-4">
       {error && <ErrorMessage>{error}</ErrorMessage>}
 
       <div>
-        <label htmlFor="email" className="block text-sm font-medium text-slate-700">
+        <label htmlFor="email" className="block text-sm font-medium text-ink">
           Correo
         </label>
         <input
@@ -42,12 +42,12 @@ export function LoginForm() {
           autoComplete="username"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
-          className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+          className="mt-1 w-full rounded-control border border-border-strong px-3 py-2 text-sm"
         />
       </div>
 
       <div>
-        <label htmlFor="password" className="block text-sm font-medium text-slate-700">
+        <label htmlFor="password" className="block text-sm font-medium text-ink">
           Contrasena
         </label>
         <input
@@ -57,14 +57,14 @@ export function LoginForm() {
           autoComplete="current-password"
           value={password}
           onChange={(event) => setPassword(event.target.value)}
-          className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+          className="mt-1 w-full rounded-control border border-border-strong px-3 py-2 text-sm"
         />
       </div>
 
       <button
         type="submit"
         disabled={pending}
-        className="w-full rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+        className="w-full rounded-control bg-ink px-4 py-2 text-sm font-medium text-white hover:bg-ink/90 disabled:cursor-not-allowed disabled:opacity-60"
       >
         {pending ? "Entrando..." : "Entrar"}
       </button>

@@ -7,6 +7,7 @@ import { toKpiConfigView, type KpiConfigView } from "@/domain/kpis/mapping";
 import { resolveStarWriterOutcome, toStarWriterOutcomeView, type StarWriterOutcomeView } from "@/domain/kpis/writer";
 import type { LoadCoverageStatus } from "@/domain/kpis/loadGroups";
 import { parseNonNegativeNumberDefaultZero, ManualEntryValidationError, type ManualEntryFieldError } from "@/server/validation/manual-entry";
+import { notifyIfWeekReadyToReview } from "@/server/services/news-week-ready.service";
 
 /**
  * Entrada manual semanal de Redactor estrella (`STAR_WRITER`, ver
@@ -95,16 +96,18 @@ export async function saveWriterEntries(db: PrismaClient, splitId: string, weekI
 
   await db.$transaction(async (tx) => {
     await tx.writerWeeklyEntry.deleteMany({ where: { splitWeekId: resolvedWeekId } });
-    if (rows.length === 0) return;
-    await tx.writerWeeklyEntry.createMany({
-      data: rows.map((row) => ({
-        splitWeekId: resolvedWeekId,
-        splitParticipantId: row.splitParticipantId,
-        deliveredArticles: row.deliveredArticles,
-        undeliveredArticles: row.undeliveredArticles,
-        proposedArticles: row.proposedArticles,
-      })),
-    });
+    if (rows.length > 0) {
+      await tx.writerWeeklyEntry.createMany({
+        data: rows.map((row) => ({
+          splitWeekId: resolvedWeekId,
+          splitParticipantId: row.splitParticipantId,
+          deliveredArticles: row.deliveredArticles,
+          undeliveredArticles: row.undeliveredArticles,
+          proposedArticles: row.proposedArticles,
+        })),
+      });
+    }
+    await notifyIfWeekReadyToReview(tx, splitId, resolvedWeekId);
   });
 }
 

@@ -25,11 +25,11 @@ export function GamificationToggle({
 
   function optionClass(value: GamificationMode): string {
     const active = mode === value;
-    return `rounded-md px-3 py-1.5 text-sm font-medium ${active ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100"}`;
+    return `rounded-control px-3 py-1.5 text-sm font-medium ${active ? "bg-ink text-white" : "text-text-muted hover:bg-surface-muted"}`;
   }
 
   return (
-    <div role="group" aria-label="Modo de visualizacion de resultados" className="inline-flex gap-1 rounded-lg border border-slate-300 bg-white p-1">
+    <div role="group" aria-label="Modo de visualizacion de resultados" className="inline-flex gap-1 rounded-card border border-border-strong bg-surface p-1">
       <Link href={hrefFor("con")} aria-current={mode === "con" ? "true" : undefined} className={optionClass("con")}>
         Con gamificacion
       </Link>

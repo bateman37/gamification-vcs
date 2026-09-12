@@ -25,13 +25,13 @@ export function ManualEntrySuccessPanel({
     <div className="space-y-3">
       <SuccessMessage>{message}</SuccessMessage>
       <div className="flex flex-wrap gap-4 text-sm">
-        <a href={comprobarHref} className="underline hover:text-slate-900">
+        <a href={comprobarHref} className="underline hover:text-ink">
           Ir a Comprobar
         </a>
-        <a href={introducirHref} className="underline hover:text-slate-900">
+        <a href={introducirHref} className="underline hover:text-ink">
           Volver a introducir datos
         </a>
-        <a href={backHref} className="underline hover:text-slate-900">
+        <a href={backHref} className="underline hover:text-ink">
           Volver a las cargas de la semana
         </a>
       </div>

@@ -27,9 +27,9 @@ export function PersonEditRow({
 
   if (!editing) {
     return (
-      <tr className="border-b border-slate-100">
+      <tr className="border-b border-border">
         <td className="px-3 py-2">{person.fullName}</td>
-        <td className="px-3 py-2 text-slate-500">{person.email ?? "-"}</td>
+        <td className="px-3 py-2 text-text-muted">{person.email ?? "-"}</td>
         <td className="px-3 py-2 text-center">{person.participationCount}</td>
         <td className="px-3 py-2">
           <PersonAccountCell personId={person.id} account={account} />
@@ -38,7 +38,7 @@ export function PersonEditRow({
           <button
             type="button"
             onClick={() => setEditing(true)}
-            className="text-sm font-medium text-slate-700 underline hover:text-slate-900"
+            className="text-sm font-medium text-ink underline hover:text-ink"
           >
             Editar
           </button>
@@ -48,26 +48,26 @@ export function PersonEditRow({
   }
 
   return (
-    <tr className="border-b border-slate-100 bg-slate-50">
+    <tr className="border-b border-border bg-canvas">
       <td colSpan={5} className="px-3 py-3">
         <form action={formAction} className="flex flex-wrap items-start gap-3">
           <div>
-            <label className="block text-xs font-medium text-slate-600">Nombre completo</label>
+            <label className="block text-xs font-medium text-text-muted">Nombre completo</label>
             <input
               name="fullName"
               defaultValue={person.fullName}
               required
-              className="mt-1 rounded-md border border-slate-300 px-2 py-1 text-sm"
+              className="mt-1 rounded-control border border-border-strong px-2 py-1 text-sm"
             />
             <FieldError message={state.fieldErrors?.fullName} />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-600">Correo</label>
+            <label className="block text-xs font-medium text-text-muted">Correo</label>
             <input
               name="email"
               type="email"
               defaultValue={person.email ?? ""}
-              className="mt-1 rounded-md border border-slate-300 px-2 py-1 text-sm"
+              className="mt-1 rounded-control border border-border-strong px-2 py-1 text-sm"
             />
             <FieldError message={state.fieldErrors?.email} />
           </div>
@@ -76,7 +76,7 @@ export function PersonEditRow({
             <button
               type="button"
               onClick={() => setEditing(false)}
-              className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="rounded-control border border-border-strong px-3 py-2 text-sm"
             >
               Cancelar
             </button>

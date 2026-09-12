@@ -27,11 +27,11 @@ export function ChangePasswordForm() {
   }
 
   return (
-    <form action={formAction} className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
+    <form action={formAction} className="space-y-4 rounded-card border border-border bg-surface p-4">
       {!state.ok && state.error && <ErrorMessage>{state.error}</ErrorMessage>}
 
       <div>
-        <label htmlFor="currentPassword" className="block text-sm font-medium text-slate-700">
+        <label htmlFor="currentPassword" className="block text-sm font-medium text-ink">
           Contrasena actual
         </label>
         <input
@@ -40,12 +40,12 @@ export function ChangePasswordForm() {
           type="password"
           required
           autoComplete="current-password"
-          className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+          className="mt-1 w-full rounded-control border border-border-strong px-3 py-2 text-sm"
         />
       </div>
 
       <div>
-        <label htmlFor="newPassword" className="block text-sm font-medium text-slate-700">
+        <label htmlFor="newPassword" className="block text-sm font-medium text-ink">
           Nueva contrasena
         </label>
         <input
@@ -55,12 +55,12 @@ export function ChangePasswordForm() {
           required
           minLength={8}
           autoComplete="new-password"
-          className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+          className="mt-1 w-full rounded-control border border-border-strong px-3 py-2 text-sm"
         />
       </div>
 
       <div>
-        <label htmlFor="confirmPassword" className="block text-sm font-medium text-slate-700">
+        <label htmlFor="confirmPassword" className="block text-sm font-medium text-ink">
           Confirmar nueva contrasena
         </label>
         <input
@@ -70,7 +70,7 @@ export function ChangePasswordForm() {
           required
           minLength={8}
           autoComplete="new-password"
-          className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+          className="mt-1 w-full rounded-control border border-border-strong px-3 py-2 text-sm"
         />
       </div>
 

@@ -27,11 +27,11 @@ export default async function StudentCheckPage({ params }: { params: { id: strin
   return (
     <div className="space-y-6">
       <div>
-        <Link href={backHref} className="text-sm text-slate-600 underline hover:text-slate-900">
+        <Link href={backHref} className="text-sm text-text-muted underline hover:text-ink">
           Volver a las cargas de la semana
         </Link>
         <h1 className="mt-2 text-xl font-semibold">Comprobar Estudiante entusiasta</h1>
-        <p className="mt-1 text-sm text-slate-600">
+        <p className="mt-1 text-sm text-text-muted">
           {split.name} - Semana {week.sequenceNumber} ({formatCalendarDate(week.startDate)} a{" "}
           {formatCalendarDate(week.endDate)})
         </p>
@@ -40,9 +40,9 @@ export default async function StudentCheckPage({ params }: { params: { id: strin
       {view.rows.length === 0 ? (
         <EmptyState>No hay participantes aplicables en esta semana.</EmptyState>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+        <div className="overflow-x-auto rounded-card border border-border bg-surface">
           <table className="w-full text-left text-sm">
-            <thead className="border-b border-slate-200 bg-slate-50 text-slate-600">
+            <thead className="border-b border-border bg-canvas text-text-muted">
               <tr>
                 <th className="px-3 py-2 font-medium">Alias</th>
                 <th className="px-3 py-2 font-medium">Nombre real</th>
@@ -53,7 +53,7 @@ export default async function StudentCheckPage({ params }: { params: { id: strin
             </thead>
             <tbody>
               {view.rows.map((row) => (
-                <tr key={row.participantId} className="border-b border-slate-100">
+                <tr key={row.participantId} className="border-b border-border">
                   <td className="px-3 py-2">{row.alias}</td>
                   <td className="px-3 py-2">{row.fullName}</td>
                   <td className="px-3 py-2">{row.level}</td>
@@ -69,14 +69,14 @@ export default async function StudentCheckPage({ params }: { params: { id: strin
       {split.status === "ACTIVE" && (
         <Link
           href={`/splits/${split.id}/weeks/${week.id}/kpis/dedicacion/introducir`}
-          className="block text-sm text-slate-600 underline hover:text-slate-900"
+          className="block text-sm text-text-muted underline hover:text-ink"
         >
           Actualizar datos
         </Link>
       )}
       <Link
         href={`/splits/${split.id}#kpi-configuracion`}
-        className="block text-sm text-slate-600 underline hover:text-slate-900"
+        className="block text-sm text-text-muted underline hover:text-ink"
       >
         Ir a la configuracion de KPI
       </Link>
