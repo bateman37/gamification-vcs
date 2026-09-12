@@ -22,7 +22,7 @@ export function KpiConfigSection({
   const readOnly = splitStatus === "CLOSED" || locked;
 
   return (
-    <section id="kpi-configuracion" className="scroll-mt-6 space-y-3">
+    <section id="kpi-configuracion" className="scroll-mt-20 space-y-3">
       <h2 className="text-lg font-semibold">KPI del split</h2>
       {splitStatus === "CLOSED" ? (
         <p className="text-sm text-text-muted">

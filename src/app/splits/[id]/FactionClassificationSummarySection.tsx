@@ -14,7 +14,7 @@ export function FactionClassificationSummarySection({
   const { weeks, accumulated, hasFactionData } = classification;
 
   return (
-    <section id="clasificacion-general-facciones" className="scroll-mt-6 space-y-3">
+    <section id="clasificacion-general-facciones" className="scroll-mt-20 space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-semibold">Clasificacion general facciones</h2>
         {hasFactionData && (
