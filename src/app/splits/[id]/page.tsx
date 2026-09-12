@@ -90,18 +90,25 @@ export default async function SplitDetailPage({ params }: { params: { id: string
   const showAddParticipant = split.status !== "CLOSED";
 
   const navItems: SplitDetailNavItem[] = [
-    { href: "#resumen", label: "Resumen", icon: "ClipboardList" },
-    { href: "#calendario-semanas", label: "Calendario de semanas", icon: "Calendar" },
-    { href: "#clasificacion-general-individual", label: "Clasificación general individual", icon: "Trophy" },
-    { href: "#clasificacion-general-facciones", label: "Clasificación general facciones", icon: "Award" },
-    { href: "#facciones", label: "Facciones", icon: "Flag" },
-    { href: "#profesiones", label: "Profesiones", icon: "Briefcase" },
-    { href: "#economia", label: "Economía y mercado", icon: "Store" },
-    { href: "#participantes", label: "Participantes", icon: "Users" },
-    ...(showAddParticipant ? [{ href: "#anadir-participante", label: "Añadir participante", icon: "UserPlus" }] : []),
-    { href: "#kpi-configuracion", label: "KPI del split", icon: "SlidersHorizontal" },
-    { href: "#puntos-posicion", label: "Puntos por posición semanal", icon: "ListOrdered" },
-    ...(split.status === "DRAFT" ? [{ href: "#editar-split", label: "Editar split", icon: "Settings" }] : []),
+    { type: "section", href: "#resumen", label: "Resumen", icon: "ClipboardList" },
+    { type: "section", href: "#calendario-semanas", label: "Calendario de semanas", icon: "Calendar" },
+    // Enlace de ruta real (`1.0.2`), no un ancla de la misma pagina: nunca participa
+    // en el IntersectionObserver ni en el resaltado por hash (ver SplitDetailNav.tsx).
+    { type: "route", href: `/splits/${split.id}/presentacion-resultados`, label: "Presentar resultados", icon: "Play" },
+    { type: "section", href: "#clasificacion-general-individual", label: "Clasificación general individual", icon: "Trophy" },
+    { type: "section", href: "#clasificacion-general-facciones", label: "Clasificación general facciones", icon: "Award" },
+    { type: "section", href: "#facciones", label: "Facciones", icon: "Flag" },
+    { type: "section", href: "#profesiones", label: "Profesiones", icon: "Briefcase" },
+    { type: "section", href: "#economia", label: "Economía y mercado", icon: "Store" },
+    { type: "section", href: "#participantes", label: "Participantes", icon: "Users" },
+    ...(showAddParticipant
+      ? [{ type: "section" as const, href: "#anadir-participante", label: "Añadir participante", icon: "UserPlus" }]
+      : []),
+    { type: "section", href: "#kpi-configuracion", label: "KPI del split", icon: "SlidersHorizontal" },
+    { type: "section", href: "#puntos-posicion", label: "Puntos por posición semanal", icon: "ListOrdered" },
+    ...(split.status === "DRAFT"
+      ? [{ type: "section" as const, href: "#editar-split", label: "Editar split", icon: "Settings" }]
+      : []),
   ];
 
   return (

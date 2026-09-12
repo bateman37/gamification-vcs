@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Icon } from "@/components/Icon";
 import type { SplitDetailNavItem } from "./SplitDetailNav";
 
@@ -36,14 +37,25 @@ export function SplitDetailMobileNav({ items }: { items: SplitDetailNavItem[] })
         >
           {items.map((item) => (
             <li key={item.href} className="border-b border-border last:border-b-0">
-              <a
-                href={item.href}
-                onClick={() => setOpen(false)}
-                className="flex items-center gap-2 px-3 py-2 text-sm text-ink hover:bg-surface-muted"
-              >
-                <Icon name={item.icon} className="h-4 w-4 shrink-0" />
-                {item.label}
-              </a>
+              {item.type === "route" ? (
+                <Link
+                  href={item.href}
+                  onClick={() => setOpen(false)}
+                  className="flex items-center gap-2 px-3 py-2 text-sm text-ink hover:bg-surface-muted"
+                >
+                  <Icon name={item.icon} className="h-4 w-4 shrink-0" />
+                  {item.label}
+                </Link>
+              ) : (
+                <a
+                  href={item.href}
+                  onClick={() => setOpen(false)}
+                  className="flex items-center gap-2 px-3 py-2 text-sm text-ink hover:bg-surface-muted"
+                >
+                  <Icon name={item.icon} className="h-4 w-4 shrink-0" />
+                  {item.label}
+                </a>
+              )}
             </li>
           ))}
         </ul>
