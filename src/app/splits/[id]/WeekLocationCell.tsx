@@ -31,7 +31,7 @@ export function WeekLocationCell({
           </span>
         </div>
       ) : (
-        <span className="text-xs text-text-muted">Sin localizacion</span>
+        <span className="text-xs text-text-muted">Sin localización</span>
       )}
 
       <div className="flex flex-wrap items-center gap-1.5">

@@ -22,7 +22,7 @@ export function FactionWeeklyPreviewTable({ rows }: { rows: FactionWeeklyPreview
             <tr>
               <th className="px-3 py-2 font-medium">Pos.</th>
               <th className="px-3 py-2 font-medium">Facción</th>
-              <th className="px-3 py-2 font-medium">Top 3 (Renombre = puntos por posicion)</th>
+              <th className="px-3 py-2 font-medium">Top 3 (Renombre = puntos por posición)</th>
               <th className="px-3 py-2 text-center font-medium">Suma</th>
             </tr>
           </thead>

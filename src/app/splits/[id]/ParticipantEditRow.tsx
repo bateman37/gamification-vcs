@@ -150,7 +150,7 @@ export function ParticipantEditRow({
                 className="mt-1 rounded-control border border-border-strong px-2 py-1 text-sm"
               >
                 <option value="" disabled>
-                  Selecciona una faccion
+                  Selecciona una facción
                 </option>
                 {factions.map((faction) => (
                   <option key={faction.id} value={faction.id}>

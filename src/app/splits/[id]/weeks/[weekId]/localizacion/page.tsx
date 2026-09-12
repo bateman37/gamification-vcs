@@ -77,14 +77,14 @@ export default async function WeekLocationPage({ params }: { params: { id: strin
               <p className="text-text-muted">Bonus para todos los participantes: {locationBonusLabel(location.bonusPercent)}</p>
             </>
           ) : (
-            <p className="text-text-muted">Esta semana no tiene localizacion.</p>
+            <p className="text-text-muted">Esta semana no tiene localización.</p>
           )}
           <p className="text-xs text-text-muted">
             {window.status === "PUBLICADA"
-              ? "Esta semana ya esta publicada: su localizacion es de solo lectura."
+              ? "Esta semana ya está publicada: su localización es de solo lectura."
               : split.status === "CLOSED"
-                ? "Este split esta cerrado: su localizacion es de solo lectura."
-                : "Esta semana ya ha comenzado: su localizacion ya no se puede crear, editar ni eliminar."}
+                ? "Este split está cerrado: su localización es de solo lectura."
+                : "Esta semana ya ha comenzado: su localización ya no se puede crear, editar ni eliminar."}
           </p>
         </div>
       )}

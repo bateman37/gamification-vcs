@@ -133,7 +133,7 @@ export default async function WeeklyKpisPage({
                 </p>
               </>
             ) : (
-              <p className="text-sm text-text-muted">Esta semana no tiene localizacion.</p>
+              <p className="text-sm text-text-muted">Esta semana no tiene localización.</p>
             )}
           </div>
           <div className="flex items-center gap-2">

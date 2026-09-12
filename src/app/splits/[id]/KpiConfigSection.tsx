@@ -73,9 +73,9 @@ export function KpiConfigSection({
           {!readOnly && <SaveAllKpiButton />}
         </div>
         {splitStatus === "CLOSED" ? (
-          <p className="text-sm text-text-muted">El split esta cerrado: la configuracion de KPI se muestra en modo solo lectura.</p>
+          <p className="text-sm text-text-muted">El split está cerrado: la configuración de KPI se muestra en modo solo lectura.</p>
         ) : (
-          locked && <p className="text-sm text-reward-ink">La configuracion quedo bloqueada al publicar la primera semana del split.</p>
+          locked && <p className="text-sm text-reward-ink">La configuración quedó bloqueada al publicar la primera semana del split.</p>
         )}
         {!bulkState.ok && bulkState.error && <ErrorMessage>{bulkState.error}</ErrorMessage>}
         {bulkState.ok && <SuccessMessage>Todos los KPI se han guardado correctamente.</SuccessMessage>}

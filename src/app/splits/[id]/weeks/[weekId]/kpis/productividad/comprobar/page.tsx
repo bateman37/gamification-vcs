@@ -102,7 +102,7 @@ export default async function ProductivityCheckPage({
         href={`/splits/${split.id}#kpi-configuracion`}
         className="inline-block text-sm text-text-muted underline hover:text-ink"
       >
-        Ir a la configuracion de KPI
+        Ir a la configuración de KPI
       </Link>
     </div>
   );

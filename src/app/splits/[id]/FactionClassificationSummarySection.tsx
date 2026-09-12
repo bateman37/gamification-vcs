@@ -19,7 +19,7 @@ export function FactionClassificationSummarySection({
         <h2 className="text-lg font-semibold">Clasificación general facciones</h2>
         {hasFactionData && (
           <Link href={`/splits/${splitId}/clasificacion-facciones`} className="text-sm font-medium text-ink underline hover:text-ink">
-            Ver clasificacion detallada
+            Ver clasificación detallada
           </Link>
         )}
       </div>

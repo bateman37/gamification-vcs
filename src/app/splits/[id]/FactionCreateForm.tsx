@@ -7,7 +7,7 @@ import { ErrorMessage, FieldError, SubmitButton, SuccessMessage } from "@/compon
 
 function CreateFactionButton() {
   const { pending } = useFormStatus();
-  return <SubmitButton pending={pending}>Crear faccion</SubmitButton>;
+  return <SubmitButton pending={pending}>Crear facción</SubmitButton>;
 }
 
 export function FactionCreateForm({ splitId }: { splitId: string }) {
@@ -18,7 +18,7 @@ export function FactionCreateForm({ splitId }: { splitId: string }) {
     <form action={formAction} className="grid grid-cols-1 gap-3 rounded-card border border-dashed border-border-strong bg-surface p-4 sm:grid-cols-[minmax(0,1fr)_8rem_auto] sm:items-end">
       <div>
         <label htmlFor="faction-new-name" className="block text-sm font-medium text-ink">
-          Nombre de la nueva faccion
+          Nombre de la nueva facción
         </label>
         <input
           id="faction-new-name"

@@ -156,7 +156,7 @@ export function EquipmentSlotsPanel({ splitId, slots, locked, maxSlots }: { spli
       <h3 className="text-base font-semibold">Ranuras de equipo</h3>
       <p className="text-sm text-text-muted">
         El número y el nombre de las ranuras los decides tú: no hay ranuras predeterminadas. Cada objeto del catálogo
-        pertenece exactamente a una ranura, y cada participante puede equipar como maximo un objeto por ranura.
+        pertenece exactamente a una ranura, y cada participante puede equipar como máximo un objeto por ranura.
       </p>
       {locked && (
         <p className="text-sm text-reward-ink">

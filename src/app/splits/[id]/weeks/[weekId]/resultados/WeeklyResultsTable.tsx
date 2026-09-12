@@ -104,7 +104,7 @@ function KpiCellView({ cell, weekLocation }: { cell: ResultKpiCell; weekLocation
   const percentage = cell.baseMax && cell.baseMax > 0 ? (displayPoints / cell.baseMax) * 100 : 0;
   const bandInfo = colorBandForPercentage(percentage);
   const breakdown = formatBonusBreakdown(cell, weekLocation);
-  const title = `${formatPoints(percentage)} % del maximo${cell.capped ? " (limitado por el maximo)" : ""}${
+  const title = `${formatPoints(percentage)} % del máximo${cell.capped ? " (limitado por el máximo)" : ""}${
     breakdown ? ` - ${breakdown}` : ""
   }`;
   const borderClass = cell.professionApplied && cell.locationApplied
@@ -120,12 +120,12 @@ function KpiCellView({ cell, weekLocation }: { cell: ResultKpiCell; weekLocation
       {cell.capped && <span aria-hidden="true"> *</span>}
       {cell.professionApplied && (
         <span className="mt-1 block rounded bg-game-soft px-1 py-0.5 text-[10px] font-semibold text-game-ink">
-          +{PROFESSION_BONUS_PERCENT} % profesion
+          +{PROFESSION_BONUS_PERCENT} % profesión
         </span>
       )}
       {cell.locationApplied && (
         <span className="mt-1 block rounded bg-info-soft px-1 py-0.5 text-[10px] font-semibold text-info-ink">
-          +{weekLocation?.bonusPercent ?? ""} % localizacion
+          +{weekLocation?.bonusPercent ?? ""} % localización
         </span>
       )}
       <span className="sr-only"> ({title})</span>
@@ -206,9 +206,9 @@ export function WeeklyResultsTable({
                 </th>
               ))}
               <th className="px-3 py-2 text-center">{headerButton("Total KPI", "total")}</th>
-              <th className="px-3 py-2 text-center font-medium">% del maximo aplicable</th>
+              <th className="px-3 py-2 text-center font-medium">% del máximo aplicable</th>
               <th className="px-3 py-2 text-center">{headerButton("Posición", "position")}</th>
-              <th className="px-3 py-2 text-center font-medium">Puntos por posicion</th>
+              <th className="px-3 py-2 text-center font-medium">Puntos por posición</th>
             </tr>
           </thead>
           <tbody>
@@ -268,16 +268,16 @@ export function WeeklyResultsTable({
         <span className={`rounded px-2 py-0.5 ${COLOR_BAND_CLASSES.good}`}>75-90 %</span>
         <span className={`rounded px-2 py-0.5 ${COLOR_BAND_CLASSES.excellent}`}>90 % o mas</span>
         <span className={`rounded px-2 py-0.5 ${COLOR_BAND_CLASSES["not-applicable"]}`}>No aplica</span>
-        <span>* = limitado por el maximo configurado</span>
+        <span>* = limitado por el máximo configurado</span>
         {showProfessionColumn && (
           <span className="rounded border-2 border-dashed border-game px-2 py-0.5 text-game-ink">
-            Borde y badge &quot;+{PROFESSION_BONUS_PERCENT} % profesion&quot; = bonus de profesion aplicado (el desglose esta en la
+            Borde y badge &quot;+{PROFESSION_BONUS_PERCENT} % profesión&quot; = bonus de profesión aplicado (el desglose está en la
             ayuda de la celda)
           </span>
         )}
         {weekLocation && (
           <span className="rounded border-2 border-dashed border-info px-2 py-0.5 text-info-ink">
-            Borde y badge &quot;+{weekLocation.bonusPercent} % localizacion&quot; = bonus de la localizacion &quot;{weekLocation.name}&quot;
+            Borde y badge &quot;+{weekLocation.bonusPercent} % localización&quot; = bonus de la localización &quot;{weekLocation.name}&quot;
             aplicado (el desglose esta en la ayuda de la celda)
           </span>
         )}

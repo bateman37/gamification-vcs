@@ -185,7 +185,7 @@ export function AddParticipantForm({
                 ))}
               </select>
               {availableProfessions.length === 0 && (
-                <p className="mt-1 text-xs text-reward-ink">No hay ninguna profesion disponible para el nivel {level}.</p>
+                <p className="mt-1 text-xs text-reward-ink">No hay ninguna profesión disponible para el nivel {level}.</p>
               )}
               <FieldError message={state.fieldErrors?.professionId} />
             </div>
@@ -204,7 +204,7 @@ export function AddParticipantForm({
                 className="mt-1 w-full rounded-control border border-border-strong px-3 py-2 text-sm"
               >
                 <option value="" disabled>
-                  Selecciona una faccion
+                  Selecciona una facción
                 </option>
                 {factions.map((faction) => (
                   <option key={faction.id} value={faction.id}>
@@ -250,7 +250,7 @@ export function AddParticipantForm({
           <p id={PROFESSION_HELP_ID}>
             * Profesión:{" "}
             {professionRequired
-              ? "es obligatoria porque este split ya publico una semana usando profesiones; debe elegirse una compatible con el nivel."
+              ? "es obligatoria porque este split ya publicó una semana usando profesiones; debe elegirse una compatible con el nivel."
               : "es opcional hasta la primera publicación."}{" "}
             {PROFESSION_BONUS_LABEL} y despues queda bloqueada.
           </p>

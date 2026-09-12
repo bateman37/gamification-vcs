@@ -29,7 +29,7 @@ export function ProfessionFormFields({
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
       <div className="sm:col-span-2">
         <label htmlFor={`${idPrefix}-name`} className="block text-sm font-medium text-ink">
-          Nombre de la profesion
+          Nombre de la profesión
         </label>
         <input
           id={`${idPrefix}-name`}

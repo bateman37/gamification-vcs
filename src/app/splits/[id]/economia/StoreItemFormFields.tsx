@@ -60,7 +60,7 @@ export function StoreItemFormFields({
 
       <div>
         <label htmlFor={`${idPrefix}-priceCredits`} className="block text-sm font-medium text-ink">
-          Precio (creditos)
+          Precio (créditos)
         </label>
         <input
           id={`${idPrefix}-priceCredits`}

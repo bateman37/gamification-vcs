@@ -12,7 +12,7 @@ export function ClassificationSummarySection({ splitId, classification }: { spli
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-semibold">Clasificación general individual</h2>
         <Link href={`/splits/${splitId}/clasificacion`} className="text-sm font-medium text-ink underline hover:text-ink">
-          Ver clasificacion detallada
+          Ver clasificación detallada
         </Link>
       </div>
 

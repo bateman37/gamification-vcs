@@ -149,7 +149,7 @@ function PreviewSummary({ preview, weekId, splitId }: { preview: VoicePreview; w
                     <td className="px-3 py-2">
                       {formatRawOutcome(row.voiceAmbassador)} / {formatOutcome(row.voiceAmbassador)}
                       {row.voiceAmbassador?.status === "computed" && row.voiceAmbassador.capped && (
-                        <span className="ml-1 text-xs text-reward-ink">(maximo aplicado)</span>
+                        <span className="ml-1 text-xs text-reward-ink">(máximo aplicado)</span>
                       )}
                     </td>
                   )}
