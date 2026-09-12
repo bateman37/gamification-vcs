@@ -5,6 +5,56 @@ La primera version publicada es `0.1.0`; `1.0.0` cierra la primera version
 estable del producto (nucleo funcional y las cuatro capas de juego, mas
 comunicacion y renovacion visual).
 
+## [1.1.0] - Analitica avanzada del equipo, exclusiva de administracion
+
+Nuevo modulo de solo lectura `/analitica`, situado inmediatamente debajo de
+`Resultados` en la navegacion del administrador. Analiza el rendimiento del
+equipo y de cada persona a partir de semanas publicadas: no es una segunda
+clasificacion del juego y no modifica ninguna publicacion, ranking, punto
+por posicion, faccion ni credito existente.
+
+### Anadido
+
+- **Seis bloques**: Vision general, Rendimiento por KPI, Evolucion del
+  equipo, Distribucion y consistencia, Analisis por persona (con detalle en
+  `/analitica/personas/[personId]`) e Impacto de la gamificacion, cada uno
+  con filtros compartidos, graficos (`recharts`, unica dependencia nueva) y
+  su tabla de datos equivalente.
+- **Motor analitico puro** (`src/domain/analytics/*`): jerarquia de medias
+  explicita para que dos splits simultaneos o varias semanas de una persona
+  nunca dupliquen su peso, resolucion de la base "sin gamificacion" con el
+  fallback documentado a publicaciones anteriores a `0.8.0`, mediana y
+  cuartiles con interpolacion lineal, distribucion por intervalos, y
+  comparacion (semana anterior / media del periodo) sobre poblacion comun
+  por nivel historico.
+- **Politica de posibles ausencias** ajustable (umbral de 2 a 10 KPI en
+  `COMPUTED=0`/`VAC`): excluye una observacion persona-split-semana de las
+  estadisticas de rendimiento, con revision manual por fila ("Ver
+  exclusiones") y aviso de falso positivo cuando existe algun valor
+  positivo. Exclusiva de este modulo: nunca toca `Resultados`, posiciones,
+  facciones ni creditos.
+- **Capa de lectura** (`analytics.service.ts`) que consulta exclusivamente
+  instantaneas publicadas (`PublishedParticipantWeeklyResult`/
+  `PublishedKpiResult`/`PublishedEquippedItem`/`CreditLedgerEntry`), nunca
+  recalcula con `computeWeeklyResults` ni con la configuracion actual.
+- **Impacto de la gamificacion**: desglose de bonus (profesion,
+  localizacion, objetos) sobre puntos base/finales publicados, y un
+  subbloque economico independiente por fecha de operacion (nunca por
+  fecha de rendimiento), sin aplicar el filtro de nivel ni la exclusion de
+  posibles ausencias.
+- Acceso restringido en dos capas (`src/middleware.ts` + `requireAdminSession()`
+  en cada pagina), consistente con `Personas`/`Splits`.
+- Documentacion completa en `docs/ADVANCED_ANALYTICS.md` y pruebas acotadas
+  en `tests/advanced-analytics-domain.test.ts`,
+  `tests/advanced-analytics-service.test.ts` y
+  `tests/advanced-analytics-access.test.ts`.
+
+### Fuera de alcance de esta entrega
+
+Exportacion Excel/PDF, informes programados, Power BI, analitica
+predictiva, modelos de IA, diagnosticos personales, registros de
+vacaciones/bajas reales, y cualquier nueva mecanica de juego.
+
 ## [1.0.2] - Hotfix de ranuras de equipo, bonus de objetos y submenu de presentacion
 
 Hotfix puntual sobre `1.0.1`. **Sin migracion de Prisma:** no cambia el

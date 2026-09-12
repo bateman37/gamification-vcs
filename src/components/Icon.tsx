@@ -27,6 +27,7 @@ import {
   SkipBack,
   RotateCcw,
   Maximize,
+  BarChart3,
   type LucideIcon,
 } from "lucide-react";
 
@@ -59,6 +60,7 @@ const ICONS: Record<string, LucideIcon> = {
   SkipBack,
   RotateCcw,
   Maximize,
+  BarChart3,
 };
 
 /** Icono generico por nombre (nav y categorias de noticia comparten este mapa unico). */

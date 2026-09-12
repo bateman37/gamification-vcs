@@ -424,6 +424,37 @@ satisfactorias.
   reglas de clasificacion, creditos, mercado, avatares como snapshot
   historico, y cualquier otra capa de juego nueva.
 
+## `1.1.0` — Analitica avanzada del equipo, exclusiva de administracion
+
+**Estado: completado.**
+
+- Nuevo modulo `/analitica`, exclusivo de `ADMIN` (menu inmediatamente
+  debajo de `Resultados`, protegido en middleware y en cada pagina): seis
+  bloques (vision general, rendimiento por KPI, evolucion del equipo,
+  distribucion y consistencia, analisis por persona e impacto de la
+  gamificacion), todos de solo lectura sobre semanas publicadas
+  (`PublishedParticipantWeeklyResult`/`PublishedKpiResult`/
+  `PublishedEquippedItem`/`CreditLedgerEntry`). No es una segunda
+  clasificacion del juego ni sustituye ninguna pantalla de `Resultados`.
+- Identidad de analisis por `personId` (nombre real), nunca alias ni
+  faccion; filtro de nivel historico (`levelSnapshot`); combinacion de uno,
+  varios o todos los splits sin duplicar el peso de una persona en semanas
+  simultaneas.
+- Motor analitico puro (`src/domain/analytics/*`) con la jerarquia de
+  medias documentada, resolucion de la base "sin gamificacion" con su
+  fallback legado, distribucion por intervalos y comparacion (semana
+  anterior/media del periodo) sobre poblacion comun.
+- Politica ajustable de exclusion de posibles ausencias (umbral de KPI en
+  cero/sin dato), revisable fila a fila, exclusiva de este modulo.
+- Impacto de la gamificacion: desglose de bonus de profesion, localizacion
+  y objetos sobre puntos publicados, y subbloque economico independiente
+  por fecha de operacion.
+- Unica dependencia nueva: `recharts` (graficos), version fijada.
+- Detalle completo en `docs/ADVANCED_ANALYTICS.md`.
+- Fuera de alcance: exportacion Excel/PDF, informes programados, Power BI,
+  analitica predictiva, modelos de IA, diagnosticos personales, registros
+  de vacaciones/bajas reales, y cualquier nueva mecanica de juego.
+
 ## Capas posteriores (fuera de alcance por ahora)
 
 **Estado: pendiente**, documentadas unicamente para no perder contexto:

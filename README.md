@@ -21,8 +21,9 @@ MVP-2C — Localizaciones semanales**, **`0.9.0` / MVP-2D — Economia,
 inventario y equipo**, **`1.0.0` / MVP-3 — Centro de noticias y
 renovacion visual**, **`1.0.1` — UX y presentacion de resultados** y
 **`1.0.2` — Hotfix de sincronizacion de ranuras de equipo, bonus de
-objetos en la tabla administrativa y submenu de "Presentar resultados"**
-(ver `docs/ROADMAP.md`). Version actual: `1.0.2`.
+objetos en la tabla administrativa y submenu de "Presentar resultados"** y
+**`1.1.0` — Analitica avanzada del equipo, exclusiva de administracion**
+(ver `docs/ROADMAP.md`). Version actual: `1.1.0`.
 
 Estas entregas implementan:
 
@@ -124,6 +125,16 @@ Estas entregas implementan:
   `docs/WEEKLY_LOCATIONS.md`.
 - Minicorreccion: la nota del asterisco de `Semana inicial *` en
   `Anadir participante` se muestra siempre, en los dos modos de alta.
+
+- **Analitica avanzada (`/analitica`, exclusiva de `ADMIN`)**: los seis
+  bloques (vision general, rendimiento por KPI, evolucion del equipo,
+  distribucion y consistencia, analisis por persona e impacto de la
+  gamificacion) leen exclusivamente semanas publicadas, con identidad de
+  analisis por `personId` (nunca alias ni faccion), filtros compartidos de
+  splits/periodo/nivel/modo, una politica ajustable de exclusion de
+  posibles ausencias, comparacion frente a la semana anterior o a la media
+  del periodo, y un detalle por persona con enlace a la publicacion
+  original. Ver `docs/ADVANCED_ANALYTICS.md`.
 
 Todavia **no** incluye despublicar/reabrir una semana, exportacion
 Excel/PDF de resultados, ni transferencias, regalos, reventa ni misiones.

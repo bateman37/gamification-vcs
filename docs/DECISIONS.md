@@ -1535,3 +1535,73 @@ bugs ya documentados en sus entregas originales (`0.9.0`/MVP-2D y
 una entrega nueva en el roadmap o una seccion nueva de reglas "que no
 romper" en `CLAUDE.md` habria sido desproporcionado para tres correcciones
 puntuales sin superficie nueva de configuracion.
+
+## Umbral inicial de la politica de ceros multiples: `2`, ajustable de `2` a `10` (`1.1.0`)
+
+**Decision:** el encargo de Analitica avanzada pedia "2 o mas KPI" como
+valor inicial sin fijar una cifra exacta ("Este umbral concreta una
+ambiguedad del encargo: no se habia fijado una cifra"). Se fija `2` como
+`DEFAULT_ZERO_THRESHOLD` (`src/domain/analytics/exclusions.ts`) y se deja
+ajustable en el propio panel de filtros de `/analitica` entre `2` y `10`
+(limite tecnico razonable, no impuesto por el encargo), nunca por debajo
+de `2` para no vaciar de contenido la regla ("varios KPI").
+
+**Motivo:** aplicar la solucion mas sencilla compatible con lo pedido
+(regla de trabajo del proyecto) sin inventar una certeza estadistica que
+el encargo no da. Queda registrado aqui explicitamente para que Dennis
+pueda validar el efecto de ese umbral con datos reales, como pide el
+propio encargo.
+
+## Nivel de una persona en un agregado de equipo cuando cambia dentro de la misma semana de calendario (`1.1.0`)
+
+**Decision:** para las comparaciones de poblacion comun a nivel de
+**equipo** (bloques 1-3), si una persona tuviera niveles historicos
+distintos en dos splits simultaneos la misma semana de calendario (caso
+extremo, no observado en los datos reales del proyecto), se usa el nivel
+de la ultima observacion de esa semana al construir la comparacion por
+nivel. El **detalle por persona** (`/analitica/personas/[personId]`,
+bloque 5) no aplica esta simplificacion: siempre muestra el nivel real de
+cada fila/semana tal como esta publicado.
+
+**Motivo:** implementar el emparejamiento de niveles distintos dentro de
+una misma semana de calendario para las comparaciones de equipo agregadas
+habria anadido una complejidad considerable (un "tramo" a nivel de
+semana, no solo de split) para un caso que la parte D1 del encargo
+describe como "si alguien cambio de nivel **entre splits**", no dentro de
+la misma semana de dos splits simultaneos. La garantia que el encargo
+exige explicitamente (nunca mezclar niveles distintos en el detalle
+personal) se mantiene completa; la simplificacion solo afecta a un
+agregado de equipo en un caso extremo no observado.
+
+## `recharts` como unica dependencia de graficos nueva (`1.1.0`)
+
+**Decision:** se anade `recharts@2.15.4` (fijado en `package.json`), la
+unica libreria de visualizacion instalada para Analitica avanzada, en vez
+de construir SVG a mano o anadir una libreria de nivel mas bajo
+(`visx`/`d3`). Los componentes de grafico son "client components"
+aislados en `src/components/analytics/charts/*`; el resto del modulo
+(filtros, calculo, tablas) sigue siendo de servidor.
+
+**Motivo:** el encargo permite explicitamente "anadir una sola
+dependencia de visualizacion mantenida y compatible con las versiones de
+React/Next existentes". `recharts@2.15.4` declara soporte de React
+16-18, coincide con React `18.3.1` del proyecto, y cubre lineas con
+huecos, barras y tooltips accesibles sin escribir un motor de graficos
+propio.
+
+## El subbloque economico de Analitica avanzada ignora nivel y exclusion de rendimiento (`1.1.0`)
+
+**Decision:** dentro de "Impacto de la gamificacion", el desglose de
+bonus (profesion/localizacion/objetos) respeta los mismos filtros de
+nivel historico y la misma politica de exclusion de posibles ausencias
+que el resto del modulo; el subbloque de creditos/compras/saldos usa
+**solo** splits y fechas de operacion (`createdAt`/`purchasedAt`), nunca
+el filtro de nivel ni la exclusion de rendimiento.
+
+**Motivo:** el encargo lo exige explicitamente (parte I2): "no hay un
+nivel de operacion congelado en todas las compras y un filtro analitico
+no revoca creditos reales". Aplicar el filtro de nivel a un movimiento de
+credito exigiria inventar un nivel para esa fecha que no existe en el
+modelo; aplicar la exclusion de rendimiento a un ingreso o gasto ya
+persistido violaria la regla general del proyecto de que ningun analisis
+nuevo puede alterar el libro de movimientos ya existente.

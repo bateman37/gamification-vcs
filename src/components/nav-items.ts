@@ -18,6 +18,7 @@ export function buildNavItems(input: { isAuthenticated: boolean; isAdmin: boolea
     items.push({ href: "/personas", label: "Personas", icon: "Users" });
     items.push({ href: "/splits", label: "Splits", icon: "Layers" });
     items.push({ href: "/resultados", label: "Resultados", icon: "Trophy" });
+    items.push({ href: "/analitica", label: "Analítica avanzada", icon: "BarChart3" });
     if (input.hasPersonId) {
       items.push({ href: "/fichas", label: "Fichas", icon: "IdCard" });
     }
