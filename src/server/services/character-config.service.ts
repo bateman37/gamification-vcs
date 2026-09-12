@@ -1,6 +1,7 @@
 import { Prisma, type MarketStatus, type ParticipantLevel, type PrismaClient, type SplitStatus } from "@prisma/client";
 import { DomainError } from "@/lib/errors";
 import { KPI_CATALOG, type KpiCode } from "@/domain/kpis/catalog";
+import { isProfessionAvailableForLevel } from "@/domain/profession-bonus";
 import { toProfessionView, type ProfessionView } from "@/domain/profession-display";
 import { locationBonusLabel } from "@/domain/location-bonus";
 import { getEconomySettings } from "@/server/services/economy.service";
@@ -47,6 +48,8 @@ export interface CharacterConfigView {
   level: ParticipantLevel;
   faction: { name: string; color: string } | null;
   profession: ProfessionView | null;
+  /** Profesiones del split disponibles para el nivel de esta participacion (para el selector de eleccion propia). */
+  availableProfessions: ProfessionView[];
   splitUsesProfessions: boolean;
   avatarVersion: string | null;
   editable: boolean;
@@ -89,7 +92,7 @@ export async function getCharacterConfig(
   const splitId = participation.splitId;
 
   const [
-    professionCount,
+    professions,
     publishedResults,
     economySettings,
     balance,
@@ -101,7 +104,7 @@ export async function getCharacterConfig(
     weekLocations,
     publications,
   ] = await Promise.all([
-    db.splitProfession.count({ where: { splitId } }),
+    db.splitProfession.findMany({ where: { splitId }, orderBy: { name: "asc" } }),
     db.publishedParticipantWeeklyResult.findMany({ where: { splitParticipantId } }),
     getEconomySettings(db, splitId),
     getParticipantBalance(db, splitParticipantId),
@@ -198,7 +201,10 @@ export async function getCharacterConfig(
     level: participation.level,
     faction: participation.faction,
     profession: participation.profession ? toProfessionView(participation.profession) : null,
-    splitUsesProfessions: professionCount > 0,
+    availableProfessions: professions
+      .filter((profession) => isProfessionAvailableForLevel(profession, participation.level))
+      .map(toProfessionView),
+    splitUsesProfessions: professions.length > 0,
     avatarVersion: participation.avatar?.sha256 ?? null,
     editable: participation.split.status !== "CLOSED",
     hasPublishedResults: publishedResults.length > 0,

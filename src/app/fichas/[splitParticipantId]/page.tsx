@@ -9,6 +9,9 @@ import { PROFESSION_BONUS_LABEL } from "@/domain/profession-bonus";
 import { SPLIT_STATUS_LABELS } from "@/lib/labels";
 import { Badge } from "@/components/ui";
 import { ProfileAvatar } from "@/app/fichas/ProfileAvatar";
+import { ProfileAliasForm } from "@/app/fichas/ProfileAliasForm";
+import { ProfileAvatarForm } from "@/app/fichas/ProfileAvatarForm";
+import { ProfileProfessionForm } from "@/app/fichas/ProfileProfessionForm";
 import { EquipmentPanel } from "./EquipmentPanel";
 import { InventoryPanel } from "./InventoryPanel";
 import { MarketPanel } from "./MarketPanel";
@@ -62,6 +65,30 @@ export default async function CharacterConfigPage({ params }: { params: { splitP
           </div>
         </div>
       </div>
+
+      <section id="personaje" className="space-y-3">
+        <h2 className="text-lg font-semibold">Alias, avatar y profesion</h2>
+        {character.editable ? (
+          <div className="grid grid-cols-1 gap-4 rounded-card border border-border bg-surface p-4 md:grid-cols-2">
+            <ProfileAliasForm splitParticipantId={character.splitParticipantId} alias={character.alias} />
+            <ProfileAvatarForm splitParticipantId={character.splitParticipantId} hasAvatar={character.avatarVersion !== null} />
+            <div className="md:col-span-2">
+              <ProfileProfessionForm
+                splitParticipantId={character.splitParticipantId}
+                splitUsesProfessions={character.splitUsesProfessions}
+                profession={character.profession}
+                availableProfessions={character.availableProfessions}
+                locked={character.hasPublishedResults}
+                editable={character.editable}
+              />
+            </div>
+          </div>
+        ) : (
+          <p className="rounded-card border border-border bg-surface p-4 text-sm text-text-muted">
+            El split esta cerrado: esta ficha es de solo lectura.
+          </p>
+        )}
+      </section>
 
       <section id="resumen" className="space-y-3">
         <h2 className="text-lg font-semibold">Resumen</h2>

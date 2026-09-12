@@ -66,11 +66,13 @@ export interface ProfileActiveLocation {
   endDate: Date;
 }
 
-const SPLIT_STATUS_ORDER: Record<SplitStatus, number> = { ACTIVE: 0, DRAFT: 1, CLOSED: 2 };
-
 /**
  * Fichas de una persona, una por participacion de split. Nunca selecciona
  * los bytes del avatar: solo su hash, para construir la URL de la imagen.
+ * El orden de presentacion (activos/proximos/finalizados) lo decide
+ * `groupAndOrderProfileCards` (`src/domain/profile-order.ts`), no este
+ * servicio: aqui se devuelven todas las fichas de la persona sin un orden
+ * de negocio propio.
  */
 export async function listProfileCardsForPerson(db: Db, personId: string): Promise<ProfileCard[]> {
   const participations = await db.splitParticipant.findMany({
@@ -144,13 +146,7 @@ export async function listProfileCardsForPerson(db: Db, personId: string): Promi
         hasPublishedResults: hasPublications,
         activeLocation,
       } satisfies ProfileCard;
-    })
-    .sort(
-      (a, b) =>
-        SPLIT_STATUS_ORDER[a.splitStatus] - SPLIT_STATUS_ORDER[b.splitStatus] ||
-        b.splitStartDate.getTime() - a.splitStartDate.getTime() ||
-        a.splitName.localeCompare(b.splitName, "es"),
-    );
+    });
 }
 
 /**

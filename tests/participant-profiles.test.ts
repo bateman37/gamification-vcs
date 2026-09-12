@@ -70,7 +70,7 @@ beforeEach(async () => {
 });
 
 describe("Fichas: propiedad y alcance de las operaciones", () => {
-  it("lista una ficha por participacion, ordenando ACTIVE, DRAFT y CLOSED", async () => {
+  it("lista una ficha por participacion (el orden por estado lo decide groupAndOrderProfileCards, `1.0.1`)", async () => {
     const person = await createPerson(testDb, { fullName: "Multi Split", email: undefined });
     const draft = await createSplitWithWeeks(testDb, { name: "En borrador", description: undefined, startDate: "2025-10-06", numberOfWeeks: 1 });
     const active = await createSplitWithWeeks(testDb, { name: "Activo", description: undefined, startDate: "2025-09-01", numberOfWeeks: 1 });
@@ -84,7 +84,7 @@ describe("Fichas: propiedad y alcance de las operaciones", () => {
     await testDb.split.update({ where: { id: closed.id }, data: { status: "CLOSED" } });
 
     const cards = await listProfileCardsForPerson(testDb, person.id);
-    expect(cards.map((card) => card.splitName)).toEqual(["Activo", "En borrador", "Cerrado"]);
+    expect(cards.map((card) => card.splitName).sort()).toEqual(["Activo", "Cerrado", "En borrador"]);
     expect(cards.find((card) => card.splitName === "Cerrado")!.editable).toBe(false);
     // Ninguna tarjeta expone bytes de avatar: solo su version (hash) o `null`.
     expect(cards.every((card) => card.avatarVersion === null)).toBe(true);

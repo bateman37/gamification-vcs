@@ -13,13 +13,15 @@ import Link from "next/link";
 
 // --- Botones -------------------------------------------------------------
 
-type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
+type ButtonVariant = "primary" | "secondary" | "ghost" | "danger" | "game";
 
 const BUTTON_VARIANT_CLASSES: Record<ButtonVariant, string> = {
   primary: "bg-primary text-white hover:bg-primary-hover",
   secondary: "border border-border-strong bg-surface text-ink hover:bg-surface-muted",
   ghost: "bg-transparent text-ink hover:bg-surface-muted",
   danger: "bg-danger text-white hover:bg-danger/90",
+  // Tono de juego/personaje (facciones, profesiones, fichas): nunca compite con el azul de accion principal.
+  game: "bg-game text-white hover:bg-game-ink",
 };
 
 const BUTTON_BASE_CLASSES =
