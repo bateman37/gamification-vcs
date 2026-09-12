@@ -261,7 +261,7 @@ export async function PorSplitSection({
             </tbody>
           </table>
         </div>
-        <p className="text-xs text-text-muted">Publicada por ultima vez el {formatCalendarDate(detail.weeks.at(-1)!.publishedAt)}.</p>
+        <p className="text-xs text-text-muted">Publicada por última vez el {formatCalendarDate(detail.weeks.at(-1)!.publishedAt)}.</p>
       </div>
 
       <div className="space-y-3">

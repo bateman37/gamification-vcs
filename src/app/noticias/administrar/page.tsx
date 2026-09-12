@@ -76,7 +76,7 @@ export default async function AdministrarNoticiasPage({
             idempotencyKey={generateIdempotencyKey()}
           />
         ) : (
-          <p className="text-sm text-text-muted">Selecciona un split y un publico para redactar el mensaje.</p>
+          <p className="text-sm text-text-muted">Selecciona un split y un público para redactar el mensaje.</p>
         )}
       </Card>
 

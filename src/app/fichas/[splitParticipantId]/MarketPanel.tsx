@@ -83,7 +83,7 @@ export function MarketPanel({
         <span className="text-sm font-medium text-ink">Saldo disponible: {balance} créditos</span>
       </div>
       {marketStatus === "CLOSED" && (
-        <p className="text-sm text-text-muted">El mercado esta cerrado: puedes ver el catalogo, pero no comprar.</p>
+        <p className="text-sm text-text-muted">El mercado está cerrado: puedes ver el catálogo, pero no comprar.</p>
       )}
 
       {catalog.length === 0 ? (

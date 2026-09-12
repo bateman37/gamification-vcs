@@ -64,7 +64,7 @@ export function AudienceSelectorForm({
 
       <div>
         <label htmlFor="ma-audience" className="block text-xs font-medium text-text-muted">
-          Publico
+          Público
         </label>
         <select
           id="ma-audience"

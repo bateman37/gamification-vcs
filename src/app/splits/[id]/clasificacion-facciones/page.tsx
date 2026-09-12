@@ -48,7 +48,7 @@ export default async function FactionClassificationPage({
       {!classification.hasFactionData ? (
         <EmptyState>
           Todavía no hay clasificación de facciones publicada para este split. Configura al menos dos facciones y
-          publica una semana para verla aqui.
+          publica una semana para verla aquí.
         </EmptyState>
       ) : (
         <>

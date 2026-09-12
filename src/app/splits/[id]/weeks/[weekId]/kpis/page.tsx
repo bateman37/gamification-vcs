@@ -23,7 +23,7 @@ import { Badge } from "@/components/ui";
 import { StatusIndicator } from "./StatusIndicator";
 
 const LOCATION_STATUS_LABEL: Record<string, string> = {
-  PROXIMA: "Proxima",
+  PROXIMA: "Próxima",
   ACTIVA: "Activa",
   FINALIZADA: "Finalizada",
   PUBLICADA: "Publicada",

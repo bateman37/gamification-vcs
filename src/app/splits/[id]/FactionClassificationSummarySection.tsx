@@ -27,7 +27,7 @@ export function FactionClassificationSummarySection({
       {!hasFactionData ? (
         <EmptyState>
           Todavía no hay clasificación de facciones publicada. Configura al menos dos facciones y publica una semana
-          para verla aqui.
+          para verla aquí.
         </EmptyState>
       ) : (
         <div className="overflow-x-auto rounded-card border border-border bg-surface">

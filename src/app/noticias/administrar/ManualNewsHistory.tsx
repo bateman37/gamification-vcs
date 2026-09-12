@@ -14,7 +14,7 @@ export function ManualNewsHistory({ entries }: { entries: ManualNewsHistoryEntry
             <th className="px-3 py-2 font-medium">Fecha</th>
             <th className="px-3 py-2 font-medium">Autor</th>
             <th className="px-3 py-2 font-medium">Split</th>
-            <th className="px-3 py-2 font-medium">Publico</th>
+            <th className="px-3 py-2 font-medium">Público</th>
             <th className="px-3 py-2 font-medium">Prioridad</th>
             <th className="px-3 py-2 font-medium">Titulo / mensaje</th>
             <th className="px-3 py-2 text-right font-medium">Destinatarios</th>

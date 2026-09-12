@@ -156,7 +156,7 @@ export function StoreItemsPanel({
 
   return (
     <div className="space-y-3">
-      <h3 className="text-base font-semibold">Catalogo de objetos</h3>
+      <h3 className="text-base font-semibold">Catálogo de objetos</h3>
       <p className="text-sm text-text-muted">
         Cada objeto afecta exactamente a un KPI activo con un bonus del conjunto cerrado (10/20/30/40/50 %), y
         pertenece a una unica ranura. Solo se administra con el mercado cerrado; despues de la primera compra, el

@@ -27,7 +27,7 @@ export function EconomySummarySection({
         </Badge>
         <span className="text-sm text-text-muted">
           {slotCount} ranura{slotCount === 1 ? "" : "s"} de equipo, {itemCount} objeto{itemCount === 1 ? "" : "s"} en el
-          catalogo.
+          catálogo.
         </span>
         <Link href={`/splits/${splitId}/economia`} className="text-sm font-medium text-ink underline hover:text-ink">
           Administrar economía y mercado

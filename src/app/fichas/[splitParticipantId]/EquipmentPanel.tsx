@@ -107,7 +107,7 @@ export function EquipmentPanel({
     <div className="space-y-3">
       <p className="text-sm text-text-muted">
         El equipo que cuenta para tus resultados es siempre el que tengas puesto en el instante en que el
-        administrador publique la semana: cambiarlo ahora afecta a la previsualizacion de la proxima semana no
+        administrador publique la semana: cambiarlo ahora afecta a la previsualización de la próxima semana no
         publicada, nunca a una ya publicada.
       </p>
       <ul className="space-y-2">

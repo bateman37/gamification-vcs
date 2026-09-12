@@ -51,7 +51,7 @@ export function WeekLocationCell({
         )}
         {isNextWeek && editable && !location && (
           <span className="rounded-full bg-game-soft px-2 py-0.5 text-[10px] font-medium text-game-ink">
-            Proxima semana
+            Próxima semana
           </span>
         )}
       </div>
