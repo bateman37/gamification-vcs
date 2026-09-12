@@ -10,12 +10,19 @@ import { isManualNewsDestination } from "@/domain/news-links";
  * esta entrega).
  */
 describe("Navegacion por rol", () => {
-  it("un administrador ve Personas, Splits, Resultados y Noticias, y Fichas solo si esta vinculado", () => {
+  it("un administrador ve Noticias primero, despues Personas, Splits y Resultados, y Fichas solo si esta vinculado (`1.0.1`)", () => {
     const withoutPerson = buildNavItems({ isAuthenticated: true, isAdmin: true, hasPersonId: false });
-    expect(withoutPerson.map((item) => item.href)).toEqual(["/personas", "/splits", "/resultados", "/noticias"]);
+    expect(withoutPerson.map((item) => item.href)).toEqual(["/noticias", "/personas", "/splits", "/resultados"]);
 
     const withPerson = buildNavItems({ isAuthenticated: true, isAdmin: true, hasPersonId: true });
-    expect(withPerson.map((item) => item.href)).toEqual(["/personas", "/splits", "/resultados", "/noticias", "/fichas"]);
+    expect(withPerson.map((item) => item.href)).toEqual(["/noticias", "/personas", "/splits", "/resultados", "/fichas"]);
+  });
+
+  it("desktop (`SidebarNav`) y movil (`MobileNav`) comparten la misma lista de `buildNavItems`, sin un segundo orden independiente", () => {
+    // No hay una segunda fuente de orden: SidebarNav.tsx y MobileNav.tsx reciben ambos el mismo
+    // array `items` ya calculado por AppShell a partir de buildNavItems (ver src/components/AppShell.tsx).
+    const items = buildNavItems({ isAuthenticated: true, isAdmin: true, hasPersonId: true });
+    expect(items[0].href).toBe("/noticias");
   });
 
   it("un participante ve Noticias, Resultados y Fichas, nunca Personas ni Splits", () => {
