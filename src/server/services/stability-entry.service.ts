@@ -11,6 +11,7 @@ import {
 } from "@/domain/kpis/stability";
 import type { LoadCoverageStatus } from "@/domain/kpis/loadGroups";
 import { parseNonNegativeNumberDefaultZero, ManualEntryValidationError, type ManualEntryFieldError } from "@/server/validation/manual-entry";
+import { notifyIfWeekReadyToReview } from "@/server/services/news-week-ready.service";
 
 /**
  * Entrada manual semanal de Guardian de la Estabilidad (`STABILITY_GUARDIAN`,
@@ -90,10 +91,12 @@ export async function saveStabilityEntries(db: PrismaClient, splitId: string, we
 
   await db.$transaction(async (tx) => {
     await tx.stabilityWeeklyEntry.deleteMany({ where: { splitWeekId: resolvedWeekId } });
-    if (rows.length === 0) return;
-    await tx.stabilityWeeklyEntry.createMany({
-      data: rows.map((row) => ({ splitWeekId: resolvedWeekId, splitParticipantId: row.splitParticipantId, resultValue: row.resultValue })),
-    });
+    if (rows.length > 0) {
+      await tx.stabilityWeeklyEntry.createMany({
+        data: rows.map((row) => ({ splitWeekId: resolvedWeekId, splitParticipantId: row.splitParticipantId, resultValue: row.resultValue })),
+      });
+    }
+    await notifyIfWeekReadyToReview(tx, splitId, resolvedWeekId);
   });
 }
 

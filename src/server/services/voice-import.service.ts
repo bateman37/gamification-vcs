@@ -8,6 +8,7 @@ import { toKpiConfigView, type KpiConfigView } from "@/domain/kpis/mapping";
 import { resolveVoiceAmbassadorOutcome, toVoiceAmbassadorOutcomeView, type VoiceAmbassadorOutcomeView } from "@/domain/kpis/voice";
 import type { LoadCoverageStatus } from "@/domain/kpis/loadGroups";
 import { readVoiceWorkbook, type VoiceSourceRow } from "@/server/services/voice/excel-reader";
+import { notifyIfWeekReadyToReview } from "@/server/services/news-week-ready.service";
 import { formatXlsxRowError } from "@/server/services/shared/xlsx";
 import { isAmbiguousMatch, isFoundMatch, isIgnoredMatch, matchRowsToParticipants } from "@/server/services/shared/matching";
 
@@ -221,6 +222,8 @@ export async function confirmVoiceImport(db: PrismaClient, splitId: string, week
         segmentWrapUpTimeMinutes: match.row.segmentWrapUpTimeMinutes,
       })),
     });
+
+    await notifyIfWeekReadyToReview(tx, splitId, resolvedWeekId);
   });
 }
 

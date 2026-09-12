@@ -22,9 +22,11 @@ export default withAuth(
       return NextResponse.redirect(new URL("/cuenta/cambiar-contrasena", req.url));
     }
 
-    const isAdminOnlyPath = path.startsWith("/personas") || path.startsWith("/splits");
+    // `/noticias/administrar` (envio manual, seccion 40 del encargo) es exclusivo de administrador,
+    // igual que `Personas` y `Splits`; el resto de `/noticias` es para cualquier usuario autenticado.
+    const isAdminOnlyPath = path.startsWith("/personas") || path.startsWith("/splits") || path.startsWith("/noticias/administrar");
     if (isAdminOnlyPath && token?.role !== "ADMIN") {
-      return NextResponse.redirect(new URL("/resultados", req.url));
+      return NextResponse.redirect(new URL("/noticias", req.url));
     }
 
     return NextResponse.next();
@@ -38,5 +40,5 @@ export default withAuth(
 );
 
 export const config = {
-  matcher: ["/personas/:path*", "/splits/:path*", "/resultados/:path*", "/fichas/:path*", "/cuenta/:path*"],
+  matcher: ["/personas/:path*", "/splits/:path*", "/resultados/:path*", "/fichas/:path*", "/cuenta/:path*", "/noticias/:path*"],
 };

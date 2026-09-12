@@ -1,8 +1,14 @@
 import { Prisma, type PrismaClient } from "@prisma/client";
 import { DomainError } from "@/lib/errors";
-import { getSplitById, getSplitWeek } from "@/server/services/split.service";
+import { getSplitById, getSplitWeek, listSplitWeeks } from "@/server/services/split.service";
 import { computeWeeklyResults } from "@/server/services/weekly-results.service";
 import { computeCreditsEarned } from "@/domain/credits";
+import { countParticipantsForSplit } from "@/server/services/participant.service";
+import { createNewsWithDeliveries, resolveActiveAdminUserIds } from "@/server/services/news.service";
+import { buildNewsActionPath } from "@/domain/news-links";
+import { weekPublishedNewsTemplate, adminWeekPublishedNewsTemplate, adminNextLocationMissingNewsTemplate } from "@/domain/news-templates";
+import { resolveWeekLocationWindow } from "@/domain/location-window";
+import { currentCalendarDate } from "@/lib/dates";
 
 /**
  * Publicacion de una semana (ver docs/RESULTS_PUBLICATION.md y, desde
@@ -66,6 +72,14 @@ export async function publishWeek(
         // nombre y color en el momento de publicar. `null` para splits que no usan facciones.
         const factions = await tx.splitFaction.findMany({ where: { splitId } });
         const factionById = new Map(factions.map((faction) => [faction.id, faction]));
+        const factionRankById = new Map(results.factionPreview.factions.map((entry) => [entry.factionId, entry.weeklyRank]));
+
+        // Denominador unico de "x de n" en toda la aplicacion: el total de participantes del split,
+        // nunca el numero de participantes que entraron en el ranking de esta semana concreta.
+        const totalSplitParticipantCount = await countParticipantsForSplit(tx, splitId);
+        // Primera publicacion del split (seccion 35 del encargo): si un participante tiene profesion,
+        // su resumen semanal puede anadir que la profesion ya es definitiva.
+        const isFirstPublicationForSplit = (await tx.weekPublication.count({ where: { splitWeek: { splitId } } })) === 0;
 
         const created = await tx.weekPublication.create({
           data: {
@@ -171,6 +185,95 @@ export async function publishWeek(
               publishedResultId: participantResult.id,
             },
           });
+
+          // Resumen semanal personalizado (seccion 35 del encargo): una unica noticia por resultado
+          // publicado, con los datos oficiales de esta misma transaccion (nunca un recalculo aparte).
+          const factionNews =
+            faction && results.factionPreview.hasFactions
+              ? { name: faction.name, rank: factionRankById.get(faction.id) ?? 0 }
+              : null;
+          const { title, body } = weekPublishedNewsTemplate({
+            weekStartDate: week.startDate,
+            totalKpiPoints: participant.totalKpiPoints,
+            rank: participant.weeklyRank,
+            totalParticipants: totalSplitParticipantCount,
+            positionPoints: participant.positionPoints,
+            creditsEarned,
+            faction: factionNews,
+            professionJustLocked: isFirstPublicationForSplit && Boolean(profession),
+          });
+          await createNewsWithDeliveries(
+            tx,
+            {
+              splitId,
+              splitNameSnapshot: split.name,
+              origin: "AUTOMATIC",
+              category: "RESULTS",
+              title,
+              body,
+              eventKey: `week-published:${created.id}:${participant.personId}`,
+            },
+            [{ personId: participant.personId, actionPath: buildNewsActionPath({ kind: "RESULTS", splitId }, "PERSON") }],
+          );
+        }
+
+        // Aviso administrativo de semana publicada (seccion 37 del encargo): una unica noticia para
+        // todos los administradores, con el total de creditos generados en esta misma publicacion.
+        const totalCreditsGenerated = results.participants.reduce(
+          (sum, participant) => sum + computeCreditsEarned(participant.totalKpiPoints),
+          0,
+        );
+        const publishedByUser = publishedByUserId ? await tx.user.findUnique({ where: { id: publishedByUserId } }) : null;
+        const adminUserIds = await resolveActiveAdminUserIds(tx);
+        if (adminUserIds.length > 0) {
+          const adminText = adminWeekPublishedNewsTemplate({
+            splitName: split.name,
+            weekStartDate: week.startDate,
+            participantCount: results.participants.length,
+            totalCreditsGenerated,
+            publishedByName: publishedByUser?.email ?? "el sistema",
+          });
+          await createNewsWithDeliveries(
+            tx,
+            {
+              splitId,
+              splitNameSnapshot: split.name,
+              origin: "AUTOMATIC",
+              category: "ADMIN",
+              title: adminText.title,
+              body: adminText.body,
+              eventKey: `admin-week-published:${created.id}`,
+            },
+            adminUserIds.map((userId) => ({ userId, actionPath: buildNewsActionPath({ kind: "WEEK_RESULTS_ADMIN", splitId, weekId: week.id }, "USER") })),
+          );
+
+          // Proxima ubicacion pendiente (seccion 39 del encargo): solo si la siguiente semana sigue
+          // siendo futura, editable y todavia no tiene ninguna localizacion configurada.
+          const allWeeks = await listSplitWeeks(tx, splitId);
+          const nextWeek = allWeeks.find((candidate) => candidate.sequenceNumber === week.sequenceNumber + 1) ?? null;
+          if (nextWeek) {
+            const nextWeekWindow = resolveWeekLocationWindow(currentCalendarDate(), nextWeek, false);
+            const nextWeekLocation = await tx.splitWeekLocation.findUnique({ where: { splitWeekId: nextWeek.id } });
+            if (nextWeekWindow.editable && !nextWeekLocation) {
+              const nextLocationText = adminNextLocationMissingNewsTemplate({ splitName: split.name, weekStartDate: nextWeek.startDate });
+              await createNewsWithDeliveries(
+                tx,
+                {
+                  splitId,
+                  splitNameSnapshot: split.name,
+                  origin: "AUTOMATIC",
+                  category: "ADMIN",
+                  title: nextLocationText.title,
+                  body: nextLocationText.body,
+                  eventKey: `next-location-missing:${created.id}:${nextWeek.id}`,
+                },
+                adminUserIds.map((userId) => ({
+                  userId,
+                  actionPath: buildNewsActionPath({ kind: "WEEK_LOCATION_ADMIN", splitId, weekId: nextWeek.id }, "USER"),
+                })),
+              );
+            }
+          }
         }
 
         return created;

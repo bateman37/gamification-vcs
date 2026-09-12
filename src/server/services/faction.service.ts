@@ -1,7 +1,11 @@
+import { randomUUID } from "node:crypto";
 import type { Prisma, PrismaClient, SplitFaction, SplitParticipant } from "@prisma/client";
 import { DomainError } from "@/lib/errors";
 import type { FactionFormInput } from "@/server/validation/faction";
 import { selectFactionTopThree, rankFactions, type FactionMemberScore, type FactionTopThree } from "@/domain/faction-ranking";
+import { createNewsWithDeliveries, resolveFactionMembers } from "@/server/services/news.service";
+import { buildNewsActionPath } from "@/domain/news-links";
+import { factionRenamedNewsTemplate } from "@/domain/news-templates";
 
 /**
  * Facciones de un split (`0.7.0` / MVP-2A, ver docs/FACTIONS.md). CRUD y
@@ -79,16 +83,47 @@ export async function updateFaction(
   factionId: string,
   input: FactionFormInput,
 ): Promise<SplitFaction> {
-  await getEditableSplitOrThrow(db, splitId);
+  const split = await getEditableSplitOrThrow(db, splitId);
   const existing = await db.splitFaction.findUnique({ where: { id: factionId } });
   if (!existing || existing.splitId !== splitId) {
     throw new DomainError("La faccion indicada no existe en este split.");
   }
+  const newName = input.name.trim();
+  // Solo un cambio de nombre real, durante un split activo, genera noticia (seccion 30 del encargo).
+  const isRename = split.status === "ACTIVE" && newName !== existing.name;
+  const operationId = randomUUID();
 
   try {
-    return await db.splitFaction.update({
-      where: { id: factionId },
-      data: { name: input.name.trim(), nameNormalized: normalizeFactionName(input.name), color: input.color.trim() },
+    return await db.$transaction(async (tx) => {
+      const updated = await tx.splitFaction.update({
+        where: { id: factionId },
+        data: { name: newName, nameNormalized: normalizeFactionName(input.name), color: input.color.trim() },
+      });
+
+      if (isRename) {
+        const members = await resolveFactionMembers(tx, splitId, factionId);
+        if (members.length > 0) {
+          const { title, body } = factionRenamedNewsTemplate({ oldName: existing.name, newName });
+          await createNewsWithDeliveries(
+            tx,
+            {
+              splitId,
+              splitNameSnapshot: split.name,
+              origin: "AUTOMATIC",
+              category: "FACTION",
+              title,
+              body,
+              eventKey: `faction-renamed:${operationId}`,
+            },
+            members.map((member) => ({
+              personId: member.personId,
+              actionPath: buildNewsActionPath({ kind: "PROFILE", splitParticipantId: member.splitParticipantId }, "PERSON"),
+            })),
+          );
+        }
+      }
+
+      return updated;
     });
   } catch (error) {
     if (typeof error === "object" && error !== null && "code" in error && (error as { code?: string }).code === UNIQUE_CONSTRAINT_ERROR_CODE) {

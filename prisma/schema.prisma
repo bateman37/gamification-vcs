@@ -51,6 +51,7 @@ model Person {
   participations   SplitParticipant[]
   user             User?
   publishedResults PublishedParticipantWeeklyResult[]
+  newsDeliveries   NewsDelivery[]
 }
 
 enum UserRole {
@@ -76,8 +77,10 @@ model User {
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
-  person       Person?           @relation(fields: [personId], references: [id], onDelete: Restrict)
-  publications WeekPublication[]
+  person           Person?           @relation(fields: [personId], references: [id], onDelete: Restrict)
+  publications     WeekPublication[]
+  createdNewsItems NewsItem[]
+  newsDeliveries   NewsDelivery[]
 }
 
 /// Split: una edicion de la gamificacion periodica.
@@ -104,6 +107,7 @@ model Split {
   economySettings    SplitEconomySettings?
   equipmentSlots     SplitEquipmentSlot[]
   storeItems         SplitStoreItem[]
+  newsItems          NewsItem[]
 }
 
 /// Semana de un split. La identidad funcional es splitId + sequenceNumber,
@@ -990,4 +994,103 @@ model PublishedEquippedItem {
   equipmentSlot           SplitEquipmentSlot?              @relation(fields: [equipmentSlotId], references: [id], onDelete: SetNull)
 
   @@index([participantWeeklyResultId])
+}
+
+// ---------------------------------------------------------------------------
+// Centro de noticias (`1.0.0` / MVP-3, ver docs/NEWS_CENTER.md). Dos
+// conceptos separados a proposito: `NewsItem` es el contenido (texto plano
+// congelado, nunca editable) y `NewsDelivery` es la entrega privada a un
+// unico destinatario (una `Person` para noticias de jugador -para que
+// lleguen aunque la cuenta todavia no exista-, o un `User` para noticias de
+// administracion). No es un motor generico de eventos: cada origen
+// automatico declara su propia plantilla en el servicio de negocio que la
+// genera; este esquema solo guarda el resultado ya redactado.
+// ---------------------------------------------------------------------------
+
+enum NewsOrigin {
+  AUTOMATIC
+  MANUAL
+}
+
+/// Categoria cerrada de noticia (seccion 25 del encargo). Puramente
+/// descriptiva (icono + filtro en la bandeja); no condiciona destinatarios
+/// ni permisos.
+enum NewsCategory {
+  SPLIT
+  PROFILE
+  RESULTS
+  FACTION
+  PROFESSION
+  LOCATION
+  MARKET
+  PURCHASE
+  ANNOUNCEMENT
+  ADMIN
+}
+
+enum NewsPriority {
+  NORMAL
+  IMPORTANT
+}
+
+/// Contenido inmutable de una noticia. `splitId`/`splitNameSnapshot` son
+/// opcionales porque una noticia de administracion puede no pertenecer a
+/// ningun split. `eventKey` es la clave de idempotencia de las noticias
+/// automaticas repetibles (activacion, publicacion, apertura de mercado...):
+/// unica cuando no es `null`, para que una carrera o un reintento nunca
+/// duplique la noticia. `createdByUserId` y `manualAudienceSnapshot` solo se
+/// usan en envio manual.
+model NewsItem {
+  id                      String       @id @default(uuid())
+  splitId                 String?
+  splitNameSnapshot       String?
+  origin                  NewsOrigin
+  category                NewsCategory
+  priority                NewsPriority @default(NORMAL)
+  title                   String
+  body                    String
+  eventKey                String?      @unique
+  createdByUserId         String?
+  /// Descripcion congelada del publico elegido por el administrador (por
+  /// ejemplo "Todo el split", "Faccion Aurora" o el alias de una persona).
+  /// Solo para envio manual; `null` en noticias automaticas.
+  manualAudienceSnapshot  String?
+  createdAt               DateTime     @default(now())
+
+  split         Split?         @relation(fields: [splitId], references: [id], onDelete: SetNull)
+  // Restrict: el autor de un envio manual no se borra fisicamente mientras conserve mensajes enviados.
+  createdByUser User?          @relation(fields: [createdByUserId], references: [id], onDelete: Restrict)
+  deliveries    NewsDelivery[]
+
+  @@index([splitId, category, createdAt])
+}
+
+/// Entrega privada de una noticia a un destinatario concreto (seccion 26 del
+/// encargo). Exactamente uno entre `recipientPersonId` y `recipientUserId`
+/// (restriccion `NewsDelivery_recipient_exclusive_check` en la migracion).
+/// Solo `readAt`/`archivedAt` cambian despues de crearse; no hay borrado
+/// fisico desde la interfaz. `actionPath` se construye siempre en servidor
+/// (`src/domain/news-links.ts`), nunca a partir de una URL enviada por el
+/// administrador.
+model NewsDelivery {
+  id                String    @id @default(uuid())
+  newsItemId        String
+  recipientPersonId String?
+  recipientUserId   String?
+  actionPath        String?
+  readAt            DateTime?
+  archivedAt        DateTime?
+  createdAt         DateTime  @default(now())
+
+  newsItem        NewsItem @relation(fields: [newsItemId], references: [id], onDelete: Cascade)
+  // Restrict: una entrega ya creada nunca debe quedar huerfana por borrar fisicamente al destinatario.
+  recipientPerson Person?  @relation(fields: [recipientPersonId], references: [id], onDelete: Restrict)
+  recipientUser   User?    @relation(fields: [recipientUserId], references: [id], onDelete: Restrict)
+
+  // Como mucho una entrega de cada noticia por persona (Postgres no considera iguales dos NULL, por lo que esto no bloquea las entregas dirigidas a un usuario).
+  @@unique([newsItemId, recipientPersonId])
+  // Como mucho una entrega de cada noticia por usuario directo.
+  @@unique([newsItemId, recipientUserId])
+  @@index([recipientPersonId, archivedAt, readAt, createdAt])
+  @@index([recipientUserId, archivedAt, readAt, createdAt])
 }

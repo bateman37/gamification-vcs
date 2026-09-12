@@ -1,10 +1,19 @@
 import type { Prisma, PrismaClient, Split, SplitWeek } from "@prisma/client";
 import { DomainError } from "@/lib/errors";
-import { generateSplitWeeks, parseCalendarDate } from "@/lib/dates";
+import { currentCalendarDate, generateSplitWeeks, parseCalendarDate } from "@/lib/dates";
 import type { CreateSplitInput, UpdateSplitDraftInput } from "@/server/validation/split";
 import { countActiveKpiConfigs, createDefaultKpiConfigs } from "@/server/services/kpi.service";
 import { createDefaultPositionPointRules } from "@/server/services/position-points.service";
 import { assertFactionsReadyToActivate } from "@/server/services/faction.service";
+import { createNewsWithDeliveries, resolveActiveAdminUserIds } from "@/server/services/news.service";
+import { buildNewsActionPath } from "@/domain/news-links";
+import {
+  adminSplitCreatedNewsTemplate,
+  adminSplitActivatedNewsTemplate,
+  adminIncompleteProfilesNewsTemplate,
+  splitActivatedNewsTemplateForParticipant,
+} from "@/domain/news-templates";
+import { KPI_CATALOG } from "@/domain/kpis/catalog";
 
 type Db = PrismaClient | Prisma.TransactionClient;
 
@@ -42,6 +51,16 @@ export async function createSplitWithWeeks(db: PrismaClient, input: CreateSplitI
 
     await createDefaultKpiConfigs(tx, split.id);
     await createDefaultPositionPointRules(tx, split.id);
+
+    const adminUserIds = await resolveActiveAdminUserIds(tx);
+    if (adminUserIds.length > 0) {
+      const { title, body } = adminSplitCreatedNewsTemplate({ splitName: split.name, startDate: split.startDate, numberOfWeeks: split.numberOfWeeks });
+      await createNewsWithDeliveries(
+        tx,
+        { splitId: split.id, splitNameSnapshot: split.name, origin: "AUTOMATIC", category: "ADMIN", title, body, eventKey: `split-created:${split.id}` },
+        adminUserIds.map((userId) => ({ userId, actionPath: buildNewsActionPath({ kind: "SPLIT_ADMIN", splitId: split.id }, "USER") })),
+      );
+    }
 
     return split;
   });
@@ -168,5 +187,80 @@ export async function activateSplit(db: PrismaClient, splitId: string): Promise<
   }
   await assertFactionsReadyToActivate(db, splitId);
 
-  return db.split.update({ where: { id: splitId }, data: { status: "ACTIVE" } });
+  const usesProfessions = (await db.splitProfession.count({ where: { splitId } })) > 0;
+  const participants = await db.splitParticipant.findMany({ where: { splitId } });
+  const avatars = await db.splitParticipantAvatar.findMany({
+    where: { splitParticipantId: { in: participants.map((p) => p.id) } },
+    select: { splitParticipantId: true },
+  });
+  const avatarIds = new Set(avatars.map((a) => a.splitParticipantId));
+  const firstWeek = await db.splitWeek.findUnique({ where: { splitId_sequenceNumber: { splitId, sequenceNumber: 1 } } });
+  const firstWeekLocation = firstWeek ? await db.splitWeekLocation.findUnique({ where: { splitWeekId: firstWeek.id } }) : null;
+
+  return db.$transaction(async (tx) => {
+    const updated = await tx.split.update({ where: { id: splitId }, data: { status: "ACTIVE" } });
+
+    const incompleteAliases = participants
+      .filter((p) => !avatarIds.has(p.id) || (usesProfessions && !p.professionId))
+      .map((p) => p.alias);
+
+    for (const participant of participants) {
+      const needsAvatar = !avatarIds.has(participant.id);
+      const needsProfession = usesProfessions && !participant.professionId;
+      const { title, body } = splitActivatedNewsTemplateForParticipant({
+        splitName: split.name,
+        startDate: split.startDate,
+        needsAvatar,
+        needsProfession,
+        nextLocation:
+          firstWeekLocation && firstWeek
+            ? {
+                name: firstWeekLocation.name,
+                kpiName: KPI_CATALOG[firstWeekLocation.kpiCode].name,
+                bonusPercent: firstWeekLocation.bonusPercent,
+                weekStartDate: firstWeek.startDate,
+              }
+            : null,
+      });
+      await createNewsWithDeliveries(
+        tx,
+        { splitId, splitNameSnapshot: split.name, origin: "AUTOMATIC", category: "SPLIT", title, body, eventKey: `split-activated:${splitId}:${participant.id}` },
+        [{ personId: participant.personId, actionPath: buildNewsActionPath({ kind: "PROFILE", splitParticipantId: participant.id }, "PERSON") }],
+      );
+    }
+
+    const adminUserIds = await resolveActiveAdminUserIds(tx);
+    if (adminUserIds.length > 0) {
+      const adminText = adminSplitActivatedNewsTemplate({
+        splitName: split.name,
+        participantCount: participants.length,
+        activeKpiCount,
+        startDate: split.startDate,
+      });
+      await createNewsWithDeliveries(
+        tx,
+        { splitId, splitNameSnapshot: split.name, origin: "AUTOMATIC", category: "ADMIN", title: adminText.title, body: adminText.body, eventKey: `admin-split-activated:${splitId}` },
+        adminUserIds.map((userId) => ({ userId, actionPath: buildNewsActionPath({ kind: "SPLIT_ADMIN", splitId, anchor: "participantes" }, "USER") })),
+      );
+
+      if (incompleteAliases.length > 0) {
+        const incompleteText = adminIncompleteProfilesNewsTemplate({ splitName: split.name, aliases: incompleteAliases });
+        await createNewsWithDeliveries(
+          tx,
+          {
+            splitId,
+            splitNameSnapshot: split.name,
+            origin: "AUTOMATIC",
+            category: "ADMIN",
+            title: incompleteText.title,
+            body: incompleteText.body,
+            eventKey: `admin-incomplete-profiles:${splitId}`,
+          },
+          adminUserIds.map((userId) => ({ userId, actionPath: buildNewsActionPath({ kind: "SPLIT_ADMIN", splitId, anchor: "participantes" }, "USER") })),
+        );
+      }
+    }
+
+    return updated;
+  });
 }

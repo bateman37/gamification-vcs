@@ -18,6 +18,7 @@ import {
   type ProductivityRowError,
   type ProductivitySourceRow,
 } from "@/server/services/productivity/excel-reader";
+import { notifyIfWeekReadyToReview } from "@/server/services/news-week-ready.service";
 import { isAmbiguousMatch, isFoundMatch, isIgnoredMatch, matchProductivityRows } from "@/server/services/productivity/matching";
 
 type Db = PrismaClient | Prisma.TransactionClient;
@@ -261,6 +262,8 @@ export async function confirmProductivityImport(
         ticketsCreated: match.row.ticketsCreated,
       })),
     });
+
+    await notifyIfWeekReadyToReview(tx, splitId, weekId);
   });
 }
 
