@@ -22,7 +22,7 @@ describe("Navegacion por rol", () => {
     // No hay una segunda fuente de orden: SidebarNav.tsx y MobileNav.tsx reciben ambos el mismo
     // array `items` ya calculado por AppShell a partir de buildNavItems (ver src/components/AppShell.tsx).
     const items = buildNavItems({ isAuthenticated: true, isAdmin: true, hasPersonId: true });
-    expect(items[0].href).toBe("/noticias");
+    expect(items[0]?.href).toBe("/noticias");
   });
 
   it("un participante ve Noticias, Resultados y Fichas, nunca Personas ni Splits", () => {
