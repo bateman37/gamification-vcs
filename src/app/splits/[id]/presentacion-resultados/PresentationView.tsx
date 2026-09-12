@@ -180,7 +180,7 @@ export function PresentationView({ splitId, data }: { splitId: string; data: Spl
   const weekIntervalLabel = `Semana del ${formatCalendarDateEs(data.weekStartDate)} al ${formatCalendarDateEs(data.weekEndDate)}`;
 
   const liveMessage = useMemo(() => {
-    if (phase === "cover") return `${data.splitName}: presentacion lista para comenzar.`;
+    if (phase === "cover") return `${data.splitName}: presentación lista para comenzar.`;
     if (phase === "summary") return "Resumen final de la clasificación general.";
     if (revealedCount === 0) return `${PHASE_TITLES[phase]}: sin revelar todavía.`;
     const group = currentGroups[revealedCount - 1] ?? [];
@@ -213,12 +213,14 @@ export function PresentationView({ splitId, data }: { splitId: string; data: Spl
             className="inline-flex items-center gap-1.5 rounded-control border border-white/20 px-3 py-1.5 text-xs font-medium text-white hover:bg-white/10"
           >
             <Icon name="X" className="h-3.5 w-3.5" />
-            Salir de la presentacion
+            Salir de la presentación
           </Link>
         </div>
       </header>
 
-      <main className="flex flex-1 flex-col items-center justify-center overflow-y-auto px-4 py-8 sm:px-8">
+      {/* `<div>`, no `<main>`: esta vista se monta dentro del `<main>` global de AppShell (cubierto
+          visualmente por el lienzo fijo), y dos landmarks `main` en la misma pagina serian invalidos. */}
+      <div className="flex flex-1 flex-col items-center justify-center overflow-y-auto px-4 py-8 sm:px-8">
         {phase === "cover" && (
           <div className="flex max-w-xl flex-col items-center gap-4 text-center">
             <h1 className="text-3xl font-bold sm:text-4xl">{data.splitName}</h1>
@@ -230,7 +232,7 @@ export function PresentationView({ splitId, data }: { splitId: string; data: Spl
               onClick={goNext}
               className="mt-4 rounded-control bg-primary px-6 py-3 text-base font-semibold text-white hover:bg-primary-hover"
             >
-              Comenzar presentacion
+              Comenzar presentación
             </button>
           </div>
         )}
@@ -335,7 +337,7 @@ export function PresentationView({ splitId, data }: { splitId: string; data: Spl
 
             <div className="flex flex-wrap justify-center gap-3 pt-2">
               <button type="button" onClick={restartPresentation} className="rounded-control border border-white/20 px-4 py-2 text-sm font-medium hover:bg-white/10">
-                Repetir presentacion
+                Repetir presentación
               </button>
               <Link href={`/splits/${splitId}`} className="rounded-control bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover">
                 Volver al split
@@ -343,7 +345,7 @@ export function PresentationView({ splitId, data }: { splitId: string; data: Spl
             </div>
           </div>
         )}
-      </main>
+      </div>
 
       {phase !== "cover" && phase !== "summary" && (
         <footer className="flex flex-wrap items-center justify-center gap-2 border-t border-white/10 px-4 py-3 sm:px-8">

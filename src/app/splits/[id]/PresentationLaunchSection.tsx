@@ -30,7 +30,7 @@ export function PresentationLaunchSection({
         </h2>
         {lastPublishedWeek ? (
           <p className="mt-1 text-sm text-text-muted">
-            Se presentara la semana del {formatCalendarDateEs(lastPublishedWeek.startDate)} al {formatCalendarDateEs(lastPublishedWeek.endDate)}.
+            Se presentará la semana del {formatCalendarDateEs(lastPublishedWeek.startDate)} al {formatCalendarDateEs(lastPublishedWeek.endDate)}.
           </p>
         ) : (
           <p className="mt-1 text-sm text-text-muted">Publica una semana para presentar sus resultados.</p>
