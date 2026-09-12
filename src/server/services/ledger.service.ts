@@ -42,3 +42,54 @@ export async function listLedgerEntriesForParticipant(db: Db, splitParticipantId
     createdAt: entry.createdAt,
   }));
 }
+
+export interface ParticipantEconomySummary {
+  splitParticipantId: string;
+  alias: string;
+  balance: number;
+  totalEarned: number;
+  totalSpent: number;
+  purchaseCount: number;
+}
+
+/**
+ * Resumen economico de todos los participantes de un split, para la
+ * administracion (seccion 8 del encargo): saldo, total ganado, total
+ * gastado y numero de compras. Dos consultas acotadas, nunca una por
+ * participante.
+ */
+export async function listEconomySummaryForSplit(db: Db, splitId: string): Promise<ParticipantEconomySummary[]> {
+  const participants = await db.splitParticipant.findMany({ where: { splitId }, select: { id: true, alias: true } });
+  if (participants.length === 0) return [];
+
+  const entries = await db.creditLedgerEntry.findMany({
+    where: { splitParticipantId: { in: participants.map((participant) => participant.id) } },
+    select: { splitParticipantId: true, type: true, amount: true },
+  });
+
+  const byParticipant = new Map<string, { earned: number; spent: number; purchases: number }>();
+  for (const entry of entries) {
+    const bucket = byParticipant.get(entry.splitParticipantId) ?? { earned: 0, spent: 0, purchases: 0 };
+    if (entry.type === "WEEKLY_EARNING") {
+      bucket.earned += entry.amount;
+    } else {
+      bucket.spent += -entry.amount;
+      bucket.purchases += 1;
+    }
+    byParticipant.set(entry.splitParticipantId, bucket);
+  }
+
+  return participants
+    .map((participant) => {
+      const bucket = byParticipant.get(participant.id) ?? { earned: 0, spent: 0, purchases: 0 };
+      return {
+        splitParticipantId: participant.id,
+        alias: participant.alias,
+        balance: bucket.earned - bucket.spent,
+        totalEarned: bucket.earned,
+        totalSpent: bucket.spent,
+        purchaseCount: bucket.purchases,
+      };
+    })
+    .sort((a, b) => a.alias.localeCompare(b.alias, "es"));
+}
