@@ -1,5 +1,7 @@
-import type { PrismaClient, SplitParticipant, SplitWeek } from "@prisma/client";
+import type { Prisma, PrismaClient, SplitParticipant, SplitWeek } from "@prisma/client";
 import { KPI_CATALOG_LIST, type KpiCode } from "@/domain/kpis/catalog";
+
+type Db = PrismaClient | Prisma.TransactionClient;
 
 /**
  * Contador de "KPI cargados" por semana, para la columna independiente del
@@ -39,7 +41,7 @@ function isManualEntryComplete(requiredIds: string[], savedIds: ReadonlySet<stri
 }
 
 export async function getWeeklyKpiLoadSummary(
-  db: PrismaClient,
+  db: Db,
   splitId: string,
   weeks: SplitWeek[],
 ): Promise<Map<string, WeekKpiLoadSummary>> {

@@ -4,6 +4,7 @@ import { KPI_CATALOG_LIST, KPI_CATALOG, type KpiCode } from "@/domain/kpis/catal
 import type { UpdateKpiConfigInput } from "@/server/validation/kpi";
 import { assertSplitConfigurationIsEditable } from "@/server/services/shared/split-configuration-lock";
 import { findFutureLocationsUsingKpi } from "@/server/services/location.service";
+import { findStoreItemsUsingKpi } from "@/server/services/store-item.service";
 
 type Db = PrismaClient | Prisma.TransactionClient;
 
@@ -79,6 +80,17 @@ export async function updateKpiConfig(
         const weeksText = affected.map((usage) => `semana ${usage.sequenceNumber} ("${usage.locationName}")`).join(", ");
         throw new DomainError(
           `No se puede desactivar "${KPI_CATALOG[kpiCode].name}": lo potencia la localizacion de ${weeksText}. Edita o elimina antes esa localizacion.`,
+        );
+      }
+
+      // Un objeto a la venta, comprado o equipado que potencie este KPI tambien bloquea la
+      // desactivacion (`0.9.0` / MVP-2D, ver docs/ECONOMY_INVENTORY_AND_EQUIPMENT.md, seccion 14
+      // del encargo): nunca se desactivan objetos ni se desequipa a nadie en silencio.
+      const affectedItems = await findStoreItemsUsingKpi(tx, splitId, kpiCode);
+      if (affectedItems.length > 0) {
+        const itemsText = affectedItems.map((usage) => `"${usage.itemName}"`).join(", ");
+        throw new DomainError(
+          `No se puede desactivar "${KPI_CATALOG[kpiCode].name}": lo potencian los objetos ${itemsText}. Retiralos de la venta o cambia su KPI (si nadie los ha comprado) antes de desactivarlo.`,
         );
       }
     }

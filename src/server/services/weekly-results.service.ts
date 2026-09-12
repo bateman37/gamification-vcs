@@ -26,6 +26,11 @@ import { buildFactionWeeklyPreview, type FactionWeeklyPreview } from "@/server/s
 import { collectProfessionAssignmentIssues, toApplicableProfession } from "@/server/services/profession.service";
 import { applyProfessionBonus, PROFESSION_BONUS_PERCENT } from "@/domain/profession-bonus";
 import { applyLocationBonus, isAllowedLocationBonusPercent, type ApplicableWeekLocation } from "@/domain/location-bonus";
+import { applyEquipmentBonuses, type EquippedItemForBonus } from "@/domain/equipment-bonus";
+import { loadEquippedItemsForParticipants } from "@/server/services/equipment.service";
+import { computeCreditsEarned } from "@/domain/credits";
+
+type Db = PrismaClient | Prisma.TransactionClient;
 
 /**
  * Motor agregado de resultados semanales (ver docs/RESULTS_PUBLICATION.md).
@@ -59,8 +64,24 @@ export interface ParticipantKpiResult {
   locationBonusPoints: number | null;
   /** `true` solo si el bonus de localizacion se aplico realmente a este KPI. */
   locationApplied: boolean;
+  /** Puntos anadidos por objetos de equipo que potencian este KPI (`0.9.0` / MVP-2D). `0` cuando no aplica; `null` si no hay resultado numerico. */
+  equipmentBonusPoints: number | null;
+  /** `true` si al menos un objeto equipado aplico su bonus a este KPI. */
+  equipmentApplied: boolean;
   kpiRank: number | null;
   rankedParticipantCount: number | null;
+}
+
+/** Objeto equipado en vivo, listo para mostrarse en la previsualizacion (`0.9.0` / MVP-2D). */
+export interface ParticipantEquippedItemView {
+  ownedItemId: string;
+  storeItemId: string;
+  itemName: string;
+  equipmentSlotId: string;
+  equipmentSlotName: string;
+  kpiCode: KpiCode;
+  kpiName: string;
+  bonusPercent: number;
 }
 
 /** Localizacion semanal (`0.8.5` / MVP-2C, ver docs/WEEKLY_LOCATIONS.md) lista para mostrarse. */
@@ -100,6 +121,12 @@ export interface ParticipantWeeklyResult {
   professionBonusTotal: number;
   /** Suma de los puntos anadidos por la localizacion semanal en la semana (0 si no hay ninguno o no aplica). */
   locationBonusTotal: number;
+  /** Suma de los puntos anadidos por objetos de equipo en la semana (`0.9.0` / MVP-2D). */
+  equipmentBonusTotal: number;
+  /** Equipo vivo del participante en el momento de calcular (`0.9.0` / MVP-2D): el que se congelara si se publica ahora mismo. */
+  equippedItems: ParticipantEquippedItemView[];
+  /** Estimacion de creditos que se ganarian si se publicara esta semana ahora mismo (`max(0, floor(totalKpiPoints))`). */
+  creditsEarned: number;
 }
 
 export interface WeeklyResultsComputation {
@@ -275,7 +302,7 @@ function resolveParticipantKpi(
   }
 }
 
-async function loadRawDataContext(db: PrismaClient, splitId: string, weekId: string, activeCodes: Set<KpiCode>): Promise<RawDataContext> {
+async function loadRawDataContext(db: Db, splitId: string, weekId: string, activeCodes: Set<KpiCode>): Promise<RawDataContext> {
   const needsProductivity = activeCodes.has("SOLUTION_HUNTER") || activeCodes.has("DATA_EXPLORER") || activeCodes.has("ESCALATION_TAMER");
   const needsVoice = activeCodes.has("VOICE_AMBASSADOR");
   const needsQuality = activeCodes.has("MASTER_CRAFTSMAN");
@@ -347,7 +374,7 @@ async function loadRawDataContext(db: PrismaClient, splitId: string, weekId: str
  * 4.3). Vuelve a validar y recalcular todo desde base de datos: nunca debe
  * llamarse confiando en datos calculados previamente en el navegador.
  */
-export async function computeWeeklyResults(db: PrismaClient, splitId: string, weekId: string): Promise<WeeklyResultsComputation> {
+export async function computeWeeklyResults(db: Db, splitId: string, weekId: string): Promise<WeeklyResultsComputation> {
   const split = await getSplitById(db, splitId);
   if (!split) throw new DomainError("El split indicado no existe.");
   const week = await getSplitWeek(db, splitId, weekId);
@@ -419,6 +446,10 @@ export async function computeWeeklyResults(db: PrismaClient, splitId: string, we
   const usesProfessions = professionCount > 0;
   const configByCode = new Map(activeConfigs.map((config) => [config.kpiCode, toKpiConfigView(config)]));
   const ctx = await loadRawDataContext(db, splitId, week.id, new Set(activeCodes));
+  // Equipo vivo de todos los participantes aplicables (`0.9.0` / MVP-2D): una sola consulta, releida en
+  // el momento de calcular (previsualizacion) o dentro de la propia transaccion de publishWeek, nunca
+  // confiando en una previsualizacion anterior (seccion 22 del encargo).
+  const equippedItemsByParticipant = await loadEquippedItemsForParticipants(db, participants.map((participant) => participant.id));
 
   const blockingIssues: string[] = [];
   const vacCountsByKpi: Partial<Record<KpiCode, number>> = {};
@@ -432,6 +463,8 @@ export async function computeWeeklyResults(db: PrismaClient, splitId: string, we
     hasApplicableMax: boolean;
     professionBonusTotalDecimal: Prisma.Decimal;
     locationBonusTotalDecimal: Prisma.Decimal;
+    equipmentBonusTotalDecimal: Prisma.Decimal;
+    equippedItems: EquippedItemForBonus[];
   }
 
   const working: WorkingParticipant[] = participants.map((participant) => {
@@ -440,11 +473,13 @@ export async function computeWeeklyResults(db: PrismaClient, splitId: string, we
     let hasApplicableMax = false;
     let professionBonusTotalDecimal = new Prisma.Decimal(0);
     let locationBonusTotalDecimal = new Prisma.Decimal(0);
+    let equipmentBonusTotalDecimal = new Prisma.Decimal(0);
 
     // La profesion solo interviene si el split usa profesiones: un split sin profesiones nunca
     // recibe bonus, aunque alguna fila antigua tuviera `professionId` informado.
     const applicableProfession =
       usesProfessions && participant.profession ? toApplicableProfession(participant.profession) : null;
+    const equippedItems = equippedItemsByParticipant.get(participant.id) ?? [];
 
     const kpiResults: ParticipantKpiResult[] = activeCodes.map((code) => {
       const config = configByCode.get(code)!;
@@ -452,31 +487,35 @@ export async function computeWeeklyResults(db: PrismaClient, splitId: string, we
       if (resolved.blockingIssue) blockingIssues.push(resolved.blockingIssue);
       if (resolved.status === "VAC") vacCountsByKpi[code] = (vacCountsByKpi[code] ?? 0) + 1;
 
-      // Orden exacto del calculo (secciones 8 y 10): formula del KPI -> maximo base -> puntos base
-      // finales. Profesion y localizacion se calculan de forma independiente sobre ese mismo
-      // resultado (nunca uno sobre el resultado del otro) y se suman una sola vez. `VAC` y
-      // `NOT_APPLICABLE` nunca llegan a ninguno de los dos bonus: no tienen puntos que bonificar.
+      // Orden exacto del calculo (secciones 8, 10 y 23): formula del KPI -> maximo base -> puntos base
+      // finales. Profesion, localizacion y objetos de equipo se calculan de forma independiente sobre
+      // ese mismo resultado (nunca uno sobre el resultado de otro) y se suman una sola vez. `VAC` y
+      // `NOT_APPLICABLE` nunca llegan a ninguno de los tres bonus: no tienen puntos que bonificar.
       const baseFinalPoints = resolved.status === "COMPUTED" && resolved.computation ? resolved.computation.finalPoints : null;
 
       const professionBonus =
         baseFinalPoints !== null ? applyProfessionBonus(baseFinalPoints, code, applicableProfession, participant.level) : null;
       const locationBonus = baseFinalPoints !== null ? applyLocationBonus(baseFinalPoints, code, applicableLocation) : null;
+      const equipmentBonus = baseFinalPoints !== null ? applyEquipmentBonuses(baseFinalPoints, code, equippedItems) : null;
 
       let finalPointsDecimal: Prisma.Decimal | null = null;
       let professionBonusPoints = new Prisma.Decimal(0);
       let locationBonusPoints = new Prisma.Decimal(0);
+      let equipmentBonusPoints = new Prisma.Decimal(0);
       if (baseFinalPoints !== null) {
         professionBonusPoints = professionBonus?.bonusPoints ?? new Prisma.Decimal(0);
         locationBonusPoints = locationBonus?.bonusPoints ?? new Prisma.Decimal(0);
-        finalPointsDecimal = baseFinalPoints.plus(professionBonusPoints).plus(locationBonusPoints);
+        equipmentBonusPoints = equipmentBonus?.bonusPoints ?? new Prisma.Decimal(0);
+        finalPointsDecimal = baseFinalPoints.plus(professionBonusPoints).plus(locationBonusPoints).plus(equipmentBonusPoints);
 
         totalKpiPointsDecimal = totalKpiPointsDecimal.plus(finalPointsDecimal);
-        // `applicableMaxPoints` sigue sumando maximos base, nunca maximos inflados por profesion o
-        // localizacion: por eso el porcentaje visual puede superar el 100 % (seccion 10 del encargo,
-        // hasta un 170 % con ambos bonus a la vez).
+        // `applicableMaxPoints` sigue sumando maximos base, nunca maximos inflados por profesion,
+        // localizacion u objetos: por eso el porcentaje visual puede superar el 100 % (seccion 27 del
+        // encargo).
         applicableMaxPointsDecimal = applicableMaxPointsDecimal.plus(config.baseMax);
         professionBonusTotalDecimal = professionBonusTotalDecimal.plus(professionBonusPoints);
         locationBonusTotalDecimal = locationBonusTotalDecimal.plus(locationBonusPoints);
+        equipmentBonusTotalDecimal = equipmentBonusTotalDecimal.plus(equipmentBonusPoints);
         hasApplicableMax = true;
       }
 
@@ -494,6 +533,8 @@ export async function computeWeeklyResults(db: PrismaClient, splitId: string, we
         professionName: professionBonus?.applied ? professionBonus.professionName : null,
         locationBonusPoints: baseFinalPoints !== null ? locationBonusPoints.toNumber() : null,
         locationApplied: locationBonus?.applied ?? false,
+        equipmentBonusPoints: baseFinalPoints !== null ? equipmentBonusPoints.toNumber() : null,
+        equipmentApplied: equipmentBonus?.applied ?? false,
         kpiRank: null,
         rankedParticipantCount: null,
       };
@@ -507,6 +548,8 @@ export async function computeWeeklyResults(db: PrismaClient, splitId: string, we
       hasApplicableMax,
       professionBonusTotalDecimal,
       locationBonusTotalDecimal,
+      equipmentBonusTotalDecimal,
+      equippedItems,
     };
   });
 
@@ -579,6 +622,18 @@ export async function computeWeeklyResults(db: PrismaClient, splitId: string, we
           : null,
       professionBonusTotal: item.professionBonusTotalDecimal.toNumber(),
       locationBonusTotal: item.locationBonusTotalDecimal.toNumber(),
+      equipmentBonusTotal: item.equipmentBonusTotalDecimal.toNumber(),
+      equippedItems: item.equippedItems.map((equippedItem) => ({
+        ownedItemId: equippedItem.ownedItemId,
+        storeItemId: equippedItem.storeItemId,
+        itemName: equippedItem.itemName,
+        equipmentSlotId: equippedItem.equipmentSlotId,
+        equipmentSlotName: equippedItem.equipmentSlotName,
+        kpiCode: equippedItem.kpiCode,
+        kpiName: KPI_CATALOG[equippedItem.kpiCode].name,
+        bonusPercent: equippedItem.bonusPercent,
+      })),
+      creditsEarned: computeCreditsEarned(item.totalKpiPointsDecimal),
     };
   });
 
