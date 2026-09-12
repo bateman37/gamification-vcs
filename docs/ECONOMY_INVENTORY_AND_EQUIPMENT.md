@@ -346,6 +346,23 @@ y se muestran sin objetos, con `equipmentApplied: false` y
 Cambiar el catalogo o el equipo actual nunca altera un resultado ya
 publicado.
 
+**Hotfix `1.0.2`:** la tabla administrativa de resultados semanales
+(`WeeklyResultsTable.tsx`, `/splits/[id]/weeks/[weekId]/resultados`) ya
+mostraba el bonus de profesion y el de localizacion en cada celda, pero no
+el de objetos, pese a que ya se calculaba y se congelaba correctamente. La
+celda ahora tambien transporta `equipmentBonusPoints`/`equipmentApplied`:
+en previsualizacion, desde el calculo en vivo de `computeWeeklyResults`
+(equipo actual); en una semana publicada, siempre desde el
+`equipmentBonusPoints`/`equipmentApplied` ya congelado de
+`PublishedKpiResult`, nunca recalculado a partir del equipo actual. La
+celda muestra un badge ambar "Objetos: +N puntos" (tono `reward`, igual
+que el resto de esta capa), combinado correctamente con los badges de
+profesion y localizacion en cualquier subconjunto de los tres bonus, y la
+leyenda de la tabla explica el nuevo badge. No cambia ningun calculo, ni
+`baseFinalPoints`, ni el instante en que se congela el equipo al publicar;
+la vista individual (`/resultados`) ya mostraba este bonus correctamente y
+no se ha tocado.
+
 ## 16. Configuracion privada del personaje
 
 `/fichas/[splitParticipantId]` (`src/server/services/character-config.service.ts`),

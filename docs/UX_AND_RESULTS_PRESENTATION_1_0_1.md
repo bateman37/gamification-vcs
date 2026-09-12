@@ -136,6 +136,16 @@ con las mismas opciones y se cierra al elegir una. Todas las secciones del
 split usan `scroll-mt-20` de forma consistente para no quedar ocultas bajo
 la cabecera fija.
 
+**Hotfix `1.0.2`:** el submenú incluye ahora "Presentar resultados" justo
+después de "Calendario de semanas" y antes de "Clasificación general
+individual", en escritorio y en su versión móvil, para `ADMIN`, exista o
+no ya alguna semana publicada. `SplitDetailNavItem` distingue ahora
+explícitamente un enlace de sección (`type: "section"`, ancla de la misma
+página, participa en el resaltado por hash/scroll) de un enlace de ruta
+real (`type: "route"`, navega con `Link`, nunca altera el hash ni participa
+en el `IntersectionObserver`): la funcionalidad de la sección 10 no
+cambia, solo se hace alcanzable desde el submenú.
+
 ## 8. Guardado individual y conjunto de KPI
 
 `src/app/splits/[id]/KpiConfigSection.tsx`/`KpiConfigCard.tsx`: cada fila

@@ -19,8 +19,10 @@ Facciones, clasificacion de facciones y consolidacion de UX**, **`0.8.0` /
 MVP-2B — Profesiones, bonus de KPI y fichas de participante**, **`0.8.5` /
 MVP-2C — Localizaciones semanales**, **`0.9.0` / MVP-2D — Economia,
 inventario y equipo**, **`1.0.0` / MVP-3 — Centro de noticias y
-renovacion visual** y **`1.0.1` — UX y presentacion de resultados** (ver
-`docs/ROADMAP.md`). Version actual: `1.0.1`.
+renovacion visual**, **`1.0.1` — UX y presentacion de resultados** y
+**`1.0.2` — Hotfix de sincronizacion de ranuras de equipo, bonus de
+objetos en la tabla administrativa y submenu de "Presentar resultados"**
+(ver `docs/ROADMAP.md`). Version actual: `1.0.2`.
 
 Estas entregas implementan:
 
