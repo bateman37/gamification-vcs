@@ -64,6 +64,9 @@ Desde `0.8.0` / MVP-2B, las Server Actions administrativas de participante
 y de profesion vuelven a exigir `requireAdminSession()` dentro de la propia
 accion, porque una Server Action es una ruta invocable directamente y no
 solo el destino de un formulario ya renderizado por una pagina protegida.
+Las de localizacion semanal (`0.8.5` / MVP-2C,
+`src/server/actions/location.actions.ts`) siguen exactamente el mismo
+patron.
 Las operaciones de autoservicio de la ficha (`alias propio`, `profesion
 propia`, `avatar propio`) son operaciones separadas y de intencion minima:
 no pueden cambiar nivel, faccion, persona ni semana inicial.
@@ -130,6 +133,9 @@ esta entrega: el administrador es quien fija la contrasena temporal.
 | Subir, reemplazar o eliminar su propio avatar | Si (su propia ficha) | Si |
 | Leer el avatar de otra persona | Si | No |
 | Gestionar el avatar de otra persona | No (fuera de alcance) | No |
+| Crear, editar o eliminar la localizacion de una semana | Si (antes de `startDate`, semana no publicada, split no cerrado) | No |
+| Ver la localizacion activa esta semana en su ficha | Si (su propia ficha) | Si |
+| Ver o mutar la localizacion de un split ajeno | No | No |
 
 ## Navegacion segun sesion
 

@@ -204,6 +204,18 @@ finalPoints          = baseFinalPoints + professionBonusPoints
 El bonus **puede** hacer que el resultado supere el maximo base hasta un
 20 % adicional: el maximo **no** se vuelve a aplicar despues de sumarlo.
 
+**Composicion con la localizacion semanal (`0.8.5` / MVP-2C, ver
+docs/WEEKLY_LOCATIONS.md):** cuando la semana tiene ademas una
+localizacion sobre el mismo KPI, su bonus se calcula **de forma
+independiente** sobre el mismo `baseFinalPoints`, nunca sobre
+`finalPoints` de la profesion ni al reves; los dos importes se suman una
+sola vez (`finalPoints = baseFinalPoints + professionBonusPoints +
+locationBonusPoints`). Con profesion `20 %` y localizacion `30 %` sobre
+`70`, el resultado es `105` (`70 + 14 + 21`), nunca `109,20` (que
+resultaria de encadenar `70 x 1,20 x 1,30`). Esta seccion no cambia por
+ello: la profesion sigue siendo exactamente el mismo `+20 %` fijo,
+calculado exactamente igual.
+
 ### 8.1 Cuando se aplica
 
 Solo cuando se cumplen **todas** estas condiciones:

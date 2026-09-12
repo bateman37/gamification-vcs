@@ -1067,3 +1067,92 @@ que en un historico que puede mezclar splits resultaba ambiguo. Formatear
 en UTC evita el error clasico de mostrar el domingo anterior; ordenar por
 la fecha real evita que `10/09` aparezca antes que `07/09` por comparacion
 de texto.
+
+## Snapshot de localizacion una sola vez por semana, no por participante (`0.8.5` / MVP-2C)
+
+**Decision:** `WeekPublication` congela `locationId`,
+`locationNameSnapshot`, `locationKpiCodeSnapshot` y
+`locationBonusPercentSnapshot` una unica vez por semana publicada.
+`PublishedKpiResult` solo anade el desglose que si varia por participante
+y KPI (`locationBonusPoints`, `locationApplied`): nunca repite nombre, KPI
+ni porcentaje de la localizacion en cada fila.
+
+**Motivo:** la localizacion es unica y comun a toda la semana (a
+diferencia de la profesion, que es propia de cada participante). Repetir
+esos tres campos en cada `PublishedKpiResult` habria sido una
+denormalizacion sin ningun beneficio de consulta: ninguna pantalla
+necesita filtrar o agrupar por ellos a nivel de fila, todas los leen desde
+la publicacion de la semana. Sigue el mismo principio ya aplicado a
+`SplitParticipant.factionId` frente al snapshot de faccion (que si es por
+participante, porque la faccion **si** varia por persona).
+
+## Composicion de profesion y localizacion: independiente, no encadenada (`0.8.5` / MVP-2C)
+
+**Decision:** `applyProfessionBonus` y `applyLocationBonus` se invocan
+ambas con el mismo `baseFinalPoints` (los puntos tras el maximo base).
+Ninguna recibe el resultado de la otra como entrada; sus dos importes se
+suman una sola vez en el punto unico de composicion de
+`weekly-results.service.ts`.
+
+**Motivo:** requisito explicito y vinculante del encargo, con ejemplo
+numerico exacto: `70 + 20 % + 30 %` debe dar `105`
+(`70 + 14 + 21`), nunca `109,20` (que resultaria de encadenar
+`70 x 1,20 x 1,30`). Encadenar los bonus tambien haria que el orden de
+aplicacion importase (un efecto no deseado para dos capas que el encargo
+declara explicitamente independientes), y complicaria cualquier futura
+tercera capa de bonus, que tendria que decidir en que punto de la cadena
+insertarse.
+
+## Ventana temporal de la localizacion: funcion pura con fecha inyectada (`0.8.5` / MVP-2C)
+
+**Decision:** `resolveWeekLocationWindow(now, week, isPublished)`
+(`src/domain/location-window.ts`) recibe siempre la fecha actual como
+argumento; los servicios la llaman con `currentCalendarDate()` (reloj
+real), pero la funcion en si nunca lee el reloj. `findNextWeek` sigue el
+mismo patron.
+
+**Motivo:** el encargo exige explicitamente que la logica temporal sea
+comprobable sin `sleep` ni depender del dia real de ejecucion de las
+pruebas. Separar "que hora es" (una unica llamada al reloj, en el borde de
+los servicios) de "que decide la hora" (funcion pura) es el mismo patron
+ya usado por `generateSplitWeeks`/`isMonday` desde `MVP-1A`, aplicado
+ahora a una decision que si depende de la fecha de ejecucion.
+
+## El bloqueo de KPI por localizacion solo mira semanas futuras (`0.8.5` / MVP-2C)
+
+**Decision:** `updateKpiConfig` solo rechaza desactivar un KPI cuando
+existe una localizacion en una semana **todavia no comenzada**
+(`findFutureLocationsUsingKpi`). Una localizacion de una semana ya
+iniciada (pero sin publicaciones en el split todavia) no bloquea la
+desactivacion del KPI: si ocurriera esa combinacion infrecuente, el motor
+de calculo simplemente no aplica el bonus a ningun KPI inactivo (no hay
+fila de resultado para un codigo fuera de `activeKpiCodes`), sin lanzar
+ningun error ni dejar datos inconsistentes.
+
+**Motivo:** el encargo pide explicitamente el bloqueo para "una
+localizacion futura" (seccion 8), no para cualquier localizacion
+existente. Bloquear tambien semanas ya en curso habria ampliado el
+alcance pedido y habria entrado en conflicto con la regla, tambien
+explicita, de que la localizacion de una semana que ya comenzo queda
+bloqueada para **editarse**, pero no convierte en inmutable el resto de la
+configuracion del split mientras no haya publicaciones. Es una
+combinacion de fechas deliberadamente rara (requiere desactivar el KPI
+manualmente en esa ventana concreta) y su peor consecuencia posible es que
+el bonus de localizacion simplemente no se aplique esa semana, nunca un
+error ni una fila corrupta.
+
+## Nota del asterisco de "Semana inicial" siempre visible (`0.8.5` / MVP-2C)
+
+**Decision:** la nota `* En un split activo, indica desde que semana
+empieza a competir esta persona.` de `AddParticipantForm.tsx` se muestra
+siempre que se presenta el formulario, sin condicionarla ni al modo de
+alta (`Persona existente`/`Nueva persona`) ni al estado del split.
+
+**Motivo:** correccion de una minicorreccion explicita del encargo: el
+label `Semana inicial *` ya mostraba el asterisco en cualquier estado del
+split y en los dos modos, pero la nota que lo explica solo aparecia con
+`splitStatus === "ACTIVE"`, una condicion sin relacion con lo que
+realmente hacia visible o no la nota. Mostrarla siempre es la solucion mas
+simple que no oculta informacion util (el alta en un split en borrador
+tambien puede beneficiarse de saber para que sirve el campo) y elimina la
+inconsistencia observada.
