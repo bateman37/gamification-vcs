@@ -275,6 +275,16 @@ dentro de la propia Server Action); un participante solo puede consultar
 la localizacion vinculada a sus propias fichas y resultados autorizados,
 nunca mutarla ni ver la de otra persona o de otro split.
 
+## 11.bis Noticias automaticas (`1.0.0` / MVP-3)
+
+Crear, actualizar o eliminar una localizacion notifica a los participantes
+aplicables a esa semana **solo si el split ya esta `ACTIVE`** (en `DRAFT`
+la configuracion es preparacion y no debe inundar bandejas) y solo si el
+`upsert` cambia realmente nombre, KPI o porcentaje (un guardado identico
+no notifica). El administrador no recibe una noticia de jugador por esto,
+pero si vera la "proxima localizacion pendiente" que genera `publishWeek`
+cuando corresponda. Ver `docs/NEWS_CENTER.md`.
+
 ## 12. Minicorreccion: nota del asterisco en "Anadir participante"
 
 `AddParticipantForm.tsx` mantenia el label `Semana inicial *` en los dos

@@ -358,6 +358,40 @@ satisfactorias.
   subastas, cofres o loot, consumibles, misiones, y cualquier otra capa de
   juego (ver mas abajo).
 
+## `1.0.0` / MVP-3 — Centro de noticias y renovacion visual
+
+**Estado: completado.**
+
+- **Centro de noticias interno** (`NewsItem`/`NewsDelivery`,
+  `prisma/migrations/20260912143314_add_news_center`): bandeja privada
+  `/noticias` para cualquier usuario autenticado, campana global con
+  contador y vista previa, envio manual segmentado desde administracion
+  (`/noticias/administrar`) y noticias automaticas generadas por los
+  servicios de negocio reales (alta de participante, activacion de split,
+  facciones, profesiones, localizaciones, mercado, compra y publicacion
+  semanal). Detalle completo en `docs/NEWS_CENTER.md`.
+- Noticias de jugador entregadas siempre a `Person` (llegan aunque la
+  cuenta todavia no exista); noticias de administracion entregadas a
+  `User`. Sin backfill historico: la bandeja empieza a registrar eventos
+  desde el despliegue de esta version.
+- Atomicidad e idempotencia: la noticia se escribe en la misma transaccion
+  que el hecho de negocio cuando ese hecho ya abre una, con claves
+  idempotentes que impiden duplicados por reintento o carrera.
+- **Renovacion visual "Prisma competitivo"**: tokens de color y tipografia
+  centralizados (`tailwind.config.ts`, `src/app/globals.css`), sistema de
+  componentes ampliado (`src/components/ui.tsx`), app shell con barra
+  lateral en escritorio y cabecera+menu en movil
+  (`src/components/AppShell.tsx`), aplicada a toda la aplicacion existente
+  sin alterar ninguna regla de negocio. Detalle completo en
+  `docs/DESIGN_SYSTEM.md`.
+- El acceso raiz `/` redirige a `/noticias` para cualquier usuario
+  autenticado: Noticias es el nuevo punto de entrada, sin eliminar los
+  accesos directos existentes.
+- Fuera de alcance: correo/Teams/push, WebSockets/polling, cron o workers,
+  chat o comentarios, adjuntos, HTML/Markdown en el mensaje, edicion o
+  borrado de una noticia enviada, recibos individuales de lectura para el
+  administrador, modo oscuro, temas por split y editor de branding.
+
 ## Capas posteriores (fuera de alcance por ahora)
 
 **Estado: pendiente**, documentadas unicamente para no perder contexto:

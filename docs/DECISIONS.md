@@ -1288,3 +1288,92 @@ potencia.
 liberar el KPI, puede simplemente eliminar ese objeto en su lugar. Bloquear
 tambien ese caso habria sido mas estricto de lo que el encargo pide
 ("a la venta, comprado o equipado") sin ningun beneficio de integridad.
+
+## Noticias es el punto de entrada autenticado (`1.0.0` / MVP-3)
+
+**Decision:** el acceso raiz `/` redirige siempre a `/noticias` para
+cualquier usuario ya autenticado (antes redirigia a `/personas` o
+`/resultados` segun el rol). El resto de accesos directos existentes
+(`/personas`, `/splits`, `/resultados`, `/fichas`...) no se elimina ni
+cambia de ruta.
+
+**Motivo:** requisito explicito del encargo de `1.0.0`: convertir Noticias
+en el primer contacto de cualquier sesion, sin degradar la navegacion ya
+construida.
+
+## Las noticias de jugador se entregan a `Person`, nunca solo a `User` (`1.0.0` / MVP-3)
+
+**Decision:** `NewsDelivery.recipientPersonId` es el destinatario de toda
+noticia automatica de jugador. Las noticias de administracion usan
+`recipientUserId`. Un administrador vinculado a una persona ve, en la
+misma bandeja, sus dos audiencias (sus avisos de administracion y sus
+propias noticias de jugador) sin que ninguna se duplique, porque son dos
+filas de `NewsDelivery` distintas.
+
+**Motivo:** una `Person` puede existir sin cuenta todavia (ver
+`docs/AUTHENTICATION.md`); entregar solo a `User` dejaria sin noticia el
+alta de un participante recien anadido hasta que alguien le cree una
+cuenta y la vincule despues, perdiendo el evento para siempre.
+
+## No existe backfill de noticias historicas (`1.0.0` / MVP-3)
+
+**Decision:** la migracion de `1.0.0` solo anade tablas e indices. No se
+generan noticias retrospectivas para publicaciones, compras,
+localizaciones, altas de participante ni aperturas de mercado anteriores
+al despliegue de esta version.
+
+**Motivo:** recrear ese historico produciria una bandeja artificial y
+potencialmente enganosa (fechas, redaccion y datos inventados a partir de
+snapshots ya congelados con otro proposito), y contradice el principio ya
+asentado de no reconstruir retroactivamente contenido a partir del estado
+vivo de entidades mutables.
+
+## El resumen semanal de noticias agrupa todos los datos relevantes en una sola noticia (`1.0.0` / MVP-3)
+
+**Decision:** `publishWeek` genera exactamente una `NewsItem` por
+participante publicado, con posicion, puntos KPI, puntos por posicion,
+creditos y faccion (si el split la usa) en un unico cuerpo de texto. No
+se crean noticias separadas por cada dato ni por cada bonus.
+
+**Motivo:** seccion 29 del encargo ("regla contra el ruido"): una
+operacion de negocio genera como maximo la noticia util definida, nunca
+una por cada cambio tecnico que la compone.
+
+## Las claves de idempotencia de eventos repetibles usan un UUID de operacion, nunca `updatedAt` (`1.0.0` / MVP-3)
+
+**Decision:** los eventos automaticos que pueden repetirse de forma
+legitima varias veces (reasignar una faccion, renombrarla, cambiar de
+profesion, abrir/cerrar el mercado, editar una localizacion) generan un
+`randomUUID()` una sola vez antes de entrar en la transaccion y lo usan
+como parte del `eventKey`. Los eventos no repetibles (alta de
+participante, activacion, compra, publicacion) usan en su lugar un
+identificador estable derivado del propio hecho de negocio
+(`participant-added:<id>`, `purchase:<id>`...).
+
+**Motivo:** `updatedAt` no tiene precision suficiente para descartar una
+carrera real, y reutilizarlo habria impedido notificar un segundo cambio
+legitimo ocurrido dentro del mismo milisegundo logico de una prueba o de
+una operacion en lote.
+
+## El sistema visual "Prisma competitivo" es una identidad global, no un tema por split (`1.0.0` / MVP-3)
+
+**Decision:** la paleta, los tokens de `tailwind.config.ts` y
+`src/app/globals.css`, la tipografia y el app shell son unicos para toda
+la aplicacion. Los colores de facciones siguen siendo datos del split
+(chips, puntos, avatares), pero nunca sustituyen ni alteran la
+navegacion, el fondo general, los botones o los formularios.
+
+**Motivo:** requisito explicito del encargo: la tematica vive en los
+nombres, avatares, facciones, profesiones, localizaciones y objetos de
+cada split, nunca en la estructura visual global, que debe seguir siendo
+reconocible y consistente entre campanas de cualquier tematica.
+
+## No hay modo oscuro ni personalizacion de marca en `1.0.0` (`1.0.0` / MVP-3)
+
+**Decision:** esta entrega implementa un unico tema claro. No se anade
+`prefers-color-scheme: dark`, selector de tema, editor de branding ni
+paletas alternativas por split.
+
+**Motivo:** fuera de alcance explicito del encargo de `1.0.0`; mantiene la
+entrega acotada a comunicacion, coherencia visual y cierre de producto sin
+abrir una superficie de configuracion nueva.

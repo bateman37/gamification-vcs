@@ -26,7 +26,11 @@ en la composicion de sus bonus con la profesion, y
 `docs/ECONOMY_INVENTORY_AND_EQUIPMENT.md` si vas a trabajar en economia de
 creditos, mercado, ranuras de equipo, catalogo de objetos, inventario,
 equipo, el selector con/sin gamificacion o su composicion con profesion y
-localizacion.
+localizacion, y `docs/NEWS_CENTER.md` si vas a trabajar en noticias
+(automaticas o envio manual), la campana, la bandeja `/noticias` o
+cualquier enlace interno de una noticia, y `docs/DESIGN_SYSTEM.md` si vas
+a tocar tokens de color, tipografia, el app shell, la navegacion o
+cualquier componente de `src/components/ui.tsx`.
 
 ## Estado real de las cargas semanales (no romper sin justificarlo)
 
@@ -268,6 +272,54 @@ motivo en `docs/DECISIONS.md` (detalle completo en
   `basePointsBeforeProfession` (con fallback a `finalPoints` en
   publicaciones anteriores a `0.8.0`), nunca de un recalculo con la
   configuracion actual.
+
+## Centro de noticias y renovacion visual (`1.0.0` / MVP-3, no romper sin justificarlo)
+
+Reglas asentadas que una sesion futura no debe deshacer sin registrar el
+motivo en `docs/DECISIONS.md` (detalle completo en
+`docs/NEWS_CENTER.md` y `docs/DESIGN_SYSTEM.md`):
+
+- `Noticias` (nombre visible; `NewsItem`/`NewsDelivery` en ingles en el
+  codigo) es el punto de entrada autenticado: `/` redirige siempre a
+  `/noticias`. No elimines los accesos directos existentes.
+- Las noticias de jugador se entregan siempre a `Person`
+  (`recipientPersonId`), nunca solo a `User`, para que lleguen aunque la
+  cuenta todavia no exista. Las de administracion se entregan a
+  `recipientUserId`. No mezcles ambas bandejas ni inventes un tercer tipo
+  de destinatario.
+- Un `NewsItem` es una instantanea de texto plano inmutable: nunca se
+  edita, retira ni borra fisicamente desde la interfaz despues de
+  enviarse. Una `NewsDelivery` solo cambia `readAt`/`archivedAt`.
+- No existe backfill de noticias historicas y no debe anadirse: la
+  bandeja registra eventos solo desde el despliegue de `1.0.0`.
+- Cada evento automatico vive en el servicio de negocio que ya realiza esa
+  operacion (alta de participante, activacion, facciones, profesiones,
+  localizaciones, mercado, compra, publicacion), llamando a
+  `createNewsWithDeliveries` (`src/server/services/news.service.ts`) con
+  texto ya redactado (`src/domain/news-templates.ts`) y un
+  `actionPath` construido solo por `src/domain/news-links.ts`. No crees un
+  motor generico de eventos ni de plantillas.
+- La noticia se escribe dentro de la misma transaccion que el hecho de
+  negocio cuando ese hecho ya abre una. Los eventos repetibles (facciones,
+  profesiones, localizaciones, mercado) usan un UUID de operacion generado
+  una sola vez como parte del `eventKey`; los no repetibles usan un
+  identificador estable. Nunca uses solo `updatedAt` como clave de
+  idempotencia.
+- Publicar una semana genera **una unica** noticia personalizada por
+  participante (nunca una por dato) y, si hay administradores, los avisos
+  administrativos correspondientes, todo dentro de la transaccion de
+  `publishWeek`.
+- El sistema visual "Prisma competitivo" es una identidad global unica:
+  los colores fisicos viven solo en `src/app/globals.css`
+  (`tailwind.config.ts` solo expone nombres semanticos). Los colores de
+  facciones siguen siendo datos del split (chips, puntos, avatares) y
+  nunca cambian la navegacion, el fondo general, los botones ni los
+  formularios. No implementes modo oscuro, temas por split ni un editor de
+  branding en esta release.
+- `SubmitButton`/`Badge`/`ErrorMessage`/`SuccessMessage`/`EmptyState`/
+  `FieldError` (`src/components/ui.tsx`) mantienen su firma anterior a
+  proposito (los usan mas de setenta componentes): si necesitas un
+  componente nuevo, anadelo junto a los existentes en vez de romper su API.
 
 ## Reglas de trabajo
 
