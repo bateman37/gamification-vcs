@@ -31,10 +31,10 @@ export function GamificationToggle({
   return (
     <div role="group" aria-label="Modo de visualizacion de resultados" className="inline-flex gap-1 rounded-card border border-border-strong bg-surface p-1">
       <Link href={hrefFor("con")} aria-current={mode === "con" ? "true" : undefined} className={optionClass("con")}>
-        Con gamificacion
+        Con gamificación
       </Link>
       <Link href={hrefFor("sin")} aria-current={mode === "sin" ? "true" : undefined} className={optionClass("sin")}>
-        Sin gamificacion
+        Sin gamificación
       </Link>
     </div>
   );

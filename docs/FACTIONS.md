@@ -227,3 +227,13 @@ privados ajenos.
 
 Profesiones, localizaciones, objetos, economia de creditos, misiones y
 cualquier otra capa de juego adicional (ver `docs/ROADMAP.md`).
+
+## 15. Reutilizacion en "Presentar resultados" (`1.0.1`)
+
+`buildSplitResultsPresentation` (ver
+`docs/UX_AND_RESULTS_PRESENTATION_1_0_1.md`) llama directamente a
+`computeFactionClassification` para las fases de clasificacion semanal y
+general de facciones: no reimplementa la regla del top-3 ni el desempate.
+Un split sin facciones, o sin ninguna publicacion con snapshot de faccion
+(`hasFactionData: false`), omite limpiamente esas dos fases de la
+presentacion, sin inventar datos ni mostrar un error.

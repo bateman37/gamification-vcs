@@ -14,7 +14,7 @@ function ConfirmedSubmitButton() {
       disabled={pending}
       className="rounded-control bg-success px-4 py-2 text-sm font-medium text-white hover:bg-success/90 disabled:cursor-not-allowed disabled:opacity-60"
     >
-      {pending ? "Publicando..." : "Confirmar publicacion"}
+      {pending ? "Publicando..." : "Confirmar publicación"}
     </button>
   );
 }

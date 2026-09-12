@@ -36,7 +36,7 @@ export async function PorSplitSection({
 }) {
   const splits = await listSplitsWithPublishedResultsForPerson(prisma, personId);
   if (splits.length === 0) {
-    return <EmptyState>Esta persona todavia no tiene ninguna semana publicada.</EmptyState>;
+    return <EmptyState>Esta persona todavía no tiene ninguna semana publicada.</EmptyState>;
   }
 
   const selectedSplitId = requestedSplitId && splits.some((split) => split.splitId === requestedSplitId) ? requestedSplitId : splits[0]!.splitId;
@@ -67,14 +67,14 @@ export async function PorSplitSection({
         <h2 className="text-base font-semibold">{detail.splitName}</h2>
         <dl className="mt-2 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
           <div>
-            <dt className="text-xs text-text-muted">Posicion actual</dt>
+            <dt className="text-xs text-text-muted">Posición actual</dt>
             <dd className="font-semibold">
               {detail.currentRank ?? "—"} de {detail.splitParticipantCount}
             </dd>
-            <dd className="text-xs text-text-muted">Clasificacion oficial calculada con gamificacion</dd>
+            <dd className="text-xs text-text-muted">Clasificación oficial calculada con gamificación</dd>
           </div>
           <div>
-            <dt className="text-xs text-text-muted">Puntos de posicion acumulados</dt>
+            <dt className="text-xs text-text-muted">Puntos de posición acumulados</dt>
             <dd className="font-semibold">{formatPoints(detail.totalPositionPoints)}</dd>
             <dd className="text-xs text-text-muted">Oficiales, no cambian con el selector</dd>
           </div>
@@ -82,7 +82,7 @@ export async function PorSplitSection({
             <dt className="text-xs text-text-muted">{gamificationMode === "con" ? "Total puntos KPI publicados" : "Total puntos KPI reales"}</dt>
             <dd className="font-semibold">{formatPoints(realTotalKpiPoints)}</dd>
             {gamificationMode === "sin" && totalBonus > 0 && (
-              <dd className="text-xs text-text-muted">Impacto de gamificacion: +{formatPoints(totalBonus)} puntos</dd>
+              <dd className="text-xs text-text-muted">Impacto de gamificación: +{formatPoints(totalBonus)} puntos</dd>
             )}
           </div>
           <div>
@@ -90,12 +90,12 @@ export async function PorSplitSection({
             <dd className="font-semibold">{detail.weeks.length}</dd>
           </div>
           <div>
-            <dt className="text-xs text-text-muted">Creditos ganados oficiales</dt>
+            <dt className="text-xs text-text-muted">Créditos ganados oficiales</dt>
             <dd className="font-semibold">{detail.totalCreditsEarned}</dd>
           </div>
           {detail.currentFaction && (
             <div>
-              <dt className="text-xs text-text-muted">Tu faccion</dt>
+              <dt className="text-xs text-text-muted">Tu facción</dt>
               <dd className="font-semibold">
                 <span className="inline-flex items-center gap-1.5">
                   <span aria-hidden className="h-3 w-3 rounded-full border border-border-strong" style={{ backgroundColor: detail.currentFaction.color }} />
@@ -108,22 +108,22 @@ export async function PorSplitSection({
       </div>
 
       <div className="space-y-3">
-        <h3 className="text-sm font-semibold text-ink">Evolucion semana a semana</h3>
+        <h3 className="text-sm font-semibold text-ink">Evolución semana a semana</h3>
         <div className="overflow-x-auto rounded-card border border-border bg-surface">
           <table className="w-full text-left text-sm">
             <thead className="border-b border-border bg-canvas text-text-muted">
               <tr>
                 <th className="px-3 py-2 font-medium">Semana</th>
-                {showProfessionColumn && <th className="px-3 py-2 font-medium">Profesion</th>}
+                {showProfessionColumn && <th className="px-3 py-2 font-medium">Profesión</th>}
                 {detail.weeks[0]?.kpiCells.map((cell) => (
                   <th key={cell.kpiCode} className="px-3 py-2 text-center font-medium">
                     {cell.kpiName}
                   </th>
                 ))}
                 <th className="px-3 py-2 text-center font-medium">Total KPI</th>
-                <th className="px-3 py-2 text-center font-medium">% del maximo</th>
-                <th className="px-3 py-2 text-center font-medium">Posicion semanal</th>
-                <th className="px-3 py-2 text-center font-medium">Puntos por posicion</th>
+                <th className="px-3 py-2 text-center font-medium">% del máximo</th>
+                <th className="px-3 py-2 text-center font-medium">Posición semanal</th>
+                <th className="px-3 py-2 text-center font-medium">Puntos por posición</th>
                 <th className="px-3 py-2" />
               </tr>
             </thead>
@@ -151,7 +151,7 @@ export async function PorSplitSection({
                             <span className="font-medium text-ink">{week.profession.name}</span>
                             {week.profession.kpiNames && <span className="block text-xs text-text-muted">{week.profession.kpiNames}</span>}
                             {gamificationMode === "con" && week.professionBonusTotal > 0 && (
-                              <span className="block text-xs text-game-ink">+{formatPoints(week.professionBonusTotal)} por profesion</span>
+                              <span className="block text-xs text-game-ink">+{formatPoints(week.professionBonusTotal)} por profesión</span>
                             )}
                           </>
                         ) : (
@@ -212,12 +212,12 @@ export async function PorSplitSection({
                           {formatPoints(cellPoints)}
                           {professionApplied && (
                             <span className="mt-1 block rounded bg-game-soft px-1 py-0.5 text-[10px] font-semibold text-game-ink">
-                              +{PROFESSION_BONUS_PERCENT} % profesion
+                              +{PROFESSION_BONUS_PERCENT} % profesión
                             </span>
                           )}
                           {locationApplied && (
                             <span className="mt-1 block rounded bg-info-soft px-1 py-0.5 text-[10px] font-semibold text-info-ink">
-                              +{week.location?.bonusPercent ?? ""} % localizacion
+                              +{week.location?.bonusPercent ?? ""} % localización
                             </span>
                           )}
                           {equipmentApplied && (
@@ -261,11 +261,11 @@ export async function PorSplitSection({
             </tbody>
           </table>
         </div>
-        <p className="text-xs text-text-muted">Publicada por ultima vez el {formatCalendarDate(detail.weeks.at(-1)!.publishedAt)}.</p>
+        <p className="text-xs text-text-muted">Publicada por última vez el {formatCalendarDate(detail.weeks.at(-1)!.publishedAt)}.</p>
       </div>
 
       <div className="space-y-3">
-        <h3 className="text-sm font-semibold text-ink">Clasificacion general del split</h3>
+        <h3 className="text-sm font-semibold text-ink">Clasificación general del split</h3>
         <LimitedClassificationTable
           classification={classification}
           selfSplitParticipantId={classification.entries.find((entry) => entry.personId === personId)?.splitParticipantId ?? null}
@@ -274,7 +274,7 @@ export async function PorSplitSection({
 
       {factionClassification.hasFactionData && (
         <div className="space-y-3">
-          <h3 className="text-sm font-semibold text-ink">Clasificacion general de facciones</h3>
+          <h3 className="text-sm font-semibold text-ink">Clasificación general de facciones</h3>
           <LimitedFactionClassificationTable
             classification={factionClassification}
             selfFactionId={detail.currentFaction?.id ?? null}

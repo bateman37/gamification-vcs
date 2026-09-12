@@ -9,7 +9,7 @@ import { ErrorMessage, SuccessMessage, SubmitButton } from "@/components/ui";
 
 function SaveButton() {
   const { pending } = useFormStatus();
-  return <SubmitButton pending={pending}>Guardar nueva contrasena</SubmitButton>;
+  return <SubmitButton pending={pending}>Guardar nueva contraseña</SubmitButton>;
 }
 
 export function ChangePasswordForm() {
@@ -23,7 +23,7 @@ export function ChangePasswordForm() {
   }, [state.ok, state.saved]);
 
   if (state.ok && state.saved) {
-    return <SuccessMessage>Contrasena actualizada. Vas a salir para volver a iniciar sesion...</SuccessMessage>;
+    return <SuccessMessage>Contraseña actualizada. Vas a salir para volver a iniciar sesión...</SuccessMessage>;
   }
 
   return (
@@ -32,7 +32,7 @@ export function ChangePasswordForm() {
 
       <div>
         <label htmlFor="currentPassword" className="block text-sm font-medium text-ink">
-          Contrasena actual
+          Contraseña actual
         </label>
         <input
           id="currentPassword"
@@ -46,7 +46,7 @@ export function ChangePasswordForm() {
 
       <div>
         <label htmlFor="newPassword" className="block text-sm font-medium text-ink">
-          Nueva contrasena
+          Nueva contraseña
         </label>
         <input
           id="newPassword"
@@ -61,7 +61,7 @@ export function ChangePasswordForm() {
 
       <div>
         <label htmlFor="confirmPassword" className="block text-sm font-medium text-ink">
-          Confirmar nueva contrasena
+          Confirmar nueva contraseña
         </label>
         <input
           id="confirmPassword"

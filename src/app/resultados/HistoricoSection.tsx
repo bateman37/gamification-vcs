@@ -4,7 +4,10 @@ import { formatPoints } from "@/lib/format";
 import { EmptyState } from "@/components/ui";
 import { colorBandForPercentage, COLOR_BAND_CLASSES } from "@/domain/color-bands";
 import { resolveGamificationDisplayTotal, computeGamificationImpact, type GamificationMode } from "@/domain/gamification-view";
+import { resolveHistoryDisplayConfig } from "@/domain/history-display";
 import { HistoryFilters } from "./HistoryFilters";
+
+const MEDIA_HELP_ID = "historico-media-ayuda";
 
 const VALID_GROUPINGS: HistoryGrouping[] = ["semana", "mes", "año"];
 
@@ -30,6 +33,7 @@ export async function HistoricoSection({
   const splitId = searchParams.splitFiltro && searchParams.splitFiltro !== "todos" ? searchParams.splitFiltro : "todos";
 
   const history = await getPersonHistory(prisma, personId, { year, splitId, grouping });
+  const display = resolveHistoryDisplayConfig(grouping);
 
   return (
     <div className="space-y-4">
@@ -46,7 +50,13 @@ export async function HistoricoSection({
       {history.groups.length === 0 ? (
         <EmptyState>No hay semanas publicadas para este filtro.</EmptyState>
       ) : (
-        <div className="overflow-x-auto rounded-card border border-border bg-surface">
+        <>
+          {display.helpNote && (
+            <p id={MEDIA_HELP_ID} className="text-xs text-text-muted">
+              {display.helpNote}
+            </p>
+          )}
+          <div className="overflow-x-auto rounded-card border border-border bg-surface">
           <table className="w-full text-left text-sm">
             <thead className="border-b border-border bg-canvas text-text-muted">
               <tr>
@@ -56,11 +66,15 @@ export async function HistoricoSection({
                     {kpi.name}
                   </th>
                 ))}
-                <th className="px-3 py-2 text-center font-medium">Semanas publicadas</th>
-                <th className="px-3 py-2 text-center font-medium">Suma puntos KPI{gamificationMode === "sin" ? " (reales)" : ""}</th>
-                <th className="px-3 py-2 text-center font-medium">Media puntos KPI</th>
-                <th className="px-3 py-2 text-center font-medium">Suma puntos por posicion</th>
-                <th className="px-3 py-2 text-center font-medium">Creditos oficiales</th>
+                {display.showPublishedWeeksColumn && <th className="px-3 py-2 text-center font-medium">Semanas publicadas</th>}
+                <th className="px-3 py-2 text-center font-medium">Suma total KPI{gamificationMode === "sin" ? " (reales)" : ""}</th>
+                {display.showAverageKpiColumn && (
+                  <th className="px-3 py-2 text-center font-medium" aria-describedby={display.helpNote ? MEDIA_HELP_ID : undefined}>
+                    {display.averageKpiColumnHeader}
+                  </th>
+                )}
+                <th className="px-3 py-2 text-center font-medium">Suma puntos por posición</th>
+                <th className="px-3 py-2 text-center font-medium">Créditos oficiales</th>
               </tr>
             </thead>
             <tbody>
@@ -96,15 +110,17 @@ export async function HistoricoSection({
                       return (
                         <td key={kpi.code} className={`px-3 py-2 text-center ${bandClass}`}>
                           <div className="font-semibold">{formatPoints(cellSum)}</div>
-                          <div className="text-xs opacity-80">media {formatPoints(cellAverage)}</div>
+                          {display.showPerKpiAverage && (
+                            <div className="text-xs opacity-80">Media semanal: {formatPoints(cellAverage)}</div>
+                          )}
                           {gamificationMode === "con" && cell.professionBonusSum > 0 && (
                             <div className="text-xs font-medium text-game-ink">
-                              +{formatPoints(cell.professionBonusSum)} por profesion
+                              +{formatPoints(cell.professionBonusSum)} por profesión
                             </div>
                           )}
                           {gamificationMode === "con" && cell.locationBonusSum > 0 && (
                             <div className="text-xs font-medium text-info-ink">
-                              +{formatPoints(cell.locationBonusSum)} localizacion
+                              +{formatPoints(cell.locationBonusSum)} localización
                             </div>
                           )}
                           {gamificationMode === "con" && cell.equipmentBonusSum > 0 && (
@@ -113,17 +129,17 @@ export async function HistoricoSection({
                         </td>
                       );
                     })}
-                    <td className="px-3 py-2 text-center">{group.publishedWeekCount}</td>
+                    {display.showPublishedWeeksColumn && <td className="px-3 py-2 text-center">{group.publishedWeekCount}</td>}
                     <td className="px-3 py-2 text-center font-semibold">
                       {formatPoints(resolveGamificationDisplayTotal(gamificationMode, group.sumKpiPoints, groupBonusSum(group)))}
                       {gamificationMode === "con" && group.professionBonusSum > 0 && (
                         <span className="block text-xs font-medium text-game-ink">
-                          Bonus profesion: {formatPoints(group.professionBonusSum)}
+                          Bonus profesión: {formatPoints(group.professionBonusSum)}
                         </span>
                       )}
                       {gamificationMode === "con" && group.locationBonusSum > 0 && (
                         <span className="block text-xs font-medium text-info-ink">
-                          +{formatPoints(group.locationBonusSum)} localizacion
+                          +{formatPoints(group.locationBonusSum)} localización
                         </span>
                       )}
                       {gamificationMode === "con" && group.equipmentBonusSum > 0 && (
@@ -141,13 +157,15 @@ export async function HistoricoSection({
                         </span>
                       )}
                     </td>
-                    <td className="px-3 py-2 text-center">
-                      {formatPoints(
-                        group.publishedWeekCount > 0
-                          ? resolveGamificationDisplayTotal(gamificationMode, group.sumKpiPoints, groupBonusSum(group)) / group.publishedWeekCount
-                          : 0,
-                      )}
-                    </td>
+                    {display.showAverageKpiColumn && (
+                      <td className="px-3 py-2 text-center">
+                        {formatPoints(
+                          group.publishedWeekCount > 0
+                            ? resolveGamificationDisplayTotal(gamificationMode, group.sumKpiPoints, groupBonusSum(group)) / group.publishedWeekCount
+                            : 0,
+                        )}
+                      </td>
+                    )}
                     <td className="px-3 py-2 text-center font-semibold">{formatPoints(group.sumPositionPoints)}</td>
                     <td className="px-3 py-2 text-center font-semibold">{group.creditsEarnedSum}</td>
                   </tr>
@@ -155,7 +173,8 @@ export async function HistoricoSection({
               })}
             </tbody>
           </table>
-        </div>
+          </div>
+        </>
       )}
     </div>
   );

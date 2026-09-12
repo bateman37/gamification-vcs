@@ -11,7 +11,7 @@ import type { KpiCode } from "@/domain/kpis/catalog";
 
 function SaveButton() {
   const { pending } = useFormStatus();
-  return <SubmitButton pending={pending}>Guardar localizacion</SubmitButton>;
+  return <SubmitButton pending={pending}>Guardar localización</SubmitButton>;
 }
 
 function DeleteButton() {
@@ -22,7 +22,7 @@ function DeleteButton() {
       disabled={pending}
       className="rounded-control border border-danger/30 px-4 py-2 text-sm font-medium text-danger-ink hover:bg-danger-soft disabled:cursor-not-allowed disabled:opacity-60"
     >
-      {pending ? "Eliminando..." : "Eliminar localizacion"}
+      {pending ? "Eliminando..." : "Eliminar localización"}
     </button>
   );
 }
@@ -57,7 +57,7 @@ export function WeekLocationForm({
     return (
       <p className="rounded-card border border-dashed border-border-strong px-4 py-6 text-center text-sm text-text-muted">
         Este split no tiene ningun KPI activo. Activa al menos uno en &quot;KPI del split&quot; antes de preparar una
-        localizacion.
+        localización.
       </p>
     );
   }
@@ -67,7 +67,7 @@ export function WeekLocationForm({
       <form action={formAction} className="max-w-lg space-y-4 rounded-card border border-border bg-surface p-4">
         <div>
           <label htmlFor="name" className="block text-sm font-medium text-ink">
-            Nombre de la localizacion
+            Nombre de la localización
           </label>
           <input
             id="name"
@@ -123,7 +123,7 @@ export function WeekLocationForm({
         </div>
 
         <div className="rounded-md bg-canvas p-3 text-sm text-ink">
-          <p className="font-medium">{name.trim() || "(sin nombre todavia)"}</p>
+          <p className="font-medium">{name.trim() || "(sin nombre todavía)"}</p>
           <p>
             Semana: {formatCalendarDateEs(weekStartDate)} — {formatCalendarDateEs(weekEndDate)}
           </p>
@@ -134,7 +134,7 @@ export function WeekLocationForm({
         </div>
 
         {!state.ok && state.error && <ErrorMessage>{state.error}</ErrorMessage>}
-        {state.ok && <SuccessMessage>Localizacion guardada correctamente.</SuccessMessage>}
+        {state.ok && <SuccessMessage>Localización guardada correctamente.</SuccessMessage>}
         <SaveButton />
       </form>
 

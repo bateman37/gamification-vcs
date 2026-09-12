@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui";
 import { WeekLocationForm } from "./WeekLocationForm";
 
 const STATUS_LABEL: Record<string, string> = {
-  PROXIMA: "Proxima",
+  PROXIMA: "Próxima",
   ACTIVA: "Activa",
   FINALIZADA: "Finalizada",
   PUBLICADA: "Publicada",
@@ -50,7 +50,7 @@ export default async function WeekLocationPage({ params }: { params: { id: strin
         <Link href={backHref} className="text-sm text-text-muted underline hover:text-ink">
           Volver al split
         </Link>
-        <h1 className="mt-2 text-xl font-semibold">Localizacion de la semana {week.sequenceNumber}</h1>
+        <h1 className="mt-2 text-xl font-semibold">Localización de la semana {week.sequenceNumber}</h1>
         <p className="mt-1 text-sm text-text-muted">
           {split.name} · {formatCalendarDateEs(week.startDate)} — {formatCalendarDateEs(week.endDate)}
         </p>
@@ -77,14 +77,14 @@ export default async function WeekLocationPage({ params }: { params: { id: strin
               <p className="text-text-muted">Bonus para todos los participantes: {locationBonusLabel(location.bonusPercent)}</p>
             </>
           ) : (
-            <p className="text-text-muted">Esta semana no tiene localizacion.</p>
+            <p className="text-text-muted">Esta semana no tiene localización.</p>
           )}
           <p className="text-xs text-text-muted">
             {window.status === "PUBLICADA"
-              ? "Esta semana ya esta publicada: su localizacion es de solo lectura."
+              ? "Esta semana ya está publicada: su localización es de solo lectura."
               : split.status === "CLOSED"
-                ? "Este split esta cerrado: su localizacion es de solo lectura."
-                : "Esta semana ya ha comenzado: su localizacion ya no se puede crear, editar ni eliminar."}
+                ? "Este split está cerrado: su localización es de solo lectura."
+                : "Esta semana ya ha comenzado: su localización ya no se puede crear, editar ni eliminar."}
           </p>
         </div>
       )}

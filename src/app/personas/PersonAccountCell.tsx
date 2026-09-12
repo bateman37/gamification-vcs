@@ -48,7 +48,7 @@ function CreateAccountForm({ personId }: { personId: string }) {
         name="temporaryPassword"
         required
         minLength={8}
-        placeholder="Contrasena temporal (min. 8)"
+        placeholder="Contraseña temporal (mín. 8)"
         className="w-full rounded-control border border-border-strong px-2 py-1 text-xs"
       />
       {!state.ok && state.error && <FieldError message={state.error} />}
@@ -68,13 +68,13 @@ function ResetPasswordForm({ userId }: { userId: string }) {
   const [state, formAction] = useFormState(resetWithId, initialSimpleActionState);
 
   if (state.ok && state.saved) {
-    return <span className="text-xs text-success">Contrasena restablecida</span>;
+    return <span className="text-xs text-success">Contraseña restablecida</span>;
   }
 
   if (!open) {
     return (
       <button type="button" onClick={() => setOpen(true)} className="text-xs font-medium text-text-muted underline hover:text-ink">
-        Restablecer contrasena
+        Restablecer contraseña
       </button>
     );
   }
@@ -87,7 +87,7 @@ function ResetPasswordForm({ userId }: { userId: string }) {
         name="temporaryPassword"
         required
         minLength={8}
-        placeholder="Nueva contrasena temporal"
+        placeholder="Nueva contraseña temporal"
         className="w-full rounded-control border border-border-strong px-2 py-1 text-xs"
       />
       {!state.ok && state.error && <FieldError message={state.error} />}
@@ -111,7 +111,7 @@ export function PersonAccountCell({ personId, account }: { personId: string; acc
       <div className="flex flex-wrap items-center gap-1">
         <span className="text-xs text-text-muted">{account.email}</span>
         <Badge tone={account.isActive ? "green" : "gray"}>{account.isActive ? "Activa" : "Inactiva"}</Badge>
-        {account.mustChangePassword && <Badge tone="amber">Debe cambiar contrasena</Badge>}
+        {account.mustChangePassword && <Badge tone="amber">Debe cambiar contraseña</Badge>}
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <form action={setAccountActiveAction.bind(null, account.id, !account.isActive)}>

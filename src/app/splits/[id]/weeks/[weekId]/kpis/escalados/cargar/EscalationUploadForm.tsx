@@ -152,7 +152,7 @@ function PreviewSummary({ preview, weekId, splitId }: { preview: EscalationPrevi
                     <td className="px-3 py-2">
                       {formatRawOutcome(row.escalationTamer)} / {formatOutcome(row.escalationTamer)}
                       {row.escalationTamer?.status === "computed" && row.escalationTamer.capped && (
-                        <span className="ml-1 text-xs text-reward-ink">(maximo aplicado)</span>
+                        <span className="ml-1 text-xs text-reward-ink">(máximo aplicado)</span>
                       )}
                     </td>
                   )}

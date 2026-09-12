@@ -26,8 +26,10 @@ import { ActivateSplitButton } from "./ActivateSplitButton";
 import { AddParticipantForm } from "./AddParticipantForm";
 import { ParticipantEditRow } from "./ParticipantEditRow";
 import { KpiConfigSection } from "./KpiConfigSection";
+import { toKpiConfigView } from "@/domain/kpis/mapping";
 import { PositionPointsSection } from "./PositionPointsSection";
 import { SplitDetailNav, type SplitDetailNavItem } from "./SplitDetailNav";
+import { SplitDetailMobileNav } from "./SplitDetailMobileNav";
 import { WeekKpiLoadCell } from "./WeekKpiLoadCell";
 import { WeekKpiLoadedCount } from "./WeekKpiLoadedCount";
 import { WeekResultsCell } from "./WeekResultsCell";
@@ -37,6 +39,7 @@ import { FactionsSection } from "./FactionsSection";
 import { FactionClassificationSummarySection } from "./FactionClassificationSummarySection";
 import { ProfessionsSection } from "./ProfessionsSection";
 import { EconomySummarySection } from "./EconomySummarySection";
+import { PresentationLaunchSection } from "./PresentationLaunchSection";
 
 const STATUS_TONE: Record<string, "slate" | "green" | "gray"> = {
   DRAFT: "slate",
@@ -87,26 +90,27 @@ export default async function SplitDetailPage({ params }: { params: { id: string
   const showAddParticipant = split.status !== "CLOSED";
 
   const navItems: SplitDetailNavItem[] = [
-    { href: "#resumen", label: "Resumen" },
-    { href: "#calendario-semanas", label: "Calendario de semanas" },
-    { href: "#clasificacion-general-individual", label: "Clasificacion general individual" },
-    { href: "#clasificacion-general-facciones", label: "Clasificacion general facciones" },
-    { href: "#facciones", label: "Facciones" },
-    { href: "#profesiones", label: "Profesiones" },
-    { href: "#economia", label: "Economia y mercado" },
-    { href: "#participantes", label: "Participantes" },
-    ...(showAddParticipant ? [{ href: "#anadir-participante", label: "Anadir participante" }] : []),
-    { href: "#kpi-configuracion", label: "KPI del split" },
-    { href: "#puntos-posicion", label: "Puntos por posicion semanal" },
-    ...(split.status === "DRAFT" ? [{ href: "#editar-split", label: "Editar split" }] : []),
+    { href: "#resumen", label: "Resumen", icon: "ClipboardList" },
+    { href: "#calendario-semanas", label: "Calendario de semanas", icon: "Calendar" },
+    { href: "#clasificacion-general-individual", label: "Clasificación general individual", icon: "Trophy" },
+    { href: "#clasificacion-general-facciones", label: "Clasificación general facciones", icon: "Award" },
+    { href: "#facciones", label: "Facciones", icon: "Flag" },
+    { href: "#profesiones", label: "Profesiones", icon: "Briefcase" },
+    { href: "#economia", label: "Economía y mercado", icon: "Store" },
+    { href: "#participantes", label: "Participantes", icon: "Users" },
+    ...(showAddParticipant ? [{ href: "#anadir-participante", label: "Añadir participante", icon: "UserPlus" }] : []),
+    { href: "#kpi-configuracion", label: "KPI del split", icon: "SlidersHorizontal" },
+    { href: "#puntos-posicion", label: "Puntos por posición semanal", icon: "ListOrdered" },
+    ...(split.status === "DRAFT" ? [{ href: "#editar-split", label: "Editar split", icon: "Settings" }] : []),
   ];
 
   return (
-    <div className="lg:grid lg:grid-cols-[16rem_minmax(0,1fr)] lg:items-start lg:gap-8">
+    <div className="lg:grid lg:grid-cols-[14rem_minmax(0,1fr)] lg:items-start lg:gap-8">
       <SplitDetailNav items={navItems} />
 
       <div className="space-y-8 lg:min-w-0">
-        <div id="resumen" className="scroll-mt-6">
+        <SplitDetailMobileNav items={navItems} />
+        <div id="resumen" className="scroll-mt-20">
           <div className="flex items-center gap-3">
             <h1 className="text-xl font-semibold">{split.name}</h1>
             <Badge tone={STATUS_TONE[split.status]}>{SPLIT_STATUS_LABELS[split.status]}</Badge>
@@ -118,7 +122,7 @@ export default async function SplitDetailPage({ params }: { params: { id: string
           <p className="mt-2 text-sm text-text-muted">
             KPI activos: {activeKpiCount} de {TOTAL_KPI_COUNT}.{" "}
             <a href="#kpi-configuracion" className="underline hover:text-ink">
-              Ir a la configuracion de KPI
+              Ir a la configuración de KPI
             </a>
           </p>
           {activeKpiCount === 0 && (
@@ -145,7 +149,7 @@ export default async function SplitDetailPage({ params }: { params: { id: string
           )}
         </div>
 
-        <section id="calendario-semanas" className="scroll-mt-6 space-y-3">
+        <section id="calendario-semanas" className="scroll-mt-20 space-y-3">
           <h2 className="text-lg font-semibold">Calendario de semanas</h2>
           <div className="overflow-x-auto rounded-card border border-border bg-surface">
             <table className="w-full text-left text-sm">
@@ -156,7 +160,7 @@ export default async function SplitDetailPage({ params }: { params: { id: string
                   <th className="px-3 py-2 font-medium">Fin</th>
                   <th className="px-3 py-2 font-medium">KPI cargados</th>
                   <th className="px-3 py-2 font-medium">Carga de KPI</th>
-                  <th className="px-3 py-2 font-medium">Localizacion</th>
+                  <th className="px-3 py-2 font-medium">Localización</th>
                   <th className="px-3 py-2 font-medium">Resultados</th>
                 </tr>
               </thead>
@@ -198,6 +202,8 @@ export default async function SplitDetailPage({ params }: { params: { id: string
           </div>
         </section>
 
+        <PresentationLaunchSection splitId={split.id} weeks={weeks} publishedAtByWeekId={publishedAtByWeekId} />
+
         <ClassificationSummarySection splitId={split.id} classification={classification} />
 
         <FactionClassificationSummarySection splitId={split.id} classification={factionClassification} />
@@ -218,7 +224,7 @@ export default async function SplitDetailPage({ params }: { params: { id: string
           itemCount={storeItems.length}
         />
 
-        <section id="participantes" className="scroll-mt-6 space-y-3">
+        <section id="participantes" className="scroll-mt-20 space-y-3">
           <h2 className="text-lg font-semibold">Participantes</h2>
           <div className="overflow-x-auto rounded-card border border-border bg-surface">
             <table className="w-full text-left text-sm">
@@ -227,8 +233,8 @@ export default async function SplitDetailPage({ params }: { params: { id: string
                   <th className="px-3 py-2 font-medium">Persona</th>
                   <th className="px-3 py-2 font-medium">Alias</th>
                   <th className="px-3 py-2 font-medium">Nivel</th>
-                  <th className="px-3 py-2 font-medium">Faccion</th>
-                  <th className="px-3 py-2 font-medium">Profesion</th>
+                  <th className="px-3 py-2 font-medium">Facción</th>
+                  <th className="px-3 py-2 font-medium">Profesión</th>
                   <th className="px-3 py-2 text-center font-medium">Semana inicial</th>
                   <th className="px-3 py-2" />
                 </tr>
@@ -251,13 +257,13 @@ export default async function SplitDetailPage({ params }: { params: { id: string
             </table>
             {participants.length === 0 && (
               <div className="p-4">
-                <EmptyState>Todavia no hay participantes en este split.</EmptyState>
+                <EmptyState>Todavía no hay participantes en este split.</EmptyState>
               </div>
             )}
           </div>
 
           {showAddParticipant && (
-            <div id="anadir-participante" className="scroll-mt-6">
+            <div id="anadir-participante" className="scroll-mt-20">
               <AddParticipantForm
                 splitId={split.id}
                 people={availablePeople}
@@ -271,12 +277,17 @@ export default async function SplitDetailPage({ params }: { params: { id: string
           )}
         </section>
 
-        <KpiConfigSection splitId={split.id} splitStatus={split.status} kpiConfigs={kpiConfigs} locked={hasAnyPublication} />
+        <KpiConfigSection
+          splitId={split.id}
+          splitStatus={split.status}
+          kpiConfigs={kpiConfigs.map(toKpiConfigView)}
+          locked={hasAnyPublication}
+        />
 
         <PositionPointsSection splitId={split.id} splitStatus={split.status} rules={positionPointRules} locked={hasAnyPublication} />
 
         {split.status === "DRAFT" && (
-          <section id="editar-split" className="scroll-mt-6 space-y-3">
+          <section id="editar-split" className="scroll-mt-20 space-y-3">
             <h2 className="text-lg font-semibold">Editar split</h2>
             <EditSplitDraftForm split={split} />
           </section>

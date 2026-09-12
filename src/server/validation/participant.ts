@@ -8,7 +8,7 @@ export const addParticipantSchema = z.object({
   level: participantLevelSchema,
   startWeekSequenceNumber: z.coerce
     .number()
-    .int("La semana inicial debe ser un numero entero.")
+    .int("La semana inicial debe ser un número entero.")
     .min(1, "La semana inicial debe ser al menos 1."),
   /** Obligatoria solo cuando el split ya tiene facciones creadas (ver docs/FACTIONS.md); se valida en el servicio. */
   factionId: z.string().trim().min(1).optional(),

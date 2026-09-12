@@ -44,7 +44,7 @@ export function MarketToggleButton({
   if (!isOpen && openIssues.length > 0) {
     return (
       <div className="space-y-2 rounded-md border border-reward/30 bg-reward-soft p-3">
-        <p className="text-sm font-medium text-reward-ink">No se puede abrir el mercado todavia:</p>
+        <p className="text-sm font-medium text-reward-ink">No se puede abrir el mercado todavía:</p>
         <ul className="list-disc space-y-1 pl-5 text-sm text-reward-ink">
           {openIssues.map((issue, index) => (
             <li key={index}>{issue}</li>

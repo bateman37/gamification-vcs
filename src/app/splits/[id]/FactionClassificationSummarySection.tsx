@@ -14,20 +14,20 @@ export function FactionClassificationSummarySection({
   const { weeks, accumulated, hasFactionData } = classification;
 
   return (
-    <section id="clasificacion-general-facciones" className="scroll-mt-6 space-y-3">
+    <section id="clasificacion-general-facciones" className="scroll-mt-20 space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold">Clasificacion general facciones</h2>
+        <h2 className="text-lg font-semibold">Clasificación general facciones</h2>
         {hasFactionData && (
           <Link href={`/splits/${splitId}/clasificacion-facciones`} className="text-sm font-medium text-ink underline hover:text-ink">
-            Ver clasificacion detallada
+            Ver clasificación detallada
           </Link>
         )}
       </div>
 
       {!hasFactionData ? (
         <EmptyState>
-          Todavia no hay clasificacion de facciones publicada. Configura al menos dos facciones y publica una semana
-          para verla aqui.
+          Todavía no hay clasificación de facciones publicada. Configura al menos dos facciones y publica una semana
+          para verla aquí.
         </EmptyState>
       ) : (
         <div className="overflow-x-auto rounded-card border border-border bg-surface">
@@ -35,7 +35,7 @@ export function FactionClassificationSummarySection({
             <thead className="border-b border-border bg-canvas text-text-muted">
               <tr>
                 <th className="sticky left-0 z-10 bg-canvas px-3 py-2 font-medium">Pos.</th>
-                <th className="sticky left-10 z-10 bg-canvas px-3 py-2 font-medium">Faccion</th>
+                <th className="sticky left-10 z-10 bg-canvas px-3 py-2 font-medium">Facción</th>
                 {weeks.map((week) => (
                   <th key={week.splitWeekId} className="px-3 py-2 text-center font-medium">
                     S{week.weekSequenceNumber}

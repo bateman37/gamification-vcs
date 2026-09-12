@@ -78,14 +78,14 @@ export function ProfileAvatarForm({
           className="block w-full text-sm text-text-muted file:mr-3 file:rounded-control file:border file:border-border-strong file:bg-surface file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-ink"
         />
         <p className="text-xs text-text-muted">
-          JPEG, PNG o WebP. Maximo 5 MB. La imagen se recorta a {AVATAR_MAX_DIMENSION} px como maximo por lado, se elimina
+          JPEG, PNG o WebP. Máximo 5 MB. La imagen se recorta a {AVATAR_MAX_DIMENSION} px como máximo por lado, se elimina
           su informacion EXIF y se guarda en formato WebP.
         </p>
         {previewUrl && (
           <div className="flex items-center gap-2">
             {/* eslint-disable-next-line @next/next/no-img-element -- previsualizacion local del archivo elegido (blob:), nunca una URL remota. */}
             <img src={previewUrl} alt="Previsualizacion del avatar elegido" className="h-16 w-16 rounded-full border border-border object-cover" />
-            <span className="text-xs text-text-muted">Previsualizacion (todavia sin guardar).</span>
+            <span className="text-xs text-text-muted">Previsualización (todavía sin guardar).</span>
           </div>
         )}
         <UploadAvatarButton label={hasAvatar ? "Reemplazar" : "Subir"} />

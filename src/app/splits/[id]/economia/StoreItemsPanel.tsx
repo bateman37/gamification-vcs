@@ -93,8 +93,8 @@ function ItemCard({
           <p className="font-medium text-ink">{item.name}</p>
           <p className="text-sm text-text-muted">Ranura: {item.equipmentSlotName}</p>
           <p className="text-sm text-text-muted">Potencia: {item.kpiName}</p>
-          <p className="text-sm text-text-muted">Bonus: +{item.bonusPercent} % despues del maximo base</p>
-          <p className="text-sm text-text-muted">Precio: {item.priceCredits} creditos</p>
+          <p className="text-sm text-text-muted">Bonus: +{item.bonusPercent} % después del máximo base</p>
+          <p className="text-sm text-text-muted">Precio: {item.priceCredits} créditos</p>
           {item.description && <p className="mt-1 text-sm text-text-muted">{item.description}</p>}
         </div>
         <Badge tone={item.isForSale ? "green" : "gray"}>{item.isForSale ? "A la venta" : "Retirado"}</Badge>
@@ -156,7 +156,7 @@ export function StoreItemsPanel({
 
   return (
     <div className="space-y-3">
-      <h3 className="text-base font-semibold">Catalogo de objetos</h3>
+      <h3 className="text-base font-semibold">Catálogo de objetos</h3>
       <p className="text-sm text-text-muted">
         Cada objeto afecta exactamente a un KPI activo con un bonus del conjunto cerrado (10/20/30/40/50 %), y
         pertenece a una unica ranura. Solo se administra con el mercado cerrado; despues de la primera compra, el
@@ -165,18 +165,18 @@ export function StoreItemsPanel({
       {locked && <p className="text-sm text-reward-ink">Cierra el mercado para crear, editar o eliminar objetos.</p>}
       {slots.length === 0 && (
         <p className="rounded-card border border-dashed border-border-strong px-4 py-4 text-sm text-text-muted">
-          Crea al menos una ranura de equipo antes de anadir objetos.
+          Crea al menos una ranura de equipo antes de añadir objetos.
         </p>
       )}
       {activeKpis.length === 0 && (
         <p className="rounded-card border border-dashed border-border-strong px-4 py-4 text-sm text-text-muted">
-          Activa al menos un KPI en &quot;KPI del split&quot; antes de anadir objetos.
+          Activa al menos un KPI en &quot;KPI del split&quot; antes de añadir objetos.
         </p>
       )}
 
       {items.length === 0 ? (
         <p className="rounded-card border border-dashed border-border-strong px-4 py-6 text-center text-sm text-text-muted">
-          Todavia no hay ningun objeto en el catalogo.
+          Todavía no hay ningún objeto en el catálogo.
         </p>
       ) : (
         <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">

@@ -31,7 +31,7 @@ export function ProfessionsSection({
       <h2 className="text-lg font-semibold">Profesiones del split</h2>
       <p className="text-sm text-text-muted">
         Las profesiones son opcionales: si no creas ninguna, este split funciona exactamente igual que antes, sin
-        selectores ni bonus. Cada profesion potencia exactamente dos KPI distintos y se aplica un bonus fijo de{" "}
+        selectores ni bonus. Cada profesión potencia exactamente dos KPI distintos y se aplica un bonus fijo de{" "}
         <span className="font-medium text-ink">{PROFESSION_BONUS_LABEL}</span>.
       </p>
       {hasAnyPublication && (
@@ -40,13 +40,13 @@ export function ProfessionsSection({
           crearse, editarse ni eliminarse.
         </p>
       )}
-      {readOnly && <p className="text-sm text-text-muted">El split esta cerrado: las profesiones se muestran en modo solo lectura.</p>}
+      {readOnly && <p className="text-sm text-text-muted">El split está cerrado: las profesiones se muestran en modo solo lectura.</p>}
 
       {professions.length === 0 ? (
         <EmptyState>
           {hasAnyPublication
-            ? "Este split no utiliza profesiones y ya no puede anadirlas: se publico su primera semana sin ninguna creada."
-            : "Todavia no hay ninguna profesion configurada. Este split no utiliza profesiones."}
+            ? "Este split no utiliza profesiones y ya no puede añadirlas: se publicó su primera semana sin ninguna creada."
+            : "Todavía no hay ninguna profesión configurada. Este split no utiliza profesiones."}
         </EmptyState>
       ) : (
         <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">

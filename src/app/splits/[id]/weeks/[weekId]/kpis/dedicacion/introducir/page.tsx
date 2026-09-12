@@ -32,7 +32,7 @@ export default async function StudentEntryPage({ params }: { params: { id: strin
           href={`/splits/${split.id}#kpi-configuracion`}
           className="mt-1 inline-block text-sm text-text-muted underline hover:text-ink"
         >
-          Ir a la configuracion de KPI
+          Ir a la configuración de KPI
         </Link>
       </div>
 

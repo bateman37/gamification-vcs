@@ -1377,3 +1377,74 @@ paletas alternativas por split.
 **Motivo:** fuera de alcance explicito del encargo de `1.0.0`; mantiene la
 entrega acotada a comunicacion, coherencia visual y cierre de producto sin
 abrir una superficie de configuracion nueva.
+
+## "Media semanal" se oculta con agrupacion `Semana` en vez de mostrarse siempre (`1.0.1`)
+
+**Decision:** con agrupacion `Semana` en el historico general, cada
+periodo es exactamente una semana publicada, asi que su media coincide
+siempre con su suma. En vez de mostrar igualmente la media (redundante) o
+eliminarla del todo (perdiendo la etiqueta con `Mes`/`Año`), se centraliza
+la decision de que columnas/textos mostrar en una unica funcion pura
+(`resolveHistoryDisplayConfig`, `src/domain/history-display.ts`): oculta
+la media por KPI, la columna de media total y "Semanas publicadas" solo
+con `Semana`; con `Mes`/`Año` las mantiene, rotuladas "Media semanal"/
+"Media semanal total KPI", con una nota de ayuda accesible sobre el
+divisor. Ningun dato ni calculo de `getPersonHistory` cambia.
+
+**Motivo:** requisito explicito del encargo `1.0.1`: aclarar el
+significado de "media" sin alterar ninguna semantica ya congelada
+(VAC como cero, No aplica excluido, `includedWeekCount`...), evitando a
+la vez repartir la misma condicion `grouping === "semana"` entre el
+componente y una futura pantalla que necesite el mismo criterio.
+
+## El guardado conjunto de KPI comparte una funcion interna con el guardado individual, no una copia (`1.0.1`)
+
+**Decision:** "Guardar todos los KPI" no repite la logica de bloqueo de
+primera publicacion ni las restricciones de localizaciones/objetos: ambas
+viven en `applyKpiConfigUpdate` (`src/server/services/kpi.service.ts`),
+llamada tanto por `updateKpiConfig` (guardado individual, su propia
+transaccion) como por `updateAllKpiConfigs` (guardado conjunto, una unica
+transaccion para las diez entradas, con el bloqueo comprobado una sola vez
+para todo el lote). La validacion de formulario tambien es una unica
+funcion pura compartida (`parseAllKpiConfigsFromFormData`,
+`src/server/validation/kpi.ts`), reutilizada por ambas Server Actions.
+
+**Motivo:** el encargo prohibe explicitamente diez Server Actions o diez
+transacciones independientes para el guardado conjunto, y exige que
+comparta "exactamente las mismas validaciones/bloqueos/comprobaciones" que
+el individual. Extraer la operacion interna evita divergencias futuras
+entre ambos guardados.
+
+## "Presentar resultados" reutiliza los servicios de clasificacion existentes, nunca los reimplementa (`1.0.1`)
+
+**Decision:** `buildSplitResultsPresentation`
+(`src/server/services/results-presentation.service.ts`) no calcula ningun
+ranking propio: llama a `computeSplitClassification` y a
+`computeFactionClassification` ya existentes, y solo agrupa el resultado
+para revelarlo con una funcion pura separada (`buildRevealGroups`,
+`src/domain/results-presentation-reveal.ts`) que unicamente decide el
+orden/agrupacion de la revelacion (nunca el ranking ni el criterio de
+empate). El estado de la revelacion (fase actual, cuantas posiciones
+llevan reveladas, reproduccion automatica) es estado local de React,
+nunca persistido ni compartido entre usuarios.
+
+**Motivo:** requisito explicito del encargo: "nunca recalcula el KPI/los
+bonus desde la configuracion actual" y "nunca reimplementa la regla del
+top-3 en el componente". Reutilizar los servicios ya probados es ademas la
+unica forma de garantizar que la presentacion coincide siempre con la
+clasificacion administrativa existente.
+
+## El modo de presentacion es un lienzo fijo superpuesto, no un layout raiz nuevo (`1.0.1`)
+
+**Decision:** `/splits/[id]/presentacion-resultados` sigue viviendo dentro
+del `RootLayout`/`AppShell` existente (barra lateral y cabecera globales),
+pero su componente cliente (`PresentationView.tsx`) se renderiza como un
+`position: fixed; inset: 0` de `z-index` alto que cubre visualmente toda
+la barra lateral y la cabecera, con el scroll de la pagina bloqueado
+mientras esta activo (mismo patron que el panel movil de navegacion).
+
+**Motivo:** el encargo permite explicitamente esta alternativa ("puede ser
+un layout dedicado o un overlay fijo que cubra toda la app shell"). Separar
+`AppShell` en grupos de rutas para una unica pantalla habria sido un
+cambio estructural mas amplio de lo necesario para una funcionalidad que
+ya se resuelve de forma robusta y accesible con un overlay.

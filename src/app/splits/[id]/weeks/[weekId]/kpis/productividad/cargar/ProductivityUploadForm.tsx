@@ -161,7 +161,7 @@ function PreviewSummary({ preview, weekId, splitId }: { preview: ProductivityPre
                       <td className="px-3 py-2">
                         {formatRawOutcome(row.solutionHunter)} / {formatOutcome(row.solutionHunter)}
                         {row.solutionHunter?.status === "computed" && row.solutionHunter.capped && (
-                          <span className="ml-1 text-xs text-reward-ink">(maximo aplicado)</span>
+                          <span className="ml-1 text-xs text-reward-ink">(máximo aplicado)</span>
                         )}
                       </td>
                     </>
@@ -172,7 +172,7 @@ function PreviewSummary({ preview, weekId, splitId }: { preview: ProductivityPre
                       <td className="px-3 py-2">
                         {formatRawOutcome(row.dataExplorer)} / {formatOutcome(row.dataExplorer)}
                         {row.dataExplorer?.status === "computed" && row.dataExplorer.capped && (
-                          <span className="ml-1 text-xs text-reward-ink">(maximo aplicado)</span>
+                          <span className="ml-1 text-xs text-reward-ink">(máximo aplicado)</span>
                         )}
                       </td>
                     </>

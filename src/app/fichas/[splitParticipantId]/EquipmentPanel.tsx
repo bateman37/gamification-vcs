@@ -98,7 +98,7 @@ export function EquipmentPanel({
   if (slots.length === 0) {
     return (
       <p className="rounded-card border border-dashed border-border-strong px-4 py-6 text-center text-sm text-text-muted">
-        Este split todavia no tiene ninguna ranura de equipo configurada.
+        Este split todavía no tiene ninguna ranura de equipo configurada.
       </p>
     );
   }
@@ -107,7 +107,7 @@ export function EquipmentPanel({
     <div className="space-y-3">
       <p className="text-sm text-text-muted">
         El equipo que cuenta para tus resultados es siempre el que tengas puesto en el instante en que el
-        administrador publique la semana: cambiarlo ahora afecta a la previsualizacion de la proxima semana no
+        administrador publique la semana: cambiarlo ahora afecta a la previsualización de la próxima semana no
         publicada, nunca a una ya publicada.
       </p>
       <ul className="space-y-2">

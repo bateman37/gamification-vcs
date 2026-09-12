@@ -61,13 +61,13 @@ export default async function SplitEconomyPage({ params }: { params: { id: strin
           &larr; Volver a {split.name}
         </Link>
         <div className="mt-2 flex flex-wrap items-center gap-3">
-          <h1 className="text-xl font-semibold">Economia y mercado</h1>
+          <h1 className="text-xl font-semibold">Economía y mercado</h1>
           <Badge tone={settings.marketStatus === "OPEN" ? "green" : "gray"}>
             {settings.marketStatus === "OPEN" ? "Mercado abierto" : "Mercado cerrado"}
           </Badge>
         </div>
         <p className="mt-1 text-sm text-text-muted">
-          1 credito equivale a 1 punto KPI completo publicado. Los creditos se generan exclusivamente al publicar una
+          1 crédito equivale a 1 punto KPI completo publicado. Los créditos se generan exclusivamente al publicar una
           semana.
         </p>
       </div>
@@ -85,7 +85,7 @@ export default async function SplitEconomyPage({ params }: { params: { id: strin
       </section>
 
       <section className="space-y-3 border-t border-border pt-6">
-        <h3 className="text-base font-semibold">Resumen de compras y creditos</h3>
+        <h3 className="text-base font-semibold">Resumen de compras y créditos</h3>
         <EconomySummaryPanel summary={summary} />
       </section>
     </div>

@@ -145,7 +145,7 @@ function PreviewSummary({ preview, weekId, splitId }: { preview: QualityPreview;
                     <td className="px-3 py-2">
                       {formatRawOutcome(row.masterCraftsman)} / {formatOutcome(row.masterCraftsman)}
                       {row.masterCraftsman?.status === "computed" && row.masterCraftsman.capped && (
-                        <span className="ml-1 text-xs text-reward-ink">(maximo aplicado)</span>
+                        <span className="ml-1 text-xs text-reward-ink">(máximo aplicado)</span>
                       )}
                     </td>
                   )}

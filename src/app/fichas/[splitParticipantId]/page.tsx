@@ -9,6 +9,9 @@ import { PROFESSION_BONUS_LABEL } from "@/domain/profession-bonus";
 import { SPLIT_STATUS_LABELS } from "@/lib/labels";
 import { Badge } from "@/components/ui";
 import { ProfileAvatar } from "@/app/fichas/ProfileAvatar";
+import { ProfileAliasForm } from "@/app/fichas/ProfileAliasForm";
+import { ProfileAvatarForm } from "@/app/fichas/ProfileAvatarForm";
+import { ProfileProfessionForm } from "@/app/fichas/ProfileProfessionForm";
 import { EquipmentPanel } from "./EquipmentPanel";
 import { InventoryPanel } from "./InventoryPanel";
 import { MarketPanel } from "./MarketPanel";
@@ -63,19 +66,43 @@ export default async function CharacterConfigPage({ params }: { params: { splitP
         </div>
       </div>
 
+      <section id="personaje" className="space-y-3">
+        <h2 className="text-lg font-semibold">Alias, avatar y profesión</h2>
+        {character.editable ? (
+          <div className="grid grid-cols-1 gap-4 rounded-card border border-border bg-surface p-4 md:grid-cols-2">
+            <ProfileAliasForm splitParticipantId={character.splitParticipantId} alias={character.alias} />
+            <ProfileAvatarForm splitParticipantId={character.splitParticipantId} hasAvatar={character.avatarVersion !== null} />
+            <div className="md:col-span-2">
+              <ProfileProfessionForm
+                splitParticipantId={character.splitParticipantId}
+                splitUsesProfessions={character.splitUsesProfessions}
+                profession={character.profession}
+                availableProfessions={character.availableProfessions}
+                locked={character.hasPublishedResults}
+                editable={character.editable}
+              />
+            </div>
+          </div>
+        ) : (
+          <p className="rounded-card border border-border bg-surface p-4 text-sm text-text-muted">
+            El split está cerrado: esta ficha es de solo lectura.
+          </p>
+        )}
+      </section>
+
       <section id="resumen" className="space-y-3">
         <h2 className="text-lg font-semibold">Resumen</h2>
         <dl className="grid grid-cols-2 gap-4 rounded-card border border-border bg-surface p-4 text-sm sm:grid-cols-3">
           <div>
-            <dt className="text-xs text-text-muted">Nivel tecnico</dt>
+            <dt className="text-xs text-text-muted">Nivel técnico</dt>
             <dd className="font-medium">{character.level}</dd>
           </div>
           <div>
-            <dt className="text-xs text-text-muted">Faccion</dt>
+            <dt className="text-xs text-text-muted">Facción</dt>
             <dd className="font-medium">{character.faction?.name ?? "—"}</dd>
           </div>
           <div>
-            <dt className="text-xs text-text-muted">Profesion</dt>
+            <dt className="text-xs text-text-muted">Profesión</dt>
             <dd className="font-medium">
               {character.profession ? (
                 <>
@@ -90,14 +117,14 @@ export default async function CharacterConfigPage({ params }: { params: { splitP
           </div>
           <div>
             <dt className="text-xs text-text-muted">Moneda actual</dt>
-            <dd className="font-medium">{character.balance} creditos</dd>
+            <dd className="font-medium">{character.balance} créditos</dd>
           </div>
           <div>
             <dt className="text-xs text-text-muted">Total puntos KPI oficiales</dt>
             <dd className="font-medium">{character.totalOfficialKpiPoints.toFixed(2)}</dd>
           </div>
           <div>
-            <dt className="text-xs text-text-muted">Total puntos de posicion</dt>
+            <dt className="text-xs text-text-muted">Total puntos de posición</dt>
             <dd className="font-medium">{character.totalPositionPoints}</dd>
           </div>
           <div>
@@ -106,7 +133,7 @@ export default async function CharacterConfigPage({ params }: { params: { splitP
           </div>
           {character.activeLocation && (
             <div className="col-span-2 sm:col-span-3">
-              <dt className="text-xs text-text-muted">Localizacion activa esta semana</dt>
+              <dt className="text-xs text-text-muted">Localización activa esta semana</dt>
               <dd className="font-medium">
                 {character.activeLocation.name} · {character.activeLocation.kpiName} · {character.activeLocation.bonusLabel}
               </dd>

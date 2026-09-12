@@ -12,7 +12,7 @@ function SaveProfessionButton() {
   const { pending } = useFormStatus();
   return (
     <SubmitButton pending={pending} className="bg-ink/90 hover:bg-ink/80">
-      Guardar profesion
+      Guardar profesión
     </SubmitButton>
   );
 }
@@ -62,7 +62,7 @@ export function ProfileProfessionForm({
   if (locked || !editable) {
     return (
       <div className="space-y-2">
-        {profession ? <ProfessionDetails profession={profession} /> : <p className="text-sm text-text-muted">Sin profesion elegida.</p>}
+        {profession ? <ProfessionDetails profession={profession} /> : <p className="text-sm text-text-muted">Sin profesión elegida.</p>}
         <p className="text-sm text-reward-ink">
           {locked ? "Profesión bloqueada desde la publicación de la primera semana." : "El split esta cerrado: la ficha es de solo lectura."}
         </p>
@@ -73,7 +73,7 @@ export function ProfileProfessionForm({
   return (
     <form action={formAction} className="space-y-2">
       <label htmlFor={`profession-${splitParticipantId}`} className="block text-xs font-medium text-text-muted">
-        Profesion
+        Profesión
       </label>
       <div className="flex flex-wrap items-start gap-2">
         <select
@@ -93,12 +93,12 @@ export function ProfileProfessionForm({
         <SaveProfessionButton />
       </div>
       {availableProfessions.length === 0 && (
-        <p className="text-sm text-reward-ink">No hay ninguna profesion disponible para tu nivel. Contacta con un administrador.</p>
+        <p className="text-sm text-reward-ink">No hay ninguna profesión disponible para tu nivel. Contacta con un administrador.</p>
       )}
       {selected && <ProfessionDetails profession={selected} />}
       <FieldError message={state.fieldErrors?.professionId} />
       {!state.ok && state.error && <ErrorMessage>{state.error}</ErrorMessage>}
-      {state.ok && <SuccessMessage>Profesion guardada.</SuccessMessage>}
+      {state.ok && <SuccessMessage>Profesión guardada.</SuccessMessage>}
     </form>
   );
 }

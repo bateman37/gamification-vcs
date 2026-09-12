@@ -62,7 +62,7 @@ export async function addParticipant(
     throw new DomainError("El split indicado no existe.");
   }
   if (split.status === "CLOSED") {
-    throw new DomainError("No se pueden anadir participantes a un split cerrado.");
+    throw new DomainError("No se pueden añadir participantes a un split cerrado.");
   }
   if (input.startWeekSequenceNumber > split.numberOfWeeks) {
     throw new DomainError(
@@ -77,7 +77,7 @@ export async function addParticipant(
   });
   if (startWeek?.publication) {
     throw new DomainError(
-      "No se puede anadir un participante con semana inicial en una semana ya publicada. Elige una semana futura no publicada.",
+      "No se puede añadir un participante con semana inicial en una semana ya publicada. Elige una semana futura no publicada.",
       "startWeekSequenceNumber",
     );
   }

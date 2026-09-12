@@ -9,8 +9,8 @@ export default async function LoginPage() {
   return (
     <div className="mx-auto max-w-sm space-y-6">
       <div>
-        <h1 className="text-xl font-semibold">Iniciar sesion</h1>
-        <p className="mt-1 text-sm text-text-muted">Accede con el correo y la contrasena de tu cuenta.</p>
+        <h1 className="text-xl font-semibold">Iniciar sesión</h1>
+        <p className="mt-1 text-sm text-text-muted">Accede con el correo y la contraseña de tu cuenta.</p>
       </div>
       <LoginForm />
     </div>

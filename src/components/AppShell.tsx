@@ -48,13 +48,18 @@ export async function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen bg-canvas">
       {isAuthenticated && (
-        <aside className="hidden md:flex md:w-60 md:shrink-0 md:flex-col md:bg-ink md:px-4 md:py-5">
-          <Link href="/noticias" className="mb-6 flex items-center gap-2 px-1">
+        <aside className="hidden md:sticky md:top-0 md:flex md:h-dvh md:w-60 md:shrink-0 md:flex-col md:bg-ink md:px-4 md:py-5">
+          <Link href="/noticias" className="mb-6 flex shrink-0 items-center gap-2 px-1">
             <BrandMark variant="dark" />
             <span className="text-sm font-semibold text-white">Gamification VCS</span>
           </Link>
-          <SidebarNav items={items} />
-          <div className="mt-auto flex flex-col gap-2 border-t border-white/10 pt-4 text-sm">
+          {/* Solo esta zona (los enlaces) puede necesitar scroll propio en alturas/zoom extremos;
+              el pie ("Mi cuenta"/"Cerrar sesión") sigue siempre visible, nunca se desplaza fuera
+              de la pantalla (seccion 14 del encargo `1.0.1`). */}
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <SidebarNav items={items} />
+          </div>
+          <div className="mt-auto flex shrink-0 flex-col gap-2 border-t border-white/10 pt-4 text-sm">
             <Link href="/cuenta/cambiar-contrasena" className="text-white/70 hover:text-white">
               Mi cuenta
             </Link>

@@ -24,7 +24,7 @@ export function LimitedClassificationTable({ classification, selfSplitParticipan
                 S{week.weekSequenceNumber}
               </th>
             ))}
-            <th className="px-3 py-2 text-center font-medium">Total posicion</th>
+            <th className="px-3 py-2 text-center font-medium">Total posición</th>
             <th className="px-3 py-2 text-center font-medium">Total KPI</th>
           </tr>
         </thead>
@@ -49,7 +49,7 @@ export function LimitedClassificationTable({ classification, selfSplitParticipan
                       title={
                         points === undefined
                           ? "No participa esta semana"
-                          : `Posicion semanal: ${weeklyRank} - Total KPI de la semana: ${formatPoints(totalKpi ?? 0)}`
+                          : `Posición semanal: ${weeklyRank} - Total KPI de la semana: ${formatPoints(totalKpi ?? 0)}`
                       }
                     >
                       {points ?? "—"}

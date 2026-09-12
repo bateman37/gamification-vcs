@@ -16,6 +16,17 @@ import {
   Menu,
   X,
   LogOut,
+  Calendar,
+  Award,
+  UserPlus,
+  SlidersHorizontal,
+  ListOrdered,
+  Play,
+  Pause,
+  SkipForward,
+  SkipBack,
+  RotateCcw,
+  Maximize,
   type LucideIcon,
 } from "lucide-react";
 
@@ -37,6 +48,17 @@ const ICONS: Record<string, LucideIcon> = {
   Menu,
   X,
   LogOut,
+  Calendar,
+  Award,
+  UserPlus,
+  SlidersHorizontal,
+  ListOrdered,
+  Play,
+  Pause,
+  SkipForward,
+  SkipBack,
+  RotateCcw,
+  Maximize,
 };
 
 /** Icono generico por nombre (nav y categorias de noticia comparten este mapa unico). */

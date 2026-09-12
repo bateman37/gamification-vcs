@@ -4,7 +4,7 @@ import type { ManualNewsHistoryEntry } from "@/server/services/news-manual.servi
 
 /** Historico de envios manuales (seccion 44 del encargo): nunca muestra quien lo ha leido. */
 export function ManualNewsHistory({ entries }: { entries: ManualNewsHistoryEntry[] }) {
-  if (entries.length === 0) return <EmptyState>Todavia no se ha enviado ninguna noticia manual.</EmptyState>;
+  if (entries.length === 0) return <EmptyState>Todavía no se ha enviado ninguna noticia manual.</EmptyState>;
 
   return (
     <TableContainer>
@@ -14,7 +14,7 @@ export function ManualNewsHistory({ entries }: { entries: ManualNewsHistoryEntry
             <th className="px-3 py-2 font-medium">Fecha</th>
             <th className="px-3 py-2 font-medium">Autor</th>
             <th className="px-3 py-2 font-medium">Split</th>
-            <th className="px-3 py-2 font-medium">Publico</th>
+            <th className="px-3 py-2 font-medium">Público</th>
             <th className="px-3 py-2 font-medium">Prioridad</th>
             <th className="px-3 py-2 font-medium">Titulo / mensaje</th>
             <th className="px-3 py-2 text-right font-medium">Destinatarios</th>

@@ -80,15 +80,15 @@ export function MarketPanel({
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-3">
         <Badge tone={marketStatus === "OPEN" ? "green" : "gray"}>{marketStatus === "OPEN" ? "Mercado abierto" : "Mercado cerrado"}</Badge>
-        <span className="text-sm font-medium text-ink">Saldo disponible: {balance} creditos</span>
+        <span className="text-sm font-medium text-ink">Saldo disponible: {balance} créditos</span>
       </div>
       {marketStatus === "CLOSED" && (
-        <p className="text-sm text-text-muted">El mercado esta cerrado: puedes ver el catalogo, pero no comprar.</p>
+        <p className="text-sm text-text-muted">El mercado está cerrado: puedes ver el catálogo, pero no comprar.</p>
       )}
 
       {catalog.length === 0 ? (
         <p className="rounded-card border border-dashed border-border-strong px-4 py-6 text-center text-sm text-text-muted">
-          Este split todavia no tiene ningun objeto a la venta.
+          Este split todavía no tiene ningún objeto a la venta.
         </p>
       ) : (
         <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -103,7 +103,7 @@ export function MarketPanel({
                 {item.kpiName} · +{item.bonusPercent} %
               </p>
               {item.description && <p className="text-text-muted">{item.description}</p>}
-              <p className="font-medium text-ink">{item.priceCredits} creditos</p>
+              <p className="font-medium text-ink">{item.priceCredits} créditos</p>
               {item.status === "DISPONIBLE" && <BuyForm splitParticipantId={splitParticipantId} item={item} />}
             </li>
           ))}

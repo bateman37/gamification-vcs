@@ -78,9 +78,9 @@ function positiveNumberField(fieldLabel: string): z.ZodTypeAny {
     z
       .number({
         required_error: `${fieldLabel} es obligatorio.`,
-        invalid_type_error: `${fieldLabel} debe ser un numero.`,
+        invalid_type_error: `${fieldLabel} debe ser un número.`,
       })
-      .finite(`${fieldLabel} debe ser un numero finito.`)
+      .finite(`${fieldLabel} debe ser un número finito.`)
       .positive(`${fieldLabel} debe ser mayor que cero.`),
   );
 }
@@ -115,7 +115,7 @@ const CATALOG_ENTRIES: KpiCatalogEntry[] = [
     code: "SOLUTION_HUNTER",
     order: 1,
     name: "Cazador de soluciones",
-    description: "Puntua los tickets resueltos por la persona.",
+    description: "Puntúa los tickets resueltos por la persona.",
     calculationExplanation: "Tickets resueltos x puntos por ticket x multiplicador del nivel.",
     defaultBaseMax: 70,
     defaultMultipliers: { N0: 2.5, N1: 1, N2: 1.85 },
@@ -127,7 +127,7 @@ const CATALOG_ENTRIES: KpiCatalogEntry[] = [
     code: "DATA_EXPLORER",
     order: 2,
     name: "Explorador de datos",
-    description: "Puntua los tickets actualizados con comentario.",
+    description: "Puntúa los tickets actualizados con comentario.",
     calculationExplanation:
       "Tickets actualizados con comentario x puntos por ticket x multiplicador del nivel.",
     defaultBaseMax: 70,
@@ -140,15 +140,15 @@ const CATALOG_ENTRIES: KpiCatalogEntry[] = [
     code: "VOICE_AMBASSADOR",
     order: 3,
     name: "Embajador de voz",
-    description: "Puntua las llamadas entrantes atendidas y las salientes realizadas.",
+    description: "Puntúa las llamadas entrantes atendidas y las salientes realizadas.",
     calculationExplanation:
-      "(Aceptadas x peso de aceptadas - rechazadas x penalizacion de rechazadas - no atendidas x penalizacion de no atendidas) x multiplicador del nivel + salientes x puntos por saliente. El multiplicador solo afecta al bloque de llamadas entrantes, no a las salientes.",
+      "(Aceptadas x peso de aceptadas - rechazadas x penalización de rechazadas - no atendidas x penalización de no atendidas) x multiplicador del nivel + salientes x puntos por saliente. El multiplicador solo afecta al bloque de llamadas entrantes, no a las salientes.",
     defaultBaseMax: 50,
     defaultMultipliers: { N0: 1.25, N1: 1.5, N2: 2 },
     parameters: [
       { key: "acceptedWeight", label: "Peso de llamadas aceptadas", defaultValue: 1 },
-      { key: "rejectedPenalty", label: "Penalizacion por llamada rechazada", defaultValue: 1 },
-      { key: "unattendedPenalty", label: "Penalizacion por llamada no atendida", defaultValue: 1 },
+      { key: "rejectedPenalty", label: "Penalización por llamada rechazada", defaultValue: 1 },
+      { key: "unattendedPenalty", label: "Penalización por llamada no atendida", defaultValue: 1 },
       { key: "outboundPoints", label: "Puntos por llamada saliente", defaultValue: 1 },
     ],
   }),
@@ -156,14 +156,14 @@ const CATALOG_ENTRIES: KpiCatalogEntry[] = [
     code: "MASTER_CRAFTSMAN",
     order: 4,
     name: "Maestro Artesano",
-    description: "Puntua las valoraciones de calidad positivas y negativas.",
+    description: "Puntúa las valoraciones de calidad positivas y negativas.",
     calculationExplanation:
       "(Positivas x peso de positivas - negativas x penalizacion de negativas) x escala x multiplicador del nivel.",
     defaultBaseMax: 100,
     defaultMultipliers: { N0: 3, N1: 2, N2: 2 },
     parameters: [
       { key: "positiveWeight", label: "Peso de valoraciones positivas", defaultValue: 1 },
-      { key: "negativePenalty", label: "Penalizacion por valoracion negativa", defaultValue: 4 },
+      { key: "negativePenalty", label: "Penalización por valoración negativa", defaultValue: 4 },
       { key: "scale", label: "Escala", defaultValue: 10 },
     ],
   }),
@@ -171,14 +171,14 @@ const CATALOG_ENTRIES: KpiCatalogEntry[] = [
     code: "ESCALATION_TAMER",
     order: 5,
     name: "Domador de Escaladas",
-    description: "Penaliza la proporcion de tickets escalados sobre los tickets gestionados.",
+    description: "Penaliza la proporción de tickets escalados sobre los tickets gestionados.",
     calculationExplanation:
-      "(Puntos base - (escalados / tickets gestionados) x factor de penalizacion) x multiplicador del nivel.",
+      "(Puntos base - (escalados / tickets gestionados) x factor de penalización) x multiplicador del nivel.",
     defaultBaseMax: 30,
     defaultMultipliers: { N0: 1, N1: 1, N2: 1 },
     parameters: [
       { key: "basePoints", label: "Puntos base", defaultValue: 30 },
-      { key: "ratioPenaltyFactor", label: "Factor de penalizacion por ratio de escalados", defaultValue: 200 },
+      { key: "ratioPenaltyFactor", label: "Factor de penalización por ratio de escalados", defaultValue: 200 },
     ],
   }),
   entry({
@@ -195,27 +195,27 @@ const CATALOG_ENTRIES: KpiCatalogEntry[] = [
     code: "WORK_CHRONOMANCY",
     order: 7,
     name: "Cronomagia laboral",
-    description: "Puntua la ocupacion (occupancy) de la persona durante la semana.",
+    description: "Puntúa la ocupación (occupancy) de la persona durante la semana.",
     calculationExplanation:
-      "Ocupacion expresada como fraccion x puntos a ocupacion completa x multiplicador del nivel.",
+      "Ocupación expresada como fracción x puntos a ocupación completa x multiplicador del nivel.",
     defaultBaseMax: 60,
     defaultMultipliers: { N0: 1, N1: 1, N2: 1 },
     parameters: [
-      { key: "pointsAtFullOccupancy", label: "Puntos a ocupacion completa (100%)", defaultValue: 60 },
+      { key: "pointsAtFullOccupancy", label: "Puntos a ocupación completa (100%)", defaultValue: 60 },
     ],
   }),
   entry({
     code: "STAR_WRITER",
     order: 8,
     name: "Redactor estrella",
-    description: "Puntua los articulos aprobados o negativos y las propuestas realizadas.",
+    description: "Puntúa los artículos aprobados o negativos y las propuestas realizadas.",
     calculationExplanation:
-      "Si los articulos aprobados son cero o positivos: articulos x puntos por articulo aprobado x multiplicador del nivel + propuestas x puntos por propuesta. Si los articulos aprobados son negativos: articulos x puntos por articulo negativo + propuestas x puntos por propuesta. El multiplicador no afecta ni a las propuestas ni a los articulos negativos.",
+      "Si los artículos aprobados son cero o positivos: artículos x puntos por artículo aprobado x multiplicador del nivel + propuestas x puntos por propuesta. Si los artículos aprobados son negativos: artículos x puntos por artículo negativo + propuestas x puntos por propuesta. El multiplicador no afecta ni a las propuestas ni a los artículos negativos.",
     defaultBaseMax: 60,
     defaultMultipliers: { N0: 4, N1: 1.5, N2: 2 },
     parameters: [
-      { key: "approvedArticlePoints", label: "Puntos por articulo aprobado", defaultValue: 10 },
-      { key: "negativeArticlePoints", label: "Puntos por articulo negativo", defaultValue: 10 },
+      { key: "approvedArticlePoints", label: "Puntos por artículo aprobado", defaultValue: 10 },
+      { key: "negativeArticlePoints", label: "Puntos por artículo negativo", defaultValue: 10 },
       { key: "proposalPoints", label: "Puntos por propuesta", defaultValue: 5 },
     ],
   }),
@@ -223,19 +223,19 @@ const CATALOG_ENTRIES: KpiCatalogEntry[] = [
     code: "ENTHUSIASTIC_STUDENT",
     order: 9,
     name: "Estudiante entusiasta",
-    description: "Puntua las horas de dedicacion a la formacion.",
-    calculationExplanation: "Horas de dedicacion x puntos por hora x multiplicador del nivel.",
+    description: "Puntúa las horas de dedicación a la formación.",
+    calculationExplanation: "Horas de dedicación x puntos por hora x multiplicador del nivel.",
     defaultBaseMax: 50,
     defaultMultipliers: { N0: 1, N1: 1, N2: 1 },
-    parameters: [{ key: "pointsPerHour", label: "Puntos por hora de dedicacion", defaultValue: 12.5 }],
+    parameters: [{ key: "pointsPerHour", label: "Puntos por hora de dedicación", defaultValue: 12.5 }],
   }),
   entry({
     code: "EXPERT_APPRENTICE",
     order: 10,
     name: "Aprendiz experto",
-    description: "Puntua el valor de formacion alcanzado respecto de un objetivo.",
+    description: "Puntúa el valor de formación alcanzado respecto de un objetivo.",
     calculationExplanation:
-      "Valor de formacion / objetivo x puntos al alcanzar el objetivo x multiplicador del nivel.",
+      "Valor de formación / objetivo x puntos al alcanzar el objetivo x multiplicador del nivel.",
     defaultBaseMax: 50,
     defaultMultipliers: { N0: 1, N1: 1, N2: 1.25 },
     parameters: [

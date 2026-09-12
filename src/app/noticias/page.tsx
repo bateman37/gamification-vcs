@@ -24,7 +24,7 @@ function statusFromParam(param: string | undefined): NewsStatusFilter {
 function emptyMessageFor(status: NewsStatusFilter): string {
   if (status === "unread") return "No tienes noticias sin leer.";
   if (status === "archived") return "No tienes noticias archivadas.";
-  return "Todavia no tienes noticias.";
+  return "Todavía no tienes noticias.";
 }
 
 export default async function NoticiasPage({
@@ -59,7 +59,7 @@ export default async function NoticiasPage({
     <div className="space-y-6">
       <PageHeader
         title="Noticias"
-        description="Novedades de tus splits: publicaciones, mercado, facciones, profesiones y avisos de administracion."
+        description="Novedades de tus splits: publicaciones, mercado, facciones, profesiones y avisos de administración."
         actions={
           session.user.role === "ADMIN" ? (
             <LinkButton href="/noticias/administrar" variant="primary">

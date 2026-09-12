@@ -17,7 +17,7 @@ export const createSplitSchema = z.object({
   startDate: isoDateSchema,
   numberOfWeeks: z.coerce
     .number()
-    .int("El numero de semanas debe ser un numero entero.")
+    .int("El número de semanas debe ser un número entero.")
     .min(MIN_SPLIT_WEEKS, `El numero de semanas debe ser al menos ${MIN_SPLIT_WEEKS}.`)
     .max(MAX_SPLIT_WEEKS, `El numero de semanas no puede superar ${MAX_SPLIT_WEEKS}.`),
 });

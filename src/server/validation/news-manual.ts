@@ -27,7 +27,7 @@ export const manualNewsFormSchema = z
     idempotencyKey: z.string().min(1, "Falta la clave de envio."),
   })
   .refine((data) => data.audienceType !== "FACTION" || Boolean(data.factionId), {
-    message: "Selecciona una faccion.",
+    message: "Selecciona una facción.",
     path: ["factionId"],
   })
   .refine((data) => data.audienceType !== "PERSON" || Boolean(data.splitParticipantId), {

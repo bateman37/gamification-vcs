@@ -19,7 +19,7 @@ export async function hashPassword(password: string): Promise<string> {
 
 function assertPasswordStrength(password: string, field: string): void {
   if (password.trim().length < MIN_PASSWORD_LENGTH) {
-    throw new DomainError(`La contrasena debe tener al menos ${MIN_PASSWORD_LENGTH} caracteres.`, field);
+    throw new DomainError(`La contraseña debe tener al menos ${MIN_PASSWORD_LENGTH} caracteres.`, field);
   }
 }
 
@@ -78,7 +78,7 @@ export async function changeOwnPassword(db: PrismaClient, userId: string, curren
   if (!user) throw new DomainError("La cuenta no existe.");
 
   const currentValid = await compare(currentPassword, user.passwordHash);
-  if (!currentValid) throw new DomainError("La contrasena actual no es correcta.", "currentPassword");
+  if (!currentValid) throw new DomainError("La contraseña actual no es correcta.", "currentPassword");
 
   assertPasswordStrength(newPassword, "newPassword");
   const passwordHash = await hashPassword(newPassword);

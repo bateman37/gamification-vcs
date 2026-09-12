@@ -23,7 +23,7 @@ export async function changeOwnPasswordAction(
   const confirmPassword = String(formData.get("confirmPassword") ?? "");
 
   if (newPassword !== confirmPassword) {
-    return { ok: false, error: "La confirmacion no coincide con la nueva contrasena." };
+    return { ok: false, error: "La confirmación no coincide con la nueva contraseña." };
   }
 
   try {

@@ -18,7 +18,7 @@ export class PositionPointsValidationError extends DomainError {
   readonly fieldErrors: PositionPointFieldError[];
 
   constructor(fieldErrors: PositionPointFieldError[]) {
-    super("Hay errores en los puntos por posicion. Revisalos antes de guardar.");
+    super("Hay errores en los puntos por posición. Revísalos antes de guardar.");
     this.name = "PositionPointsValidationError";
     this.fieldErrors = fieldErrors;
   }

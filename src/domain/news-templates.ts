@@ -27,13 +27,13 @@ export function participantAddedNewsTemplate(input: {
 }): NewsText {
   const parts: string[] = ["Ya formas parte de este split."];
   if (input.factionName) {
-    parts.push(`Perteneces a la faccion ${input.factionName}.`);
+    parts.push(`Perteneces a la facción ${input.factionName}.`);
   }
   const pending: string[] = [];
   if (input.needsAvatar) pending.push("tu avatar");
-  if (input.needsProfession) pending.push("tu profesion");
+  if (input.needsProfession) pending.push("tu profesión");
   if (pending.length > 0) {
-    parts.push(`Revisa tu alias y completa ${pending.join(" y ")} antes de la primera publicacion.`);
+    parts.push(`Revisa tu alias y completa ${pending.join(" y ")} antes de la primera publicación.`);
   } else {
     parts.push("Revisa tu alias cuando quieras personalizarlo.");
   }
@@ -47,32 +47,32 @@ export function splitActivatedNewsTemplateForParticipant(input: {
   needsProfession: boolean;
   nextLocation: { name: string; kpiName: string; bonusPercent: number; weekStartDate: Date } | null;
 }): NewsText {
-  const parts: string[] = [`${input.splitName} ya esta activo desde el ${formatCalendarDateEs(input.startDate)}.`];
+  const parts: string[] = [`${input.splitName} ya está activo desde el ${formatCalendarDateEs(input.startDate)}.`];
   const pending: string[] = [];
   if (input.needsAvatar) pending.push("tu avatar");
-  if (input.needsProfession) pending.push("tu profesion");
+  if (input.needsProfession) pending.push("tu profesión");
   if (pending.length > 0) {
-    parts.push(`Completa ${pending.join(" y ")} antes de la primera publicacion.`);
+    parts.push(`Completa ${pending.join(" y ")} antes de la primera publicación.`);
   }
   if (input.nextLocation) {
     parts.push(
-      `La semana del ${formatCalendarDateEs(input.nextLocation.weekStartDate)} tendra la localizacion "${input.nextLocation.name}", que potenciara ${input.nextLocation.kpiName} un +${input.nextLocation.bonusPercent} %.`,
+      `La semana del ${formatCalendarDateEs(input.nextLocation.weekStartDate)} tendrá la localización "${input.nextLocation.name}", que potenciará ${input.nextLocation.kpiName} un +${input.nextLocation.bonusPercent} %.`,
     );
   }
-  return { title: `${input.splitName} ya esta activo`, body: parts.join(" ") };
+  return { title: `${input.splitName} ya está activo`, body: parts.join(" ") };
 }
 
 export function factionReassignedNewsTemplate(input: { factionName: string }): NewsText {
   return {
-    title: "Tienes una nueva faccion",
-    body: `Ahora perteneces a la faccion ${input.factionName}.`,
+    title: "Tienes una nueva facción",
+    body: `Ahora perteneces a la facción ${input.factionName}.`,
   };
 }
 
 export function factionRenamedNewsTemplate(input: { oldName: string; newName: string }): NewsText {
   return {
-    title: "Tu faccion ha cambiado de nombre",
-    body: `Tu faccion "${input.oldName}" ahora se llama "${input.newName}".`,
+    title: "Tu facción ha cambiado de nombre",
+    body: `Tu facción "${input.oldName}" ahora se llama "${input.newName}".`,
   };
 }
 
@@ -83,8 +83,8 @@ export function professionAssignedNewsTemplate(input: {
   bonusPercent: number;
 }): NewsText {
   return {
-    title: "Ya tienes profesion",
-    body: `Tu profesion es ${input.professionName}: potencia ${input.kpiNameA} y ${input.kpiNameB} un +${input.bonusPercent} %.`,
+    title: "Ya tienes profesión",
+    body: `Tu profesión es ${input.professionName}: potencia ${input.kpiNameA} y ${input.kpiNameB} un +${input.bonusPercent} %.`,
   };
 }
 
@@ -95,8 +95,8 @@ export function locationCreatedNewsTemplate(input: {
   bonusPercent: number;
 }): NewsText {
   return {
-    title: `Nueva ubicacion · semana del ${formatCalendarDateEs(input.weekStartDate)}`,
-    body: `"${input.name}" potenciara ${input.kpiName} un +${input.bonusPercent} %.`,
+    title: `Nueva ubicación · semana del ${formatCalendarDateEs(input.weekStartDate)}`,
+    body: `"${input.name}" potenciará ${input.kpiName} un +${input.bonusPercent} %.`,
   };
 }
 
@@ -107,21 +107,21 @@ export function locationUpdatedNewsTemplate(input: {
   bonusPercent: number;
 }): NewsText {
   return {
-    title: `Ubicacion actualizada · semana del ${formatCalendarDateEs(input.weekStartDate)}`,
-    body: `"${input.name}" ahora potenciara ${input.kpiName} un +${input.bonusPercent} %.`,
+    title: `Ubicación actualizada · semana del ${formatCalendarDateEs(input.weekStartDate)}`,
+    body: `"${input.name}" ahora potenciará ${input.kpiName} un +${input.bonusPercent} %.`,
   };
 }
 
 export function locationDeletedNewsTemplate(input: { weekStartDate: Date; name: string }): NewsText {
   return {
-    title: `Ubicacion cancelada · semana del ${formatCalendarDateEs(input.weekStartDate)}`,
-    body: `Se ha cancelado la localizacion "${input.name}" de esa semana.`,
+    title: `Ubicación cancelada · semana del ${formatCalendarDateEs(input.weekStartDate)}`,
+    body: `Se ha cancelado la localización "${input.name}" de esa semana.`,
   };
 }
 
 export function marketOpenedNewsTemplateForParticipant(input: { itemCount: number }): NewsText {
   return {
-    title: "El mercado ya esta abierto",
+    title: "El mercado ya está abierto",
     body: `Hay ${input.itemCount} ${input.itemCount === 1 ? "objeto disponible" : "objetos disponibles"} para comprar. Consulta tu saldo en tu ficha.`,
   };
 }
@@ -129,7 +129,7 @@ export function marketOpenedNewsTemplateForParticipant(input: { itemCount: numbe
 export function marketClosedNewsTemplateForParticipant(): NewsText {
   return {
     title: "El mercado se ha cerrado",
-    body: "Ya no se pueden comprar objetos. Los que ya tienes siguen equipables mientras el split este activo.",
+    body: "Ya no se pueden comprar objetos. Los que ya tienes siguen equipables mientras el split esté activo.",
   };
 }
 
@@ -140,7 +140,7 @@ export function purchaseCompletedNewsTemplate(input: {
 }): NewsText {
   return {
     title: `Has comprado ${input.itemName}`,
-    body: `${input.priceCredits} creditos · Saldo restante: ${input.remainingBalance} creditos.`,
+    body: `${input.priceCredits} créditos · Saldo restante: ${input.remainingBalance} créditos.`,
   };
 }
 
@@ -155,13 +155,13 @@ export function weekPublishedNewsTemplate(input: {
   professionJustLocked: boolean;
 }): NewsText {
   const parts: string[] = [
-    `Posicion semanal: ${input.rank} de ${input.totalParticipants} · ${formatPoints(input.totalKpiPoints)} puntos KPI · ${input.positionPoints} puntos por posicion · ${input.creditsEarned} creditos.`,
+    `Posición semanal: ${input.rank} de ${input.totalParticipants} · ${formatPoints(input.totalKpiPoints)} puntos KPI · ${input.positionPoints} puntos por posición · ${input.creditsEarned} créditos.`,
   ];
   if (input.faction) {
-    parts.push(`Tu faccion, ${input.faction.name}, ha quedado ${input.faction.rank}.`);
+    parts.push(`Tu facción, ${input.faction.name}, ha quedado ${input.faction.rank}.`);
   }
   if (input.professionJustLocked) {
-    parts.push("Tu profesion ya es definitiva para el resto del split.");
+    parts.push("Tu profesión ya es definitiva para el resto del split.");
   }
   parts.push("Puedes consultar el detalle completo.");
   return {
@@ -186,24 +186,24 @@ export function adminSplitActivatedNewsTemplate(input: {
   startDate: Date;
 }): NewsText {
   return {
-    title: `${input.splitName} ya esta activo`,
+    title: `${input.splitName} ya está activo`,
     body: `${input.participantCount} participantes y ${input.activeKpiCount} KPI activos desde el ${formatCalendarDateEs(input.startDate)}.`,
   };
 }
 
 export function adminIncompleteProfilesNewsTemplate(input: { splitName: string; aliases: string[] }): NewsText {
   const preview = input.aliases.slice(0, 5).join(", ");
-  const suffix = input.aliases.length > 5 ? `, y ${input.aliases.length - 5} mas` : "";
+  const suffix = input.aliases.length > 5 ? `, y ${input.aliases.length - 5} más` : "";
   return {
     title: `Fichas incompletas en ${input.splitName}`,
-    body: `${input.aliases.length} ${input.aliases.length === 1 ? "participante tiene" : "participantes tienen"} avatar o profesion pendiente: ${preview}${suffix}.`,
+    body: `${input.aliases.length} ${input.aliases.length === 1 ? "participante tiene" : "participantes tienen"} avatar o profesión pendiente: ${preview}${suffix}.`,
   };
 }
 
 export function adminWeekReadyNewsTemplate(input: { splitName: string; weekStartDate: Date }): NewsText {
   return {
     title: `Semana lista para revisar · ${input.splitName}`,
-    body: `Todos los KPI activos de la semana del ${formatCalendarDateEs(input.weekStartDate)} ya estan cargados. Puedes previsualizar la publicacion.`,
+    body: `Todos los KPI activos de la semana del ${formatCalendarDateEs(input.weekStartDate)} ya están cargados. Puedes previsualizar la publicación.`,
   };
 }
 
@@ -216,14 +216,14 @@ export function adminWeekPublishedNewsTemplate(input: {
 }): NewsText {
   return {
     title: `Semana publicada · ${input.splitName}`,
-    body: `La semana del ${formatCalendarDateEs(input.weekStartDate)} se publico para ${input.participantCount} participantes (${input.totalCreditsGenerated} creditos generados). Publicado por ${input.publishedByName}.`,
+    body: `La semana del ${formatCalendarDateEs(input.weekStartDate)} se publicó para ${input.participantCount} participantes (${input.totalCreditsGenerated} créditos generados). Publicado por ${input.publishedByName}.`,
   };
 }
 
 export function adminNextLocationMissingNewsTemplate(input: { splitName: string; weekStartDate: Date }): NewsText {
   return {
-    title: `Falta localizacion · ${input.splitName}`,
-    body: `La semana del ${formatCalendarDateEs(input.weekStartDate)} todavia no tiene una localizacion configurada.`,
+    title: `Falta localización · ${input.splitName}`,
+    body: `La semana del ${formatCalendarDateEs(input.weekStartDate)} todavía no tiene una localización configurada.`,
   };
 }
 

@@ -36,7 +36,7 @@ export function MobileNav({ items, isAuthenticated }: { items: NavItem[]; isAuth
     <>
       <button
         type="button"
-        aria-label={open ? "Cerrar menu" : "Abrir menu"}
+        aria-label={open ? "Cerrar menú" : "Abrir menú"}
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
         className="inline-flex h-9 w-9 items-center justify-center rounded-control text-text-muted hover:bg-surface-muted hover:text-ink md:hidden"
@@ -46,14 +46,16 @@ export function MobileNav({ items, isAuthenticated }: { items: NavItem[]; isAuth
 
       {open && (
         <div className="fixed inset-0 z-40 md:hidden">
-          <button type="button" aria-label="Cerrar menu" className="absolute inset-0 bg-ink/40" onClick={() => setOpen(false)} />
-          <div className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col bg-ink px-4 py-5">
-            <div className="mb-6 flex items-center gap-2">
+          <button type="button" aria-label="Cerrar menú" className="absolute inset-0 bg-ink/40" onClick={() => setOpen(false)} />
+          <div className="absolute inset-y-0 left-0 flex h-dvh w-72 max-w-[85vw] flex-col bg-ink px-4 py-5">
+            <div className="mb-6 flex shrink-0 items-center gap-2">
               <BrandMark variant="dark" />
               <span className="text-sm font-semibold text-white">Gamification VCS</span>
             </div>
-            <SidebarNav items={items} onNavigate={() => setOpen(false)} />
-            <div className="mt-auto flex flex-col gap-2 border-t border-white/10 pt-4 text-sm">
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              <SidebarNav items={items} onNavigate={() => setOpen(false)} />
+            </div>
+            <div className="mt-auto flex shrink-0 flex-col gap-2 border-t border-white/10 pt-4 text-sm">
               {isAuthenticated ? (
                 <>
                   <Link href="/cuenta/cambiar-contrasena" className="text-white/70 hover:text-white" onClick={() => setOpen(false)}>

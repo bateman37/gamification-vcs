@@ -65,3 +65,25 @@ body {
     scroll-behavior: auto !important;
   }
 }
+
+/*
+ * Entrada de una tarjeta revelada en "Presentar resultados" (`1.0.1`,
+ * parte I del encargo): opacidad + ligero desplazamiento, 550ms, sin
+ * parpadeo ni rebote. La regla `prefers-reduced-motion` de arriba ya
+ * reduce su duracion a instantanea (0.01ms) para quien lo prefiera, sin
+ * omitir ningun paso de la revelacion.
+ */
+@keyframes reveal-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-reveal-in {
+  animation: reveal-in 550ms ease-out both;
+}
