@@ -111,6 +111,11 @@ export async function PorSplitSection({
                     <td className="px-3 py-2 font-medium">
                       S{week.weekSequenceNumber}
                       <span className="block text-xs font-normal text-slate-500">{formatCalendarDateEs(week.weekStartDate)}</span>
+                      {week.location && (
+                        <span className="block text-xs font-normal text-teal-700">
+                          {week.location.name} (+{week.location.bonusPercent} %)
+                        </span>
+                      )}
                     </td>
                     {showProfessionColumn && (
                       <td className="px-3 py-2 text-slate-600">
@@ -140,30 +145,46 @@ export async function PorSplitSection({
                       // El porcentaje usa el maximo base publicado, sin inflar por profesion: puede superar el 100 %.
                       const cellPercentage = cell.baseMax && cell.baseMax > 0 ? (cellPoints / cell.baseMax) * 100 : 0;
                       const band = colorBandForPercentage(cellPercentage);
-                      const bonusApplied =
+                      const professionApplied =
                         cell.professionApplied && cell.basePointsBeforeProfession !== null && cell.professionBonusPoints !== null;
-                      const breakdown = bonusApplied
-                        ? `Resultado tras máximo: ${formatPoints(cell.basePointsBeforeProfession!)} | Bonus ${
-                            cell.professionName ?? "profesión"
-                          } (+${PROFESSION_BONUS_PERCENT} %): +${formatPoints(cell.professionBonusPoints!)} | Resultado final: ${formatPoints(cellPoints)}`
-                        : undefined;
+                      const locationApplied =
+                        cell.locationApplied && cell.basePointsBeforeProfession !== null && cell.locationBonusPoints !== null;
+                      const bonusApplied = professionApplied || locationApplied;
+                      const breakdownLines = bonusApplied
+                        ? [
+                            `Resultado tras máximo: ${formatPoints(cell.basePointsBeforeProfession!)}`,
+                            professionApplied
+                              ? `Bonus ${cell.professionName ?? "profesión"} (+${PROFESSION_BONUS_PERCENT} %): +${formatPoints(cell.professionBonusPoints!)}`
+                              : null,
+                            locationApplied
+                              ? `Bonus localización (+${week.location?.bonusPercent ?? ""} %): +${formatPoints(cell.locationBonusPoints!)}`
+                              : null,
+                            `Resultado final: ${formatPoints(cellPoints)}`,
+                          ].filter((line): line is string => line !== null)
+                        : [];
+                      const breakdown = breakdownLines.length > 0 ? breakdownLines.join(" | ") : undefined;
+                      const borderClass =
+                        professionApplied && locationApplied
+                          ? "border-2 border-dashed border-violet-500"
+                          : professionApplied
+                            ? "border-2 border-dashed border-indigo-500"
+                            : locationApplied
+                              ? "border-2 border-dashed border-teal-500"
+                              : "";
                       return (
-                        <td
-                          key={cell.kpiCode}
-                          title={breakdown}
-                          className={`px-3 py-2 text-center ${COLOR_BAND_CLASSES[band.band]} ${
-                            bonusApplied ? "border-2 border-dashed border-indigo-500" : ""
-                          }`}
-                        >
+                        <td key={cell.kpiCode} title={breakdown} className={`px-3 py-2 text-center ${COLOR_BAND_CLASSES[band.band]} ${borderClass}`}>
                           {formatPoints(cellPoints)}
-                          {bonusApplied && (
-                            <>
-                              <span className="mt-1 block rounded bg-indigo-100 px-1 py-0.5 text-[10px] font-semibold text-indigo-800">
-                                +{PROFESSION_BONUS_PERCENT} % profesion
-                              </span>
-                              <span className="sr-only"> ({breakdown})</span>
-                            </>
+                          {professionApplied && (
+                            <span className="mt-1 block rounded bg-indigo-100 px-1 py-0.5 text-[10px] font-semibold text-indigo-800">
+                              +{PROFESSION_BONUS_PERCENT} % profesion
+                            </span>
                           )}
+                          {locationApplied && (
+                            <span className="mt-1 block rounded bg-teal-100 px-1 py-0.5 text-[10px] font-semibold text-teal-800">
+                              +{week.location?.bonusPercent ?? ""} % localizacion
+                            </span>
+                          )}
+                          {breakdown && <span className="sr-only"> ({breakdown})</span>}
                           <div className="text-xs text-slate-500">
                             {cell.kpiRank ?? "—"} de {detail.splitParticipantCount}
                           </div>
