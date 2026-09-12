@@ -47,11 +47,11 @@ export function ProfileSplitCard({ card }: { card: ProfileCard }) {
             <dd className="font-medium">{card.alias}</dd>
           </div>
           <div>
-            <dt className="text-xs text-text-muted">Nivel tecnico</dt>
+            <dt className="text-xs text-text-muted">Nivel técnico</dt>
             <dd className="font-medium">{card.level}</dd>
           </div>
           <div>
-            <dt className="text-xs text-text-muted">Faccion</dt>
+            <dt className="text-xs text-text-muted">Facción</dt>
             <dd className="font-medium">
               {card.faction ? (
                 <span className="inline-flex items-center gap-1.5">
@@ -68,7 +68,7 @@ export function ProfileSplitCard({ card }: { card: ProfileCard }) {
             </dd>
           </div>
           <div>
-            <dt className="text-xs text-text-muted">Profesion</dt>
+            <dt className="text-xs text-text-muted">Profesión</dt>
             <dd className="font-medium">
               {card.profession ? (
                 <>
@@ -87,7 +87,7 @@ export function ProfileSplitCard({ card }: { card: ProfileCard }) {
 
         {card.activeLocation && (
           <div className="rounded-md border border-info/30 bg-info-soft p-2 text-xs text-info-ink">
-            <p className="font-semibold">Localizacion activa esta semana: {card.activeLocation.name}</p>
+            <p className="font-semibold">Localización activa esta semana: {card.activeLocation.name}</p>
             <p>
               Potencia: {card.activeLocation.kpiName} · {card.activeLocation.bonusLabel} · del{" "}
               {formatCalendarDateEs(card.activeLocation.startDate)} al {formatCalendarDateEs(card.activeLocation.endDate)}
@@ -107,8 +107,8 @@ export function ProfileSplitCard({ card }: { card: ProfileCard }) {
             type="button"
             variant="secondary"
             disabled
-            aria-label="Resultados del split: aun no hay resultados publicados"
-            title="Aun no hay resultados publicados"
+            aria-label="Resultados del split: aún no hay resultados publicados"
+            title="Aún no hay resultados publicados"
           >
             <Icon name="Trophy" className="h-4 w-4" />
             Resultados del split

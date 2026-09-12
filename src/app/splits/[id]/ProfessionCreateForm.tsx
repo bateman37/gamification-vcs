@@ -21,7 +21,7 @@ export function ProfessionCreateForm({ splitId }: { splitId: string }) {
       <ProfessionFormFields idPrefix="profession-new" fieldErrors={state.fieldErrors} />
       <CreateProfessionButton />
       {!state.ok && state.error && <ErrorMessage>{state.error}</ErrorMessage>}
-      {state.ok && <SuccessMessage>Profesion creada correctamente.</SuccessMessage>}
+      {state.ok && <SuccessMessage>Profesión creada correctamente.</SuccessMessage>}
     </form>
   );
 }

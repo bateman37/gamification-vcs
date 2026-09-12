@@ -9,13 +9,13 @@ export const NEWS_CATEGORY_DISPLAY: Record<NewsCategory, { label: string; icon: 
   SPLIT: { label: "Split", icon: "Layers" },
   PROFILE: { label: "Ficha", icon: "IdCard" },
   RESULTS: { label: "Resultados", icon: "Trophy" },
-  FACTION: { label: "Faccion", icon: "Flag" },
-  PROFESSION: { label: "Profesion", icon: "Briefcase" },
-  LOCATION: { label: "Localizacion", icon: "MapPin" },
+  FACTION: { label: "Facción", icon: "Flag" },
+  PROFESSION: { label: "Profesión", icon: "Briefcase" },
+  LOCATION: { label: "Localización", icon: "MapPin" },
   MARKET: { label: "Mercado", icon: "Store" },
   PURCHASE: { label: "Compra", icon: "ShoppingBag" },
   ANNOUNCEMENT: { label: "Anuncio", icon: "Megaphone" },
-  ADMIN: { label: "Administracion", icon: "ShieldCheck" },
+  ADMIN: { label: "Administración", icon: "ShieldCheck" },
 };
 
 export const NEWS_CATEGORY_OPTIONS: { value: NewsCategory; label: string }[] = (

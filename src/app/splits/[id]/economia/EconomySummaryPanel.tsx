@@ -4,7 +4,7 @@ import { EmptyState } from "@/components/ui";
 /** Resumen de compras y creditos por participante (seccion 8 del encargo), solo lectura para auditoria. */
 export function EconomySummaryPanel({ summary }: { summary: ParticipantEconomySummary[] }) {
   if (summary.length === 0) {
-    return <EmptyState>Todavia no hay participantes en este split.</EmptyState>;
+    return <EmptyState>Todavía no hay participantes en este split.</EmptyState>;
   }
 
   return (

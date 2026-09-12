@@ -149,7 +149,7 @@ export default async function SplitClassificationPage({
         <Link href={`/splits/${splitId}`} className="text-sm text-text-muted underline hover:text-ink">
           Volver al split
         </Link>
-        <h1 className="mt-2 text-xl font-semibold">Clasificacion detallada individual - {split.name}</h1>
+        <h1 className="mt-2 text-xl font-semibold">Clasificación detallada individual - {split.name}</h1>
       </div>
 
       <ClassificationFilters
@@ -166,7 +166,7 @@ export default async function SplitClassificationPage({
           <table className="w-full text-left text-sm">
             <thead className="border-b border-border bg-canvas text-text-muted">
               <tr>
-                <th className="px-3 py-2 font-medium">{selectedKpiCode ? "Posicion KPI" : "Posicion"}</th>
+                <th className="px-3 py-2 font-medium">{selectedKpiCode ? "Posición KPI" : "Posición"}</th>
                 <th className="px-3 py-2 font-medium">Nombre real</th>
                 <th className="px-3 py-2 font-medium">Alias</th>
                 <th className="px-3 py-2 font-medium">Nivel</th>
@@ -177,7 +177,7 @@ export default async function SplitClassificationPage({
                   <>
                     {sortHeader("kpi", `${selectedWeek === "acumulado" ? "Suma" : "Resultado"} ${KPI_CATALOG[selectedKpiCode].name}`)}
                     {selectedWeek === "acumulado" && sortHeader("media", "Media")}
-                    <th className="px-3 py-2 text-center font-medium">Posicion en el KPI</th>
+                    <th className="px-3 py-2 text-center font-medium">Posición en el KPI</th>
                     <th className="px-3 py-2 font-medium">Enlace</th>
                   </>
                 )}

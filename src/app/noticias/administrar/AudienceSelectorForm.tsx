@@ -82,7 +82,7 @@ export function AudienceSelectorForm({
       {audienceType === "FACTION" && (
         <div>
           <label htmlFor="ma-faction" className="block text-xs font-medium text-text-muted">
-            Faccion
+            Facción
           </label>
           <select
             id="ma-faction"

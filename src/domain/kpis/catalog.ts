@@ -78,9 +78,9 @@ function positiveNumberField(fieldLabel: string): z.ZodTypeAny {
     z
       .number({
         required_error: `${fieldLabel} es obligatorio.`,
-        invalid_type_error: `${fieldLabel} debe ser un numero.`,
+        invalid_type_error: `${fieldLabel} debe ser un número.`,
       })
-      .finite(`${fieldLabel} debe ser un numero finito.`)
+      .finite(`${fieldLabel} debe ser un número finito.`)
       .positive(`${fieldLabel} debe ser mayor que cero.`),
   );
 }

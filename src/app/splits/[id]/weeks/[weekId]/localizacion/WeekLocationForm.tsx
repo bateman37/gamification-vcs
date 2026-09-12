@@ -134,7 +134,7 @@ export function WeekLocationForm({
         </div>
 
         {!state.ok && state.error && <ErrorMessage>{state.error}</ErrorMessage>}
-        {state.ok && <SuccessMessage>Localizacion guardada correctamente.</SuccessMessage>}
+        {state.ok && <SuccessMessage>Localización guardada correctamente.</SuccessMessage>}
         <SaveButton />
       </form>
 

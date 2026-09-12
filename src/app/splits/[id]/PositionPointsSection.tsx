@@ -61,7 +61,7 @@ export function PositionPointsSection({
           <table className="w-full text-left text-sm">
             <thead className="border-b border-border bg-surface-muted text-text-muted">
               <tr>
-                <th className="px-3 py-2 font-medium">Posicion</th>
+                <th className="px-3 py-2 font-medium">Posición</th>
                 <th className="px-3 py-2 font-medium">Puntos</th>
               </tr>
             </thead>

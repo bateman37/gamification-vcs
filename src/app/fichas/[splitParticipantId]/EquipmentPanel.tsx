@@ -98,7 +98,7 @@ export function EquipmentPanel({
   if (slots.length === 0) {
     return (
       <p className="rounded-card border border-dashed border-border-strong px-4 py-6 text-center text-sm text-text-muted">
-        Este split todavia no tiene ninguna ranura de equipo configurada.
+        Este split todavía no tiene ninguna ranura de equipo configurada.
       </p>
     );
   }

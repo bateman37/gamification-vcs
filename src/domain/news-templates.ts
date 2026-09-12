@@ -33,7 +33,7 @@ export function participantAddedNewsTemplate(input: {
   if (input.needsAvatar) pending.push("tu avatar");
   if (input.needsProfession) pending.push("tu profesion");
   if (pending.length > 0) {
-    parts.push(`Revisa tu alias y completa ${pending.join(" y ")} antes de la primera publicacion.`);
+    parts.push(`Revisa tu alias y completa ${pending.join(" y ")} antes de la primera publicación.`);
   } else {
     parts.push("Revisa tu alias cuando quieras personalizarlo.");
   }
@@ -52,7 +52,7 @@ export function splitActivatedNewsTemplateForParticipant(input: {
   if (input.needsAvatar) pending.push("tu avatar");
   if (input.needsProfession) pending.push("tu profesion");
   if (pending.length > 0) {
-    parts.push(`Completa ${pending.join(" y ")} antes de la primera publicacion.`);
+    parts.push(`Completa ${pending.join(" y ")} antes de la primera publicación.`);
   }
   if (input.nextLocation) {
     parts.push(
@@ -155,7 +155,7 @@ export function weekPublishedNewsTemplate(input: {
   professionJustLocked: boolean;
 }): NewsText {
   const parts: string[] = [
-    `Posicion semanal: ${input.rank} de ${input.totalParticipants} · ${formatPoints(input.totalKpiPoints)} puntos KPI · ${input.positionPoints} puntos por posicion · ${input.creditsEarned} creditos.`,
+    `Posición semanal: ${input.rank} de ${input.totalParticipants} · ${formatPoints(input.totalKpiPoints)} puntos KPI · ${input.positionPoints} puntos por posición · ${input.creditsEarned} créditos.`,
   ];
   if (input.faction) {
     parts.push(`Tu faccion, ${input.faction.name}, ha quedado ${input.faction.rank}.`);
@@ -203,7 +203,7 @@ export function adminIncompleteProfilesNewsTemplate(input: { splitName: string; 
 export function adminWeekReadyNewsTemplate(input: { splitName: string; weekStartDate: Date }): NewsText {
   return {
     title: `Semana lista para revisar · ${input.splitName}`,
-    body: `Todos los KPI activos de la semana del ${formatCalendarDateEs(input.weekStartDate)} ya estan cargados. Puedes previsualizar la publicacion.`,
+    body: `Todos los KPI activos de la semana del ${formatCalendarDateEs(input.weekStartDate)} ya están cargados. Puedes previsualizar la publicación.`,
   };
 }
 

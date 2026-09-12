@@ -73,7 +73,7 @@ export function ProfileProfessionForm({
   return (
     <form action={formAction} className="space-y-2">
       <label htmlFor={`profession-${splitParticipantId}`} className="block text-xs font-medium text-text-muted">
-        Profesion
+        Profesión
       </label>
       <div className="flex flex-wrap items-start gap-2">
         <select
@@ -98,7 +98,7 @@ export function ProfileProfessionForm({
       {selected && <ProfessionDetails profession={selected} />}
       <FieldError message={state.fieldErrors?.professionId} />
       {!state.ok && state.error && <ErrorMessage>{state.error}</ErrorMessage>}
-      {state.ok && <SuccessMessage>Profesion guardada.</SuccessMessage>}
+      {state.ok && <SuccessMessage>Profesión guardada.</SuccessMessage>}
     </form>
   );
 }

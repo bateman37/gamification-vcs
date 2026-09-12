@@ -15,13 +15,13 @@ export function FactionWeeklyPreviewTable({ rows }: { rows: FactionWeeklyPreview
 
   return (
     <div className="space-y-2">
-      <h2 className="text-sm font-semibold text-ink">Clasificacion de facciones de la semana</h2>
+      <h2 className="text-sm font-semibold text-ink">Clasificación de facciones de la semana</h2>
       <div className="overflow-x-auto rounded-card border border-border bg-surface">
         <table className="w-full text-left text-sm">
           <thead className="border-b border-border bg-canvas text-text-muted">
             <tr>
               <th className="px-3 py-2 font-medium">Pos.</th>
-              <th className="px-3 py-2 font-medium">Faccion</th>
+              <th className="px-3 py-2 font-medium">Facción</th>
               <th className="px-3 py-2 font-medium">Top 3 (Renombre = puntos por posicion)</th>
               <th className="px-3 py-2 text-center font-medium">Suma</th>
             </tr>

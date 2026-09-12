@@ -44,7 +44,7 @@ export default async function PersonasPage() {
         </table>
         {people.length === 0 && (
           <div className="p-4">
-            <EmptyState>Todavia no hay personas registradas.</EmptyState>
+            <EmptyState>Todavía no hay personas registradas.</EmptyState>
           </div>
         )}
       </div>

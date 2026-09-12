@@ -17,7 +17,7 @@ function SubmitAddParticipantButton() {
   const { pending } = useFormStatus();
   return (
     <SubmitButton pending={pending} className="w-full lg:w-auto">
-      Anadir participante
+      Añadir participante
     </SubmitButton>
   );
 }
@@ -63,7 +63,7 @@ export function AddParticipantForm({
 
   return (
     <form action={formAction} className="space-y-4 rounded-card border border-border bg-surface p-4">
-      <h2 className="text-base font-semibold">Anadir participante</h2>
+      <h2 className="text-base font-semibold">Añadir participante</h2>
 
       <div className="flex gap-4 text-sm">
         <label className="flex items-center gap-2">
@@ -148,7 +148,7 @@ export function AddParticipantForm({
 
           <div className="w-full sm:w-28">
             <label htmlFor="level" className="block text-sm font-medium text-ink">
-              Nivel tecnico
+              Nivel técnico
             </label>
             <select
               id="level"
@@ -166,7 +166,7 @@ export function AddParticipantForm({
           {professions.length > 0 && (
             <div className="w-full sm:w-64">
               <label htmlFor="professionId" className="block text-sm font-medium text-ink">
-                Profesion *
+                Profesión *
               </label>
               <select
                 id="professionId"
@@ -177,7 +177,7 @@ export function AddParticipantForm({
                 defaultValue=""
                 className="mt-1 w-full rounded-control border border-border-strong px-3 py-2 text-sm"
               >
-                <option value="">{professionRequired ? "Selecciona una profesion" : "Sin elegir"}</option>
+                <option value="">{professionRequired ? "Selecciona una profesión" : "Sin elegir"}</option>
                 {availableProfessions.map((profession) => (
                   <option key={profession.id} value={profession.id}>
                     {profession.name} ({formatPoweredKpis(profession)})
@@ -194,7 +194,7 @@ export function AddParticipantForm({
           {factions.length > 0 && (
             <div className="w-full sm:w-44">
               <label htmlFor="factionId" className="block text-sm font-medium text-ink">
-                Faccion *
+                Facción *
               </label>
               <select
                 id="factionId"
@@ -248,10 +248,10 @@ export function AddParticipantForm({
       <div className="space-y-1 border-t border-border pt-3 text-xs text-text-muted">
         {professions.length > 0 && (
           <p id={PROFESSION_HELP_ID}>
-            * Profesion:{" "}
+            * Profesión:{" "}
             {professionRequired
               ? "es obligatoria porque este split ya publico una semana usando profesiones; debe elegirse una compatible con el nivel."
-              : "es opcional hasta la primera publicacion."}{" "}
+              : "es opcional hasta la primera publicación."}{" "}
             {PROFESSION_BONUS_LABEL} y despues queda bloqueada.
           </p>
         )}

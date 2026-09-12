@@ -88,7 +88,7 @@ export function MarketPanel({
 
       {catalog.length === 0 ? (
         <p className="rounded-card border border-dashed border-border-strong px-4 py-6 text-center text-sm text-text-muted">
-          Este split todavia no tiene ningun objeto a la venta.
+          Este split todavía no tiene ningún objeto a la venta.
         </p>
       ) : (
         <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">

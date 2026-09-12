@@ -112,7 +112,7 @@ export function KpiConfigCard({
           {readOnly ? (
             <dl className="flex flex-wrap gap-x-6 gap-y-3 text-sm">
               <div className="w-24">
-                <dt className="text-xs font-medium text-text-muted">Maximo base</dt>
+                <dt className="text-xs font-medium text-text-muted">Máximo base</dt>
                 <dd>{formatNumber(config.baseMax)}</dd>
               </div>
               {multipliers.map(({ level, value }) => (
@@ -138,7 +138,7 @@ export function KpiConfigCard({
 
                 <div className="w-24">
                   <label htmlFor={`${kpiCode}-baseMax`} className="block text-xs font-medium text-text-muted">
-                    Maximo base
+                    Máximo base
                   </label>
                   <input
                     id={`${kpiCode}-baseMax`}
@@ -193,7 +193,7 @@ export function KpiConfigCard({
               <FieldError message={fieldError("isActive")} />
               <p className="mt-2 text-xs text-text-muted">Deja un multiplicador vacio para indicar que ese nivel no aplica a este KPI.</p>
               {!state.ok && state.error && <ErrorMessage>{state.error}</ErrorMessage>}
-              {state.ok && <SuccessMessage>Configuracion guardada.</SuccessMessage>}
+              {state.ok && <SuccessMessage>Configuración guardada.</SuccessMessage>}
             </>
           )}
         </div>

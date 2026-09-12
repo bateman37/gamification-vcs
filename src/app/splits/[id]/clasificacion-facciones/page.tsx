@@ -38,7 +38,7 @@ export default async function FactionClassificationPage({
         <Link href={`/splits/${split.id}`} className="text-sm text-text-muted underline hover:text-ink">
           Volver al split
         </Link>
-        <h1 className="mt-2 text-xl font-semibold">Clasificacion detallada de facciones - {split.name}</h1>
+        <h1 className="mt-2 text-xl font-semibold">Clasificación detallada de facciones - {split.name}</h1>
         <p className="mt-1 text-sm text-text-muted">
           Renombre = puntos por posicion. La puntuacion semanal de cada faccion es la suma de los tres mejores
           (nunca una media).
@@ -47,7 +47,7 @@ export default async function FactionClassificationPage({
 
       {!classification.hasFactionData ? (
         <EmptyState>
-          Todavia no hay clasificacion de facciones publicada para este split. Configura al menos dos facciones y
+          Todavía no hay clasificación de facciones publicada para este split. Configura al menos dos facciones y
           publica una semana para verla aqui.
         </EmptyState>
       ) : (
@@ -60,7 +60,7 @@ export default async function FactionClassificationPage({
                 <thead className="border-b border-border bg-canvas text-text-muted">
                   <tr>
                     <th className="sticky left-0 z-10 bg-canvas px-3 py-2 font-medium">Pos.</th>
-                    <th className="sticky left-10 z-10 bg-canvas px-3 py-2 font-medium">Faccion</th>
+                    <th className="sticky left-10 z-10 bg-canvas px-3 py-2 font-medium">Facción</th>
                     {classification.weeks.map((week) => (
                       <th key={week.splitWeekId} className="px-3 py-2 text-center font-medium">
                         <Link href={`?semana=${week.splitWeekId}`} className="underline hover:text-ink">
@@ -97,7 +97,7 @@ export default async function FactionClassificationPage({
                 <thead className="border-b border-border bg-canvas text-text-muted">
                   <tr>
                     <th className="px-3 py-2 font-medium">Pos. semanal</th>
-                    <th className="px-3 py-2 font-medium">Faccion</th>
+                    <th className="px-3 py-2 font-medium">Facción</th>
                     <th className="px-3 py-2 font-medium">1er participante</th>
                     <th className="px-3 py-2 font-medium">2o participante</th>
                     <th className="px-3 py-2 font-medium">3er participante</th>

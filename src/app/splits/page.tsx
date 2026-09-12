@@ -21,7 +21,7 @@ export default async function SplitsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold">Splits</h1>
-          <p className="text-sm text-text-muted">Ediciones de la gamificacion periodica.</p>
+          <p className="text-sm text-text-muted">Ediciones de la gamificación periódica.</p>
         </div>
         <Link
           href="/splits/nuevo"
@@ -69,7 +69,7 @@ export default async function SplitsPage() {
         </table>
         {splits.length === 0 && (
           <div className="p-4">
-            <EmptyState>Todavia no hay splits creados.</EmptyState>
+            <EmptyState>Todavía no hay splits creados.</EmptyState>
           </div>
         )}
       </div>

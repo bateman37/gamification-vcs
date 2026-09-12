@@ -142,7 +142,7 @@ export function ParticipantEditRow({
           </div>
           {factions.length > 0 && (
             <div>
-              <label className="block text-xs font-medium text-text-muted">Faccion</label>
+              <label className="block text-xs font-medium text-text-muted">Facción</label>
               <select
                 name="factionId"
                 defaultValue={participant.factionId ?? ""}
@@ -163,14 +163,14 @@ export function ParticipantEditRow({
           )}
           {splitUsesProfessions && (
             <div>
-              <label className="block text-xs font-medium text-text-muted">Profesion</label>
+              <label className="block text-xs font-medium text-text-muted">Profesión</label>
               {professionLocked ? (
                 <>
                   {/* La profesion congelada se reenvia tal cual: el servidor rechaza igualmente cualquier cambio. */}
                   <input type="hidden" name="professionId" value={participant.professionId ?? ""} />
                   <p className="mt-1 text-sm">
                     {participant.profession ? participant.profession.name : "Sin elegir"}
-                    <span className="block text-xs text-text-muted">Bloqueada desde la primera publicacion.</span>
+                    <span className="block text-xs text-text-muted">Bloqueada desde la primera publicación.</span>
                   </p>
                 </>
               ) : (

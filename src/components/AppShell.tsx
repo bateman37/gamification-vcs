@@ -54,7 +54,7 @@ export async function AppShell({ children }: { children: ReactNode }) {
             <span className="text-sm font-semibold text-white">Gamification VCS</span>
           </Link>
           {/* Solo esta zona (los enlaces) puede necesitar scroll propio en alturas/zoom extremos;
-              el pie ("Mi cuenta"/"Cerrar sesion") sigue siempre visible, nunca se desplaza fuera
+              el pie ("Mi cuenta"/"Cerrar sesión") sigue siempre visible, nunca se desplaza fuera
               de la pantalla (seccion 14 del encargo `1.0.1`). */}
           <div className="min-h-0 flex-1 overflow-y-auto">
             <SidebarNav items={items} />

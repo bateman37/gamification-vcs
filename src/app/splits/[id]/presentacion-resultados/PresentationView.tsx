@@ -15,10 +15,10 @@ type Phase = "cover" | RevealPhaseKey | "summary";
 const AUTO_ADVANCE_MS = 3000;
 
 const PHASE_TITLES: Record<RevealPhaseKey, string> = {
-  "weekly-individual": "Clasificacion semanal individual",
-  "general-individual": "Clasificacion general individual",
-  "weekly-faction": "Clasificacion semanal de facciones",
-  "general-faction": "Clasificacion general de facciones",
+  "weekly-individual": "Clasificación semanal individual",
+  "general-individual": "Clasificación general individual",
+  "weekly-faction": "Clasificación semanal de facciones",
+  "general-faction": "Clasificación general de facciones",
 };
 
 function isInteractiveElement(element: Element | null): boolean {
@@ -182,7 +182,7 @@ export function PresentationView({ splitId, data }: { splitId: string; data: Spl
   const liveMessage = useMemo(() => {
     if (phase === "cover") return `${data.splitName}: presentacion lista para comenzar.`;
     if (phase === "summary") return "Resumen final de la clasificacion general.";
-    if (revealedCount === 0) return `${PHASE_TITLES[phase]}: sin revelar todavia.`;
+    if (revealedCount === 0) return `${PHASE_TITLES[phase]}: sin revelar todavía.`;
     const group = currentGroups[revealedCount - 1] ?? [];
     const rank = group[0]?.rank;
     const names = group.map((entry) => ("alias" in entry ? entry.alias : entry.name)).join(", ");
@@ -262,7 +262,7 @@ export function PresentationView({ splitId, data }: { splitId: string; data: Spl
 
         {phase === "summary" && (
           <div className="w-full max-w-3xl space-y-4">
-            <h2 className="text-center text-2xl font-bold">Clasificacion general individual</h2>
+            <h2 className="text-center text-2xl font-bold">Clasificación general individual</h2>
             {data.hasFactionData && (
               <div className="flex justify-center gap-2 text-sm">
                 <button
@@ -277,7 +277,7 @@ export function PresentationView({ splitId, data }: { splitId: string; data: Spl
                   onClick={() => setSummaryTab("facciones")}
                   className={`rounded-control px-3 py-1.5 ${summaryTab === "facciones" ? "bg-primary text-white" : "border border-white/20 text-white/70"}`}
                 >
-                  Clasificacion general de facciones
+                  Clasificación general de facciones
                 </button>
               </div>
             )}
@@ -287,7 +287,7 @@ export function PresentationView({ splitId, data }: { splitId: string; data: Spl
                 <table className="w-full text-left text-sm">
                   <thead className="border-b border-white/15 bg-white/5 text-white/70">
                     <tr>
-                      <th className="px-3 py-2">Posicion</th>
+                      <th className="px-3 py-2">Posición</th>
                       <th className="px-3 py-2">Alias</th>
                       <th className="px-3 py-2 text-right">Puntos por posicion</th>
                       <th className="px-3 py-2 text-right">Puntos KPI acumulados</th>
@@ -310,8 +310,8 @@ export function PresentationView({ splitId, data }: { splitId: string; data: Spl
                 <table className="w-full text-left text-sm">
                   <thead className="border-b border-white/15 bg-white/5 text-white/70">
                     <tr>
-                      <th className="px-3 py-2">Posicion</th>
-                      <th className="px-3 py-2">Faccion</th>
+                      <th className="px-3 py-2">Posición</th>
+                      <th className="px-3 py-2">Facción</th>
                       <th className="px-3 py-2 text-right">Puntuacion acumulada</th>
                     </tr>
                   </thead>

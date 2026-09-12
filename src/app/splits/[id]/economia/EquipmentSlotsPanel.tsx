@@ -19,7 +19,7 @@ export interface SlotRow {
 
 function CreateSlotButton() {
   const { pending } = useFormStatus();
-  return <SubmitButton pending={pending}>Anadir ranura</SubmitButton>;
+  return <SubmitButton pending={pending}>Añadir ranura</SubmitButton>;
 }
 
 function SlotRowItem({
@@ -155,7 +155,7 @@ export function EquipmentSlotsPanel({ splitId, slots, locked, maxSlots }: { spli
     <div className="space-y-3">
       <h3 className="text-base font-semibold">Ranuras de equipo</h3>
       <p className="text-sm text-text-muted">
-        El numero y el nombre de las ranuras los decides tu: no hay ranuras predeterminadas. Cada objeto del catalogo
+        El número y el nombre de las ranuras los decides tú: no hay ranuras predeterminadas. Cada objeto del catálogo
         pertenece exactamente a una ranura, y cada participante puede equipar como maximo un objeto por ranura.
       </p>
       {locked && (
@@ -168,7 +168,7 @@ export function EquipmentSlotsPanel({ splitId, slots, locked, maxSlots }: { spli
 
       {orderedSlots.length === 0 ? (
         <p className="rounded-card border border-dashed border-border-strong px-4 py-6 text-center text-sm text-text-muted">
-          Todavia no hay ninguna ranura de equipo configurada.
+          Todavía no hay ninguna ranura de equipo configurada.
         </p>
       ) : (
         <ul className="space-y-2">
@@ -208,7 +208,7 @@ export function EquipmentSlotsPanel({ splitId, slots, locked, maxSlots }: { spli
       {!createState.ok && createState.error && <ErrorMessage>{createState.error}</ErrorMessage>}
       {createState.ok && <SuccessMessage>Ranura guardada correctamente.</SuccessMessage>}
       {!locked && orderedSlots.length >= maxSlots && (
-        <p className="text-xs text-text-muted">Limite tecnico de {maxSlots} ranuras por split alcanzado.</p>
+        <p className="text-xs text-text-muted">Límite técnico de {maxSlots} ranuras por split alcanzado.</p>
       )}
     </div>
   );

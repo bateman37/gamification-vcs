@@ -10,14 +10,14 @@ export function ClassificationSummarySection({ splitId, classification }: { spli
   return (
     <section id="clasificacion-general-individual" className="scroll-mt-20 space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold">Clasificacion general individual</h2>
+        <h2 className="text-lg font-semibold">Clasificación general individual</h2>
         <Link href={`/splits/${splitId}/clasificacion`} className="text-sm font-medium text-ink underline hover:text-ink">
           Ver clasificacion detallada
         </Link>
       </div>
 
       {entries.length === 0 ? (
-        <EmptyState>Todavia no hay ninguna semana publicada en este split.</EmptyState>
+        <EmptyState>Todavía no hay ninguna semana publicada en este split.</EmptyState>
       ) : (
         <div className="overflow-x-auto rounded-card border border-border bg-surface">
           <table className="w-full text-left text-sm">

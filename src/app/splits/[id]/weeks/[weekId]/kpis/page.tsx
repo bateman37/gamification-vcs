@@ -178,7 +178,7 @@ export default async function WeeklyKpisPage({
                     <h2 className="text-base font-semibold">{group.title}</h2>
                     <p className="text-sm text-text-muted">{group.kpiNames.join(" y ")}</p>
                     {!group.implemented && (
-                      <p className="mt-1 text-xs text-text-muted">Carga todavia no implementada.</p>
+                      <p className="mt-1 text-xs text-text-muted">Carga todavía no implementada.</p>
                     )}
                     {group.key === "ESCALATION_TAMER" && !productivityImportExists && (
                       <p className="mt-1 text-xs text-reward-ink">

@@ -5,7 +5,7 @@ import type { OwnedItemView } from "@/server/services/inventory.service";
 /** Inventario permanente del participante (`0.9.0` / MVP-2D, seccion 17 del encargo): sin vender, regalar ni destruir. */
 export function InventoryPanel({ items }: { items: OwnedItemView[] }) {
   if (items.length === 0) {
-    return <EmptyState>Todavia no has comprado ningun objeto.</EmptyState>;
+    return <EmptyState>Todavía no has comprado ningún objeto.</EmptyState>;
   }
 
   return (

@@ -176,7 +176,7 @@ export function StoreItemsPanel({
 
       {items.length === 0 ? (
         <p className="rounded-card border border-dashed border-border-strong px-4 py-6 text-center text-sm text-text-muted">
-          Todavia no hay ningun objeto en el catalogo.
+          Todavía no hay ningún objeto en el catálogo.
         </p>
       ) : (
         <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">

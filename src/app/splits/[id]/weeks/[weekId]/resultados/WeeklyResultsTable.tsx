@@ -199,7 +199,7 @@ export function WeeklyResultsTable({
               <th className="sticky left-0 z-10 bg-canvas px-3 py-2">{headerButton("Alias", "alias")}</th>
               <th className="px-3 py-2 font-medium">Nombre real</th>
               <th className="px-3 py-2 font-medium">Nivel</th>
-              {showProfessionColumn && <th className="px-3 py-2 font-medium">Profesion</th>}
+              {showProfessionColumn && <th className="px-3 py-2 font-medium">Profesión</th>}
               {activeKpis.map((kpi) => (
                 <th key={kpi.code} className="px-3 py-2 text-center">
                   {headerButton(kpi.name, `kpi:${kpi.code}`)}
@@ -207,7 +207,7 @@ export function WeeklyResultsTable({
               ))}
               <th className="px-3 py-2 text-center">{headerButton("Total KPI", "total")}</th>
               <th className="px-3 py-2 text-center font-medium">% del maximo aplicable</th>
-              <th className="px-3 py-2 text-center">{headerButton("Posicion", "position")}</th>
+              <th className="px-3 py-2 text-center">{headerButton("Posición", "position")}</th>
               <th className="px-3 py-2 text-center font-medium">Puntos por posicion</th>
             </tr>
           </thead>

@@ -42,7 +42,7 @@ export default async function FichasPage() {
       </div>
 
       {cards.length === 0 ? (
-        <EmptyState>Todavia no participas en ningun split.</EmptyState>
+        <EmptyState>Todavía no participas en ningún split.</EmptyState>
       ) : (
         <>
           {active.length > 0 && (

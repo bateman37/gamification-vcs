@@ -23,7 +23,7 @@ export function ChangePasswordForm() {
   }, [state.ok, state.saved]);
 
   if (state.ok && state.saved) {
-    return <SuccessMessage>Contrasena actualizada. Vas a salir para volver a iniciar sesion...</SuccessMessage>;
+    return <SuccessMessage>Contraseña actualizada. Vas a salir para volver a iniciar sesión...</SuccessMessage>;
   }
 
   return (

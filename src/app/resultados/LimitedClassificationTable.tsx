@@ -49,7 +49,7 @@ export function LimitedClassificationTable({ classification, selfSplitParticipan
                       title={
                         points === undefined
                           ? "No participa esta semana"
-                          : `Posicion semanal: ${weeklyRank} - Total KPI de la semana: ${formatPoints(totalKpi ?? 0)}`
+                          : `Posición semanal: ${weeklyRank} - Total KPI de la semana: ${formatPoints(totalKpi ?? 0)}`
                       }
                     >
                       {points ?? "—"}

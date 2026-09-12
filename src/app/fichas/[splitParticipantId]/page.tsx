@@ -94,15 +94,15 @@ export default async function CharacterConfigPage({ params }: { params: { splitP
         <h2 className="text-lg font-semibold">Resumen</h2>
         <dl className="grid grid-cols-2 gap-4 rounded-card border border-border bg-surface p-4 text-sm sm:grid-cols-3">
           <div>
-            <dt className="text-xs text-text-muted">Nivel tecnico</dt>
+            <dt className="text-xs text-text-muted">Nivel técnico</dt>
             <dd className="font-medium">{character.level}</dd>
           </div>
           <div>
-            <dt className="text-xs text-text-muted">Faccion</dt>
+            <dt className="text-xs text-text-muted">Facción</dt>
             <dd className="font-medium">{character.faction?.name ?? "—"}</dd>
           </div>
           <div>
-            <dt className="text-xs text-text-muted">Profesion</dt>
+            <dt className="text-xs text-text-muted">Profesión</dt>
             <dd className="font-medium">
               {character.profession ? (
                 <>
@@ -133,7 +133,7 @@ export default async function CharacterConfigPage({ params }: { params: { splitP
           </div>
           {character.activeLocation && (
             <div className="col-span-2 sm:col-span-3">
-              <dt className="text-xs text-text-muted">Localizacion activa esta semana</dt>
+              <dt className="text-xs text-text-muted">Localización activa esta semana</dt>
               <dd className="font-medium">
                 {character.activeLocation.name} · {character.activeLocation.kpiName} · {character.activeLocation.bonusLabel}
               </dd>

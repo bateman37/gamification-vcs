@@ -91,11 +91,11 @@ export default async function SplitDetailPage({ params }: { params: { id: string
   const navItems: SplitDetailNavItem[] = [
     { href: "#resumen", label: "Resumen", icon: "ClipboardList" },
     { href: "#calendario-semanas", label: "Calendario de semanas", icon: "Calendar" },
-    { href: "#clasificacion-general-individual", label: "Clasificacion general individual", icon: "Trophy" },
-    { href: "#clasificacion-general-facciones", label: "Clasificacion general facciones", icon: "Award" },
+    { href: "#clasificacion-general-individual", label: "Clasificación general individual", icon: "Trophy" },
+    { href: "#clasificacion-general-facciones", label: "Clasificación general facciones", icon: "Award" },
     { href: "#facciones", label: "Facciones", icon: "Flag" },
     { href: "#profesiones", label: "Profesiones", icon: "Briefcase" },
-    { href: "#economia", label: "Economia y mercado", icon: "Store" },
+    { href: "#economia", label: "Economía y mercado", icon: "Store" },
     { href: "#participantes", label: "Participantes", icon: "Users" },
     ...(showAddParticipant ? [{ href: "#anadir-participante", label: "Anadir participante", icon: "UserPlus" }] : []),
     { href: "#kpi-configuracion", label: "KPI del split", icon: "SlidersHorizontal" },
@@ -159,7 +159,7 @@ export default async function SplitDetailPage({ params }: { params: { id: string
                   <th className="px-3 py-2 font-medium">Fin</th>
                   <th className="px-3 py-2 font-medium">KPI cargados</th>
                   <th className="px-3 py-2 font-medium">Carga de KPI</th>
-                  <th className="px-3 py-2 font-medium">Localizacion</th>
+                  <th className="px-3 py-2 font-medium">Localización</th>
                   <th className="px-3 py-2 font-medium">Resultados</th>
                 </tr>
               </thead>
@@ -232,8 +232,8 @@ export default async function SplitDetailPage({ params }: { params: { id: string
                   <th className="px-3 py-2 font-medium">Persona</th>
                   <th className="px-3 py-2 font-medium">Alias</th>
                   <th className="px-3 py-2 font-medium">Nivel</th>
-                  <th className="px-3 py-2 font-medium">Faccion</th>
-                  <th className="px-3 py-2 font-medium">Profesion</th>
+                  <th className="px-3 py-2 font-medium">Facción</th>
+                  <th className="px-3 py-2 font-medium">Profesión</th>
                   <th className="px-3 py-2 text-center font-medium">Semana inicial</th>
                   <th className="px-3 py-2" />
                 </tr>
@@ -256,7 +256,7 @@ export default async function SplitDetailPage({ params }: { params: { id: string
             </table>
             {participants.length === 0 && (
               <div className="p-4">
-                <EmptyState>Todavia no hay participantes en este split.</EmptyState>
+                <EmptyState>Todavía no hay participantes en este split.</EmptyState>
               </div>
             )}
           </div>

@@ -50,7 +50,7 @@ export default async function WeekLocationPage({ params }: { params: { id: strin
         <Link href={backHref} className="text-sm text-text-muted underline hover:text-ink">
           Volver al split
         </Link>
-        <h1 className="mt-2 text-xl font-semibold">Localizacion de la semana {week.sequenceNumber}</h1>
+        <h1 className="mt-2 text-xl font-semibold">Localización de la semana {week.sequenceNumber}</h1>
         <p className="mt-1 text-sm text-text-muted">
           {split.name} · {formatCalendarDateEs(week.startDate)} — {formatCalendarDateEs(week.endDate)}
         </p>

@@ -163,7 +163,7 @@ export default async function WeeklyResultsPage({ params }: { params: { id: stri
         </div>
         <WeekLocationSummaryCard location={results.location} />
         <EmptyState>
-          Esta semana todavia no esta completa: {results.completeness.loadedCount} de {results.completeness.totalActiveCount} KPI
+          Esta semana todavía no está completa: {results.completeness.loadedCount} de {results.completeness.totalActiveCount} KPI
           activos cargados. Completa todos los KPI activos antes de ver los resultados.
         </EmptyState>
         <Link href={backHref} className="inline-block text-sm text-text-muted underline hover:text-ink">

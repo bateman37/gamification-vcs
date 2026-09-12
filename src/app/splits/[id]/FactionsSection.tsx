@@ -37,7 +37,7 @@ export function FactionsSection({
 
       {factions.length === 0 ? (
         <EmptyState>
-          Todavia no hay ninguna faccion configurada. Crea al menos dos para poder activar este split.
+          Todavía no hay ninguna facción configurada. Crea al menos dos para poder activar este split.
         </EmptyState>
       ) : (
         <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">

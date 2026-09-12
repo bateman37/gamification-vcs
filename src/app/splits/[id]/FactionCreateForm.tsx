@@ -52,7 +52,7 @@ export function FactionCreateForm({ splitId }: { splitId: string }) {
       )}
       {state.ok && (
         <div className="sm:col-span-3">
-          <SuccessMessage>Faccion creada correctamente.</SuccessMessage>
+          <SuccessMessage>Facción creada correctamente.</SuccessMessage>
         </div>
       )}
     </form>

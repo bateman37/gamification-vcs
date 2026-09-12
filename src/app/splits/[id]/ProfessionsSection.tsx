@@ -46,7 +46,7 @@ export function ProfessionsSection({
         <EmptyState>
           {hasAnyPublication
             ? "Este split no utiliza profesiones y ya no puede anadirlas: se publico su primera semana sin ninguna creada."
-            : "Todavia no hay ninguna profesion configurada. Este split no utiliza profesiones."}
+            : "Todavía no hay ninguna profesión configurada. Este split no utiliza profesiones."}
         </EmptyState>
       ) : (
         <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">

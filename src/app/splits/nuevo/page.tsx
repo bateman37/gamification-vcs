@@ -6,7 +6,7 @@ export default function NuevoSplitPage() {
       <div>
         <h1 className="text-xl font-semibold">Crear split</h1>
         <p className="text-sm text-text-muted">
-          El split se guardara en borrador. Podras anadir participantes y activarlo desde su pagina de
+          El split se guardara en borrador. Podrás añadir participantes y activarlo desde su página de
           detalle.
         </p>
       </div>

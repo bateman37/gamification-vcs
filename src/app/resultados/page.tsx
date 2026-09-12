@@ -70,7 +70,7 @@ export default async function ResultadosPage({
                 href={buildTabHref("historico", personId, isAdmin, gamificationMode)}
                 className={`-mb-px border-b-2 px-1 py-2 ${vista === "historico" ? "border-ink text-ink" : "border-transparent hover:text-ink"}`}
               >
-                Historico general
+                Histórico general
               </Link>
             </nav>
             <GamificationToggle mode={gamificationMode} searchParams={searchParams} />

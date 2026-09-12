@@ -20,7 +20,7 @@ export function EconomySummarySection({
 }) {
   return (
     <section id="economia" className="scroll-mt-20 space-y-3">
-      <h2 className="text-lg font-semibold">Economia y mercado</h2>
+      <h2 className="text-lg font-semibold">Economía y mercado</h2>
       <div className="flex flex-wrap items-center gap-3 rounded-card border border-border bg-surface p-4">
         <Badge tone={marketStatus === "OPEN" ? "green" : "gray"}>
           {marketStatus === "OPEN" ? "Mercado abierto" : "Mercado cerrado"}
@@ -30,7 +30,7 @@ export function EconomySummarySection({
           catalogo.
         </span>
         <Link href={`/splits/${splitId}/economia`} className="text-sm font-medium text-ink underline hover:text-ink">
-          Administrar economia y mercado
+          Administrar economía y mercado
         </Link>
       </div>
     </section>

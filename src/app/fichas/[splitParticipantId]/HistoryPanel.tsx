@@ -4,7 +4,7 @@ import type { LedgerEntryView } from "@/server/services/ledger.service";
 import type { WeekLocationHistoryRow } from "@/server/services/character-config.service";
 
 const TYPE_LABEL: Record<LedgerEntryView["type"], string> = {
-  WEEKLY_EARNING: "Creditos de semana",
+  WEEKLY_EARNING: "Créditos de semana",
   PURCHASE: "Compra",
 };
 
@@ -15,7 +15,7 @@ export function HistoryPanel({ ledger, weekLocations }: { ledger: LedgerEntryVie
       <div>
         <h4 className="text-sm font-semibold text-ink">Movimientos de creditos</h4>
         {ledger.length === 0 ? (
-          <EmptyState>Todavia no tienes ningun movimiento.</EmptyState>
+          <EmptyState>Todavía no tienes ningún movimiento.</EmptyState>
         ) : (
           <ul className="mt-2 divide-y divide-border rounded-md border border-border bg-surface text-sm">
             {ledger.map((entry) => (
@@ -37,7 +37,7 @@ export function HistoryPanel({ ledger, weekLocations }: { ledger: LedgerEntryVie
       <div>
         <h4 className="text-sm font-semibold text-ink">Localizaciones por semana</h4>
         {weekLocations.length === 0 ? (
-          <EmptyState>Este split todavia no tiene semanas.</EmptyState>
+          <EmptyState>Este split todavía no tiene semanas.</EmptyState>
         ) : (
           <ul className="mt-2 divide-y divide-border rounded-md border border-border bg-surface text-sm">
             {weekLocations.map((row) => (

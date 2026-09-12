@@ -57,7 +57,7 @@ export function CreateSplitForm() {
       </div>
       <div>
         <label htmlFor="numberOfWeeks" className="block text-sm font-medium text-ink">
-          Numero de semanas
+          Número de semanas
         </label>
         <input
           id="numberOfWeeks"

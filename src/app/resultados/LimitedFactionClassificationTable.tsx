@@ -38,7 +38,7 @@ export function LimitedFactionClassificationTable({
           <thead className="border-b border-border bg-canvas text-text-muted">
             <tr>
               <th className="sticky left-0 z-10 bg-canvas px-3 py-2 font-medium">Pos.</th>
-              <th className="sticky left-10 z-10 bg-canvas px-3 py-2 font-medium">Faccion</th>
+              <th className="sticky left-10 z-10 bg-canvas px-3 py-2 font-medium">Facción</th>
               {weeks.map((week) => (
                 <th key={week.splitWeekId} className="px-3 py-2 text-center font-medium">
                   <Link href={weekHref(week.splitWeekId)} className="underline hover:text-ink">
@@ -81,7 +81,7 @@ export function LimitedFactionClassificationTable({
             <thead className="border-b border-border bg-canvas text-text-muted">
               <tr>
                 <th className="px-3 py-2 font-medium">Pos.</th>
-                <th className="px-3 py-2 font-medium">Faccion</th>
+                <th className="px-3 py-2 font-medium">Facción</th>
                 <th className="px-3 py-2 font-medium">Los tres que puntuaron (Renombre = puntos por posicion)</th>
                 <th className="px-3 py-2 text-center font-medium">Suma semanal</th>
               </tr>
