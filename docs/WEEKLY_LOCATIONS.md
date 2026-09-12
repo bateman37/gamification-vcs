@@ -173,6 +173,15 @@ porcentaje mostrado puede superar el `100 %`, hasta el `170 %` con ambos
 bonus a la vez sobre el mismo KPI. Todo el calculo usa `Prisma.Decimal`,
 sin redondeo prematuro.
 
+**Composicion con objetos de equipo (`0.9.0` / MVP-2D, ver
+docs/ECONOMY_INVENTORY_AND_EQUIPMENT.md):** los objetos equipados son una
+tercera capa de bonus, igual de independiente y no encadenada, tambien
+calculada sobre `baseFinalPoints`. A diferencia de la localizacion (un
+unico efecto por semana), varios objetos que potencien el mismo KPI se
+acumulan de forma aditiva entre si. Con profesion `20 %`, localizacion
+`30 %` y un objeto `10 %` sobre el mismo KPI de base `70`, el resultado es
+`112`, nunca un producto de factores.
+
 ## 7. Efecto sobre rankings, puntos por posicion y facciones
 
 `finalPoints` (ya con ambos bonus) alimenta el total KPI semanal, el
@@ -285,6 +294,8 @@ o superior a `50 %`; mas de un KPI por localizacion; restricciones por
 nivel, profesion, faccion o jugador; multiplicacion encadenada de bonus;
 bonus sobre puntos por posicion; edicion por participantes; votaciones;
 imagenes, mapas, iconos o descripciones enriquecidas; notificaciones
-programadas de los miercoles; objetos permanentes, creditos, economia,
-misiones, cartas, hechizos, consumibles, ajustes manuales de juego, PDF,
-correo, Power BI o un motor generico de plugins o formulas.
+programadas de los miercoles; misiones, cartas, hechizos, consumibles,
+ajustes manuales de juego, PDF, correo, Power BI o un motor generico de
+plugins o formulas. Los objetos permanentes, el inventario, el equipo y la
+economia de creditos se implementaron en `0.9.0` / MVP-2D (ver
+`docs/ECONOMY_INVENTORY_AND_EQUIPMENT.md`).

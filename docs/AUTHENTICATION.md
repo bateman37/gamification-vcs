@@ -65,11 +65,24 @@ y de profesion vuelven a exigir `requireAdminSession()` dentro de la propia
 accion, porque una Server Action es una ruta invocable directamente y no
 solo el destino de un formulario ya renderizado por una pagina protegida.
 Las de localizacion semanal (`0.8.5` / MVP-2C,
-`src/server/actions/location.actions.ts`) siguen exactamente el mismo
+`src/server/actions/location.actions.ts`) y las de mercado, ranuras y
+objetos (`0.9.0` / MVP-2D, `src/server/actions/economy.actions.ts`,
+`src/server/actions/equipment-slot.actions.ts`,
+`src/server/actions/store-item.actions.ts`) siguen exactamente el mismo
 patron.
 Las operaciones de autoservicio de la ficha (`alias propio`, `profesion
-propia`, `avatar propio`) son operaciones separadas y de intencion minima:
-no pueden cambiar nivel, faccion, persona ni semana inicial.
+propia`, `avatar propio` y, desde `0.9.0` / MVP-2D, `comprar propio`,
+`equipar propio`, `desequipar propio`,
+`src/server/actions/purchase.actions.ts`,
+`src/server/actions/equipment.actions.ts`) son operaciones separadas y de
+intencion minima: no pueden cambiar nivel, faccion, persona ni semana
+inicial, ni comprar o equipar en nombre de otro participante.
+
+La ruta `/fichas/[splitParticipantId]` (`0.9.0` / MVP-2D, configuracion
+privada del personaje: economia, inventario, equipo e historial) resuelve
+la participacion siempre desde `session.user.personId` y comprueba que le
+pertenece, con el mismo patron que `/fichas`; un `ADMIN` vinculado a una
+persona solo puede usarla para su propia participacion.
 
 La ruta `GET /api/fichas/[splitParticipantId]/avatar` exige sesion y
 autoriza por ella: un `PARTICIPANT` solo puede leer la ficha vinculada a su
@@ -136,12 +149,24 @@ esta entrega: el administrador es quien fija la contrasena temporal.
 | Crear, editar o eliminar la localizacion de una semana | Si (antes de `startDate`, semana no publicada, split no cerrado) | No |
 | Ver la localizacion activa esta semana en su ficha | Si (su propia ficha) | Si |
 | Ver o mutar la localizacion de un split ajeno | No | No |
+| Abrir o cerrar el mercado de un split | Si | No |
+| Crear, editar, reordenar o eliminar ranuras de equipo | Si (mercado cerrado, split no cerrado) | No |
+| Crear, editar o retirar objetos del catalogo | Si (mercado cerrado, split no cerrado) | No |
+| Ver el resumen de compras y creditos del split | Si | No |
+| Ver su propia configuracion de personaje (`/fichas/[id]`) | Si (si esta vinculado a una persona) | Si |
+| Comprar un objeto propio (mercado abierto, saldo suficiente) | Si (su propia ficha) | Si |
+| Equipar o desequipar un objeto propio (split activo) | Si (su propia ficha) | Si |
+| Comprar o equipar en nombre de otro participante | No | No |
+| Editar precio, bonus, ranuras o estado del mercado desde la ficha | No | No |
+| Ver el saldo, inventario o historial de otro participante | No | No |
 
 ## Navegacion segun sesion
 
-- **Administrador:** `Personas`, `Splits`, `Resultados`, `Fichas` (solo si
+- **Administrador:** `Personas`, `Splits` (incluida `Economia y mercado`
+  dentro de cada split, `0.9.0` / MVP-2D), `Resultados`, `Fichas` (solo si
   su cuenta esta vinculada a una persona), gestion de cuenta/sesion.
-- **Participante:** `Resultados`, `Fichas`, gestion de cuenta/sesion.
+- **Participante:** `Resultados`, `Fichas` (con `Configurar personaje` por
+  cada participacion, `0.9.0` / MVP-2D), gestion de cuenta/sesion.
 - **Sin autenticar:** solo `Login`.
 
 ## Limitaciones conocidas de esta entrega

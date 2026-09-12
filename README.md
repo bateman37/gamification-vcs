@@ -16,9 +16,9 @@ completitud semanal**, **BUGFIX-1 / UX-SPLIT-1 — Correcciones de
 formularios manuales y configuracion compacta del split**, **`0.6.0` /
 MVP-1C — Resultados, publicacion y clasificacion**, **`0.7.0` / MVP-2A —
 Facciones, clasificacion de facciones y consolidacion de UX**, **`0.8.0` /
-MVP-2B — Profesiones, bonus de KPI y fichas de participante** y **`0.8.5` /
-MVP-2C — Localizaciones semanales** (ver `docs/ROADMAP.md`). Version
-actual: `0.8.5`.
+MVP-2B — Profesiones, bonus de KPI y fichas de participante**, **`0.8.5` /
+MVP-2C — Localizaciones semanales** y **`0.9.0` / MVP-2D — Economia,
+inventario y equipo** (ver `docs/ROADMAP.md`). Version actual: `0.9.0`.
 
 Estas entregas implementan:
 
@@ -122,7 +122,7 @@ Estas entregas implementan:
   `Anadir participante` se muestra siempre, en los dos modos de alta.
 
 Todavia **no** incluye despublicar/reabrir una semana, exportacion
-Excel/PDF de resultados, ni objetos, economia de creditos o misiones.
+Excel/PDF de resultados, ni transferencias, regalos, reventa ni misiones.
 Consulta `docs/ROADMAP.md` para el plan completo.
 
 ## Pila tecnologica
@@ -734,6 +734,74 @@ Tercera capa de juego. Detalle funcional exhaustivo en
 19. Revisa calendario, formulario, fichas y resultados en movil (~360 px),
     a 1366 px y en pantalla panoramica.
 
+## Economia, inventario y equipo (`0.9.0` / MVP-2D)
+
+Cuarta capa de juego. Detalle funcional exhaustivo en
+[`docs/ECONOMY_INVENTORY_AND_EQUIPMENT.md`](docs/ECONOMY_INVENTORY_AND_EQUIPMENT.md).
+
+- **Economia de creditos por split**: monedero de `SplitParticipant`,
+  `1 credito = 1 punto KPI completo publicado`
+  (`creditsEarned = max(0, floor(totalKpiPoints))`), libro de movimientos
+  inmutable (`CreditLedgerEntry`) y backfill idempotente de todas las
+  semanas publicadas antes de esta version.
+- **Mercado administrable** (`SplitEconomySettings`): empieza siempre
+  cerrado, solo `ADMIN` lo abre (exige split activo, al menos una ranura y
+  un objeto valido) o lo cierra; cerrarlo bloquea compras pero no equipar
+  objetos ya poseidos.
+- **Ranuras de equipo configurables** (`SplitEquipmentSlot`, sin numero ni
+  nombres codificados) y **catalogo de objetos** (`SplitStoreItem`, un KPI
+  activo y un bonus de `10/20/30/40/50 %`), inmutable tras la primera
+  compra.
+- **Compra atomica, inventario permanente y equipo actual**
+  (`ItemPurchase`/`SplitParticipantItem`/`SplitParticipantEquippedItem`):
+  como mucho un objeto equipado por ranura; el equipo que cuenta es
+  siempre el existente en el instante exacto en que se publica la semana
+  (`publishWeek` relee el equipo dentro de su propia transaccion).
+- **Tercer bonus de resultados**, independiente de profesion y
+  localizacion, sobre el mismo `baseFinalPoints` (varios objetos sobre el
+  mismo KPI se acumulan de forma aditiva), con instantanea publicada
+  (`PublishedEquippedItem`) y creditos congelados por semana.
+- **Configuracion privada del personaje** (`/fichas/[splitParticipantId]`,
+  boton `Configurar personaje` junto a `Ver resultados`): resumen, equipo,
+  inventario, mercado e historial.
+- **Selector `Con gamificacion` / `Sin gamificacion`** en `/resultados`,
+  persistido en la URL, que compara el rendimiento KPI real (sin bonus)
+  frente al oficial publicado, sin alterar clasificaciones ni creditos.
+
+### Comprobar manualmente
+
+1. Migra una copia de una base `0.8.5` con semanas publicadas y confirma
+   que todos los mercados quedan `CERRADO` y que se generan los creditos
+   historicos (una sola vez).
+2. Verifica a mano un total publicado `248,04 -> 248 creditos`.
+3. En un split `DRAFT`, crea varias ranuras con nombres propios.
+4. Reordena y renombra una ranura con el mercado cerrado.
+5. Crea objetos con distintos precios, ranuras, KPI y porcentajes;
+   comprueba que se rechaza un KPI inactivo, un precio decimal/cero y un
+   porcentaje fuera del selector.
+6. Intenta abrir el mercado sin configuracion completa y revisa el
+   mensaje; activa el split y abrelo.
+7. Como participante, abre `Fichas`, comprueba los botones `Ver
+   resultados` y `Configurar personaje` juntos, y revisa saldo, puntos
+   KPI, puntos de posicion y localizaciones en la configuracion.
+8. Intenta comprar sin saldo suficiente; compra un objeto con saldo
+   suficiente y verifica compra, inventario y debito; intenta comprarlo
+   dos veces.
+9. Cierra el mercado y comprueba que ya no se puede comprar, pero si
+   equipar el objeto ya comprado.
+10. Equipa varios objetos en ranuras diferentes que afecten al mismo KPI;
+    abre una semana no publicada y valida `70 + 14 profesion + 21
+    localizacion + 7 objeto = 112`.
+11. Desequipa el objeto antes de publicar y confirma que desaparece de la
+    previsualizacion; vuelve a equiparlo y publica la semana.
+12. Cambia el equipo despues y confirma que la semana ya publicada no
+    cambia.
+13. En `Resultados`, alterna `Con gamificacion`/`Sin gamificacion` y
+    confirma que el valor visible vuelve a la base tras maximo, sin
+    alterar posicion oficial, puntos de posicion, facciones ni saldo.
+14. Cierra el split y confirma que mercado y equipo quedan en solo
+    lectura.
+
 ## Reinicio opcional y destructivo del entorno local
 
 **Solo para una base de datos local ficticia.** Este comando **borra
@@ -795,6 +863,10 @@ estan excluidos en `.gitignore`).
   semanales configurables, ventana temporal, composicion no encadenada
   con la profesion y visibilidad en administracion, fichas y resultados
   (`0.8.5` / MVP-2C).
+- [`docs/ECONOMY_INVENTORY_AND_EQUIPMENT.md`](docs/ECONOMY_INVENTORY_AND_EQUIPMENT.md)
+  — economia de creditos por split, mercado, ranuras, catalogo de objetos,
+  inventario, equipo, tercer bonus de resultados, configuracion privada del
+  personaje y vista con/sin gamificacion (`0.9.0` / MVP-2D).
 - [`docs/DECISIONS.md`](docs/DECISIONS.md) — decisiones tecnicas y de
   producto registradas.
 - [`CHANGELOG.md`](CHANGELOG.md) — historial de cambios.

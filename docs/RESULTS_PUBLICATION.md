@@ -115,6 +115,32 @@ produce `105` (`70 + 14 + 21`), nunca `109,20` (que resultaria de
 encadenar `70 x 1,20 x 1,30`): cada bonus se calcula sobre la misma base y
 se suma una sola vez.
 
+### 2.1.quater Bonus de objetos de equipo (`0.9.0` / MVP-2D)
+
+Tercera capa de bonus, junto a profesion y localizacion (ver
+`docs/ECONOMY_INVENTORY_AND_EQUIPMENT.md`): tambien actua sobre
+`baseFinalPoints`, de forma independiente y sin encadenarse con las otras
+dos.
+
+```text
+baseFinalPoints -> +profesion (si corresponde) -> professionBonusPoints
+baseFinalPoints -> +localizacion (si corresponde) -> locationBonusPoints
+baseFinalPoints -> +cada objeto equipado que potencie este KPI -> equipmentBonusPoints
+finalPoints = baseFinalPoints + professionBonusPoints + locationBonusPoints + equipmentBonusPoints
+```
+
+Se aplica mediante `applyEquipmentBonuses` (`src/domain/equipment-bonus.ts`),
+invocada con el equipo vivo del participante
+(`loadEquippedItemsForParticipants`), releido dentro de la propia
+transaccion de `publishWeek`. A diferencia de profesion y localizacion
+(un unico efecto), varios objetos que potencien el mismo KPI se acumulan
+de forma aditiva si ocupan ranuras distintas: `70 + 10 % + 20 % = 91`,
+nunca `70 x 1,10 x 1,20`. Solo se aplica cuando el objeto pertenece al
+participante, esta equipado, su KPI coincide y sigue activo, y el
+resultado tras el maximo es estrictamente positivo; `VAC`/`AVISO`, `No
+aplica`, cero y negativos nunca reciben este bonus, igual que los otros
+dos.
+
 ### 2.2 Totales de la fila
 
 Para cada participante:
@@ -233,16 +259,23 @@ publicada.
 
 1. valida en servidor: split `ACTIVE`, semana perteneciente al split,
    semana todavia no publicada;
-2. **recalcula** con `computeWeeklyResults` usando el mismo `PrismaClient`
-   (nunca confia en totales enviados por el navegador), que vuelve a leer
-   tambien la localizacion vigente de la semana (`0.8.5` / MVP-2C, ver
-   `docs/WEEKLY_LOCATIONS.md`);
+2. abre una transaccion con aislamiento `Serializable` y, **dentro de
+   ella**, **recalcula** con `computeWeeklyResults` usando el propio
+   `Prisma.TransactionClient` (`tx`, nunca confia en totales enviados por
+   el navegador ni en una previsualizacion previa): vuelve a leer la
+   localizacion vigente de la semana (`0.8.5` / MVP-2C, ver
+   `docs/WEEKLY_LOCATIONS.md`) y el equipo vivo de cada participante en
+   ese instante exacto (`0.9.0` / MVP-2D, ver
+   `docs/ECONOMY_INVENTORY_AND_EQUIPMENT.md`), para que una carrera entre
+   equipar/desequipar y publicar nunca produzca una instantanea hibrida;
 3. exige `isComplete`, al menos un participante y `blockingIssues` vacio;
-4. crea `WeekPublication` (con el nombre, KPI y porcentaje de la
-   localizacion congelados una sola vez, si la semana tenia alguna), un
-   `PublishedParticipantWeeklyResult` por participante y sus
-   `PublishedKpiResult` (con el desglose del bonus de localizacion por
-   KPI) dentro de una unica transaccion con aislamiento `Serializable`;
+4. crea, dentro de esa misma transaccion, `WeekPublication` (con el
+   nombre, KPI y porcentaje de la localizacion congelados una sola vez, si
+   la semana tenia alguna), un `PublishedParticipantWeeklyResult` por
+   participante (con `creditsEarned` congelado) y sus `PublishedKpiResult`
+   (con el desglose de los bonus de profesion, localizacion y objetos por
+   KPI), una fila `PublishedEquippedItem` por objeto equipado, y el
+   movimiento `WEEKLY_EARNING` vinculado de forma unica a ese resultado;
 5. una carrera concurrente (restriccion unica sobre `splitWeekId`, o
    fallo de serializacion) no se propaga como error: si al comprobar de
    nuevo ya existe una publicacion, se devuelve como resultado idempotente
@@ -405,9 +438,17 @@ economia, tienda, objetos o recompensas.
 
 Las facciones se implementaron en `0.7.0` / MVP-2A (ver
 `docs/FACTIONS.md`), las profesiones con su bonus del `+20 %` en `0.8.0` /
-MVP-2B (ver `docs/PROFESSIONS_AND_PROFILES.md`) y las localizaciones
+MVP-2B (ver `docs/PROFESSIONS_AND_PROFILES.md`), las localizaciones
 semanales con su bonus configurable en `0.8.5` / MVP-2C (ver
-`docs/WEEKLY_LOCATIONS.md`), sin tocar ninguna de las formulas de KPI
-descritas en este documento: cada bonus es una capa posterior al maximo
-base, independiente del otro, aplicada una sola vez por semana y congelada
-al publicar. El resto de la lista sigue fuera de alcance.
+`docs/WEEKLY_LOCATIONS.md`) y la economia de creditos, el mercado, el
+inventario y el equipo con su tercer bonus en `0.9.0` / MVP-2D (ver
+`docs/ECONOMY_INVENTORY_AND_EQUIPMENT.md`), sin tocar ninguna de las
+formulas de KPI descritas en este documento: cada bonus es una capa
+posterior al maximo base, independiente de los demas, aplicada una sola
+vez por semana y congelada al publicar. `/resultados` incorpora ademas,
+desde `0.9.0`, un selector analitico `Con gamificacion`/`Sin
+gamificacion` (`src/domain/gamification-view.ts`) que compara el
+rendimiento KPI real (`basePointsBeforeProfession`) frente al total
+oficial, sin recalcular ni alterar ninguna publicacion, ranking, punto por
+posicion, faccion ni credito. El resto de la lista sigue fuera de
+alcance.

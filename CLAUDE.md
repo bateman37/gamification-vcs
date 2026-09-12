@@ -22,7 +22,11 @@ datos, motor de calculo o en la configuracion de puntos por posicion, y
 `docs/FACTIONS.md` y `docs/PROFESSIONS_AND_PROFILES.md` si vas a trabajar en
 facciones, profesiones, bonus de KPI, fichas de participante o avatares, y
 `docs/WEEKLY_LOCATIONS.md` si vas a trabajar en localizaciones semanales o
-en la composicion de sus bonus con la profesion.
+en la composicion de sus bonus con la profesion, y
+`docs/ECONOMY_INVENTORY_AND_EQUIPMENT.md` si vas a trabajar en economia de
+creditos, mercado, ranuras de equipo, catalogo de objetos, inventario,
+equipo, el selector con/sin gamificacion o su composicion con profesion y
+localizacion.
 
 ## Estado real de las cargas semanales (no romper sin justificarlo)
 
@@ -195,6 +199,75 @@ motivo en `docs/DECISIONS.md` (detalle completo en
   desde `session.user.personId` y respeta las semanas inicial/final del
   participante; nunca la muestres para una semana futura, pasada, de otro
   split, o a alguien todavia no incorporado esa semana.
+
+## Economia, inventario y equipo (`0.9.0` / MVP-2D, no romper sin justificarlo)
+
+Reglas asentadas que una sesion futura no debe deshacer sin registrar el
+motivo en `docs/DECISIONS.md` (detalle completo en
+`docs/ECONOMY_INVENTORY_AND_EQUIPMENT.md`):
+
+- El monedero, el inventario y el equipo pertenecen a `SplitParticipant`,
+  nunca a `Person`: no crees una economia global ni una tesoreria de
+  faccion.
+- `creditsEarned = max(0, floor(totalKpiPoints))`
+  (`computeCreditsEarned`, `src/domain/credits.ts`), calculado solo al
+  publicar; nunca redondees al entero mas proximo ni generes una deuda por
+  un resultado negativo.
+- `CreditLedgerEntry` es la **unica** fuente de verdad del saldo
+  (`balance = suma de los movimientos`). No anadas un campo `balance`
+  materializado sin explicacion; un `WEEKLY_EARNING` se genera exactamente
+  una vez por `PublishedParticipantWeeklyResult` (indice unico sobre
+  `publishedResultId`) y un `PURCHASE` exactamente una vez por
+  `ItemPurchase`.
+- Todo split, nuevo o migrado, empieza con el mercado `CERRADO`
+  (`SplitEconomySettings`). Solo `ADMIN` lo abre o lo cierra; abrir exige
+  split `ACTIVE`, al menos una `SplitEquipmentSlot` y al menos un
+  `SplitStoreItem` a la venta con configuracion valida. Cerrar el mercado
+  bloquea nuevas compras, pero **nunca** impide equipar o desequipar
+  objetos ya propiedad del participante.
+- El numero y el nombre de las ranuras de equipo los decide el
+  administrador (`SplitEquipmentSlot`): no codifiques ranuras fijas
+  (`Arma`/`Armadura`/`Accesorio` o cualquier otro nombre) ni un numero fijo
+  de ranuras.
+- Un objeto (`SplitStoreItem`) afecta exactamente a un KPI activo y
+  pertenece a una unica ranura, con un bonus del conjunto cerrado
+  `10/20/30/40/50 %` (`EQUIPMENT_BONUS_PERCENTS`,
+  `src/domain/bonus-percent.ts`, misma lista tipada que las
+  localizaciones). Ranuras y objetos solo se administran con el mercado
+  **cerrado**; un objeto ya comprado por alguien queda inmutable en
+  nombre, descripcion, ranura, KPI, porcentaje y precio, salvo retirarlo
+  de la venta.
+- Como maximo un objeto de cada tipo por participante
+  (`@@unique([splitParticipantId, storeItemId])`) y como maximo un objeto
+  equipado por ranura (`SplitParticipantEquippedItem`, clave primaria
+  compuesta). Sin reventa, regalo, intercambio ni destruccion en esta
+  release.
+- El equipo que cuenta para una semana es siempre el existente en el
+  instante exacto en que se pulsa "Publicar semana": `publishWeek` debe
+  releer el equipo **dentro** de su propia transaccion serializable
+  (`computeWeeklyResults` acepta `PrismaClient | Prisma.TransactionClient`
+  precisamente por esto). No calcules el equipo fuera de esa transaccion
+  ni confies en una previsualizacion anterior.
+- El bonus de objetos (`applyEquipmentBonuses`,
+  `src/domain/equipment-bonus.ts`) es una tercera capa **independiente y
+  no encadenada** con profesion y localizacion: los tres actuan sobre el
+  mismo `baseFinalPoints` y se suman una sola vez
+  (`finalPoints = baseFinalPoints + professionBonusPoints + locationBonusPoints + equipmentBonusPoints`).
+  A diferencia de profesion y localizacion, varios objetos sobre el mismo
+  KPI se acumulan de forma **aditiva** si ocupan ranuras distintas: nunca
+  multipliques factores entre si.
+- La publicacion congela una fila `PublishedEquippedItem` por objeto
+  equipado (nunca un JSON opaco con todo el equipo) y el desglose agregado
+  en `PublishedKpiResult` (`equipmentBonusPoints`/`equipmentApplied`).
+  `basePointsBeforeProfession` sigue siendo la unica base persistida para
+  los tres bonus: no anadas una columna nueva equivalente.
+- El selector `Con gamificacion`/`Sin gamificacion` de `/resultados`
+  (`src/domain/gamification-view.ts`) es puramente analitico: nunca debe
+  alterar clasificacion, puntos por posicion, facciones ni creditos
+  oficiales. "Sin gamificacion" se deriva siempre de
+  `basePointsBeforeProfession` (con fallback a `finalPoints` en
+  publicaciones anteriores a `0.8.0`), nunca de un recalculo con la
+  configuracion actual.
 
 ## Reglas de trabajo
 
