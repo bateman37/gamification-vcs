@@ -117,15 +117,15 @@ export default async function WeeklyResultsPage({ params }: { params: { id: stri
     return (
       <div className="space-y-6">
         <div>
-          <Link href={backHref} className="text-sm text-slate-600 underline hover:text-slate-900">
+          <Link href={backHref} className="text-sm text-text-muted underline hover:text-ink">
             Volver a las cargas de la semana
           </Link>
           <div className="mt-2 flex flex-wrap items-center gap-3">
             <h1 className="text-xl font-semibold">{split.name}</h1>
-            <span className="rounded-full bg-sky-100 px-2 py-0.5 text-xs font-medium text-sky-800">Publicada</span>
+            <span className="rounded-full bg-success-soft px-2 py-0.5 text-xs font-medium text-success">Publicada</span>
           </div>
-          <p className="mt-1 text-sm text-slate-600">{weekLabel}</p>
-          <p className="mt-1 text-sm text-slate-600">
+          <p className="mt-1 text-sm text-text-muted">{weekLabel}</p>
+          <p className="mt-1 text-sm text-text-muted">
             Publicada el {publication.publishedAt.toLocaleString("es-ES")}.
           </p>
         </div>
@@ -142,7 +142,7 @@ export default async function WeeklyResultsPage({ params }: { params: { id: stri
 
         <FactionWeeklyPreviewTable rows={factionRows} />
 
-        <Link href={backHref} className="inline-block text-sm text-slate-600 underline hover:text-slate-900">
+        <Link href={backHref} className="inline-block text-sm text-text-muted underline hover:text-ink">
           Volver
         </Link>
       </div>
@@ -155,18 +155,18 @@ export default async function WeeklyResultsPage({ params }: { params: { id: stri
     return (
       <div className="space-y-6">
         <div>
-          <Link href={backHref} className="text-sm text-slate-600 underline hover:text-slate-900">
+          <Link href={backHref} className="text-sm text-text-muted underline hover:text-ink">
             Volver a las cargas de la semana
           </Link>
           <h1 className="mt-2 text-xl font-semibold">{split.name}</h1>
-          <p className="mt-1 text-sm text-slate-600">{weekLabel}</p>
+          <p className="mt-1 text-sm text-text-muted">{weekLabel}</p>
         </div>
         <WeekLocationSummaryCard location={results.location} />
         <EmptyState>
           Esta semana todavia no esta completa: {results.completeness.loadedCount} de {results.completeness.totalActiveCount} KPI
           activos cargados. Completa todos los KPI activos antes de ver los resultados.
         </EmptyState>
-        <Link href={backHref} className="inline-block text-sm text-slate-600 underline hover:text-slate-900">
+        <Link href={backHref} className="inline-block text-sm text-text-muted underline hover:text-ink">
           Ir a las cargas de la semana
         </Link>
       </div>
@@ -213,18 +213,18 @@ export default async function WeeklyResultsPage({ params }: { params: { id: stri
   return (
     <div className="space-y-6">
       <div>
-        <Link href={backHref} className="text-sm text-slate-600 underline hover:text-slate-900">
+        <Link href={backHref} className="text-sm text-text-muted underline hover:text-ink">
           Volver a las cargas de la semana
         </Link>
         <div className="mt-2 flex flex-wrap items-center gap-3">
           <h1 className="text-xl font-semibold">{split.name}</h1>
-          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+          <span className="rounded-full bg-reward-soft px-2 py-0.5 text-xs font-medium text-reward-ink">
             Previsualizacion sin publicar
           </span>
         </div>
-        <p className="mt-1 text-sm text-slate-600">{weekLabel}</p>
-        <p className="mt-1 text-xs text-slate-500">Calculado el {results.computedAt.toLocaleString("es-ES")}.</p>
-        <p className="mt-2 text-sm text-slate-600">
+        <p className="mt-1 text-sm text-text-muted">{weekLabel}</p>
+        <p className="mt-1 text-xs text-text-muted">Calculado el {results.computedAt.toLocaleString("es-ES")}.</p>
+        <p className="mt-2 text-sm text-text-muted">
           {results.totalParticipantCount} participantes - {results.totalActiveKpiCount} KPI activos - {results.totalVacCount} valores en
           0 por ausencia de datos en total.
         </p>
@@ -233,7 +233,7 @@ export default async function WeeklyResultsPage({ params }: { params: { id: stri
       <WeekLocationSummaryCard location={results.location} />
 
       {results.blockingIssues.length > 0 && (
-        <div className="rounded-md border border-red-300 bg-red-50 p-4 text-sm text-red-800">
+        <div className="rounded-md border border-danger/30 bg-danger-soft p-4 text-sm text-danger-ink">
           <p className="font-medium">No se puede publicar hasta resolver:</p>
           <ul className="mt-1 list-disc space-y-1 pl-5">
             {results.blockingIssues.map((issue) => (
@@ -254,7 +254,7 @@ export default async function WeeklyResultsPage({ params }: { params: { id: stri
       <FactionWeeklyPreviewTable rows={results.factionPreview.factions} />
 
       <div className="flex flex-wrap items-center gap-3">
-        <Link href={backHref} className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+        <Link href={backHref} className="rounded-control border border-border-strong px-4 py-2 text-sm font-medium text-ink hover:bg-surface-muted">
           Volver
         </Link>
         {results.blockingIssues.length === 0 && <PublishWeekButton splitId={split.id} weekId={week.id} />}

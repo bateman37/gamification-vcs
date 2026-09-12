@@ -15,10 +15,10 @@ export function FactionWeeklyPreviewTable({ rows }: { rows: FactionWeeklyPreview
 
   return (
     <div className="space-y-2">
-      <h2 className="text-sm font-semibold text-slate-700">Clasificacion de facciones de la semana</h2>
-      <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+      <h2 className="text-sm font-semibold text-ink">Clasificacion de facciones de la semana</h2>
+      <div className="overflow-x-auto rounded-card border border-border bg-surface">
         <table className="w-full text-left text-sm">
-          <thead className="border-b border-slate-200 bg-slate-50 text-slate-600">
+          <thead className="border-b border-border bg-canvas text-text-muted">
             <tr>
               <th className="px-3 py-2 font-medium">Pos.</th>
               <th className="px-3 py-2 font-medium">Faccion</th>
@@ -28,15 +28,15 @@ export function FactionWeeklyPreviewTable({ rows }: { rows: FactionWeeklyPreview
           </thead>
           <tbody>
             {rows.map((row) => (
-              <tr key={row.factionId} className="border-b border-slate-100">
+              <tr key={row.factionId} className="border-b border-border">
                 <td className="px-3 py-2 font-medium">{row.weeklyRank}</td>
                 <td className="px-3 py-2">
                   <span className="inline-flex items-center gap-1.5">
-                    <span aria-hidden className="h-3 w-3 rounded-full border border-slate-300" style={{ backgroundColor: row.color }} />
+                    <span aria-hidden className="h-3 w-3 rounded-full border border-border-strong" style={{ backgroundColor: row.color }} />
                     {row.name}
                   </span>
                 </td>
-                <td className="px-3 py-2 text-slate-600">
+                <td className="px-3 py-2 text-text-muted">
                   {row.topContributors.map((contributor) => `${contributor.alias} (${formatPoints(contributor.positionPoints)})`).join(", ")}
                 </td>
                 <td className="px-3 py-2 text-center font-semibold">{formatPoints(row.weeklyScore)}</td>

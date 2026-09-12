@@ -22,7 +22,7 @@ function UnequipButton() {
     <button
       type="submit"
       disabled={pending}
-      className="rounded-md border border-red-300 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+      className="rounded-control border border-danger/30 px-3 py-1 text-xs font-medium text-danger-ink hover:bg-danger-soft disabled:cursor-not-allowed disabled:opacity-50"
     >
       {pending ? "Desequipando..." : "Desequipar"}
     </button>
@@ -44,27 +44,27 @@ function SlotRow({
   const [unequipState, unequipAction] = useFormState(unequipWithIds, initialActionState);
 
   return (
-    <li className="space-y-2 rounded-md border border-slate-200 bg-white p-3">
+    <li className="space-y-2 rounded-md border border-border bg-surface p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="font-medium text-slate-800">{slot.equipmentSlotName}</span>
+        <span className="font-medium text-ink">{slot.equipmentSlotName}</span>
         {slot.equippedItem ? (
           <form action={unequipAction}>
             <UnequipButton />
           </form>
         ) : (
-          <span className="text-sm text-slate-400">Ranura vacia</span>
+          <span className="text-sm text-text-muted">Ranura vacia</span>
         )}
       </div>
       {slot.equippedItem && (
-        <p className="text-sm text-slate-600">
+        <p className="text-sm text-text-muted">
           {slot.equippedItem.itemName} · {slot.equippedItem.kpiName} · +{slot.equippedItem.bonusPercent} %
         </p>
       )}
       {!unequipState.ok && unequipState.error && <ErrorMessage>{unequipState.error}</ErrorMessage>}
 
       {compatibleItems.length > 0 && (
-        <form action={equipAction} className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-2">
-          <select name="ownedItemId" defaultValue={compatibleItems[0]!.ownedItemId} className="rounded-md border border-slate-300 px-2 py-1 text-xs">
+        <form action={equipAction} className="flex flex-wrap items-center gap-2 border-t border-border pt-2">
+          <select name="ownedItemId" defaultValue={compatibleItems[0]!.ownedItemId} className="rounded-control border border-border-strong px-2 py-1 text-xs">
             {compatibleItems.map((item) => (
               <option key={item.ownedItemId} value={item.ownedItemId}>
                 {item.name} (+{item.bonusPercent} % {item.kpiName})
@@ -97,7 +97,7 @@ export function EquipmentPanel({
 }) {
   if (slots.length === 0) {
     return (
-      <p className="rounded-md border border-dashed border-slate-300 px-4 py-6 text-center text-sm text-slate-500">
+      <p className="rounded-card border border-dashed border-border-strong px-4 py-6 text-center text-sm text-text-muted">
         Este split todavia no tiene ninguna ranura de equipo configurada.
       </p>
     );
@@ -105,7 +105,7 @@ export function EquipmentPanel({
 
   return (
     <div className="space-y-3">
-      <p className="text-sm text-slate-600">
+      <p className="text-sm text-text-muted">
         El equipo que cuenta para tus resultados es siempre el que tengas puesto en el instante en que el
         administrador publique la semana: cambiarlo ahora afecta a la previsualizacion de la proxima semana no
         publicada, nunca a una ya publicada.
@@ -120,7 +120,7 @@ export function EquipmentPanel({
           />
         ))}
       </ul>
-      {!editable && <p className="text-sm text-slate-500">El split no esta activo: el equipo es de solo lectura.</p>}
+      {!editable && <p className="text-sm text-text-muted">El split no esta activo: el equipo es de solo lectura.</p>}
     </div>
   );
 }

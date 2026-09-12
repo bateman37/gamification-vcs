@@ -22,18 +22,18 @@ export function FactionsSection({
   return (
     <section id="facciones" className="scroll-mt-20 space-y-3">
       <h2 className="text-lg font-semibold">Facciones</h2>
-      <p className="text-sm text-slate-600">
+      <p className="text-sm text-text-muted">
         Un split necesita al menos dos facciones, con todos los participantes asignados, para poder activarse. El
         aporte de cada participante a su faccion es siempre su puntuacion por posicion ya publicada (Renombre =
         puntos por posicion): no existe una segunda formula ni un saldo independiente.
       </p>
       {hasAnyPublication && (
-        <p className="text-sm text-amber-700">
+        <p className="text-sm text-reward-ink">
           Este split ya tiene semanas publicadas: no se pueden crear ni eliminar facciones, pero el nombre y el
           color siguen siendo editables.
         </p>
       )}
-      {readOnly && <p className="text-sm text-slate-500">El split esta cerrado: las facciones se muestran en modo solo lectura.</p>}
+      {readOnly && <p className="text-sm text-text-muted">El split esta cerrado: las facciones se muestran en modo solo lectura.</p>}
 
       {factions.length === 0 ? (
         <EmptyState>

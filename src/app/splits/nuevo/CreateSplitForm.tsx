@@ -15,9 +15,9 @@ export function CreateSplitForm() {
   const [state, formAction] = useFormState(createSplitAction, initialActionState);
 
   return (
-    <form action={formAction} className="max-w-lg space-y-4 rounded-lg border border-slate-200 bg-white p-4">
+    <form action={formAction} className="max-w-lg space-y-4 rounded-card border border-border bg-surface p-4">
       <div>
-        <label htmlFor="name" className="block text-sm font-medium text-slate-700">
+        <label htmlFor="name" className="block text-sm font-medium text-ink">
           Nombre
         </label>
         <input
@@ -25,24 +25,24 @@ export function CreateSplitForm() {
           name="name"
           type="text"
           required
-          className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+          className="mt-1 w-full rounded-control border border-border-strong px-3 py-2 text-sm"
         />
         <FieldError message={state.fieldErrors?.name} />
       </div>
       <div>
-        <label htmlFor="description" className="block text-sm font-medium text-slate-700">
+        <label htmlFor="description" className="block text-sm font-medium text-ink">
           Descripcion (opcional)
         </label>
         <textarea
           id="description"
           name="description"
           rows={2}
-          className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+          className="mt-1 w-full rounded-control border border-border-strong px-3 py-2 text-sm"
         />
         <FieldError message={state.fieldErrors?.description} />
       </div>
       <div>
-        <label htmlFor="startDate" className="block text-sm font-medium text-slate-700">
+        <label htmlFor="startDate" className="block text-sm font-medium text-ink">
           Lunes de inicio
         </label>
         <input
@@ -50,13 +50,13 @@ export function CreateSplitForm() {
           name="startDate"
           type="date"
           required
-          className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+          className="mt-1 w-full rounded-control border border-border-strong px-3 py-2 text-sm"
         />
-        <p className="mt-1 text-xs text-slate-500">Debe ser un lunes.</p>
+        <p className="mt-1 text-xs text-text-muted">Debe ser un lunes.</p>
         <FieldError message={state.fieldErrors?.startDate} />
       </div>
       <div>
-        <label htmlFor="numberOfWeeks" className="block text-sm font-medium text-slate-700">
+        <label htmlFor="numberOfWeeks" className="block text-sm font-medium text-ink">
           Numero de semanas
         </label>
         <input
@@ -66,7 +66,7 @@ export function CreateSplitForm() {
           min={MIN_SPLIT_WEEKS}
           max={MAX_SPLIT_WEEKS}
           required
-          className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+          className="mt-1 w-full rounded-control border border-border-strong px-3 py-2 text-sm"
         />
         <FieldError message={state.fieldErrors?.numberOfWeeks} />
       </div>

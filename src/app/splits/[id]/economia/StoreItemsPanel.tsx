@@ -58,7 +58,7 @@ function ItemCard({
 
   if (editing && canEditOrDelete) {
     return (
-      <div className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
+      <div className="space-y-3 rounded-card border border-border bg-surface p-4">
         <form action={updateAction} className="space-y-3">
           <StoreItemFormFields
             idPrefix={`item-${item.id}`}
@@ -76,7 +76,7 @@ function ItemCard({
           />
           <div className="flex flex-wrap gap-2">
             <SaveButton />
-            <button type="button" onClick={() => setEditing(false)} className="rounded-md border border-slate-300 px-3 py-2 text-sm">
+            <button type="button" onClick={() => setEditing(false)} className="rounded-control border border-border-strong px-3 py-2 text-sm">
               Cancelar
             </button>
           </div>
@@ -87,35 +87,35 @@ function ItemCard({
   }
 
   return (
-    <div className="space-y-2 rounded-lg border border-slate-200 bg-white p-4">
+    <div className="space-y-2 rounded-card border border-border bg-surface p-4">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <p className="font-medium text-slate-800">{item.name}</p>
-          <p className="text-sm text-slate-600">Ranura: {item.equipmentSlotName}</p>
-          <p className="text-sm text-slate-600">Potencia: {item.kpiName}</p>
-          <p className="text-sm text-slate-600">Bonus: +{item.bonusPercent} % despues del maximo base</p>
-          <p className="text-sm text-slate-600">Precio: {item.priceCredits} creditos</p>
-          {item.description && <p className="mt-1 text-sm text-slate-500">{item.description}</p>}
+          <p className="font-medium text-ink">{item.name}</p>
+          <p className="text-sm text-text-muted">Ranura: {item.equipmentSlotName}</p>
+          <p className="text-sm text-text-muted">Potencia: {item.kpiName}</p>
+          <p className="text-sm text-text-muted">Bonus: +{item.bonusPercent} % despues del maximo base</p>
+          <p className="text-sm text-text-muted">Precio: {item.priceCredits} creditos</p>
+          {item.description && <p className="mt-1 text-sm text-text-muted">{item.description}</p>}
         </div>
         <Badge tone={item.isForSale ? "green" : "gray"}>{item.isForSale ? "A la venta" : "Retirado"}</Badge>
       </div>
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-text-muted">
         {item.ownedCount} participante{item.ownedCount === 1 ? "" : "s"} lo posee{item.ownedCount === 1 ? "" : "n"}.
       </p>
 
       {!locked && (
-        <div className="flex flex-wrap gap-2 border-t border-slate-100 pt-3">
+        <div className="flex flex-wrap gap-2 border-t border-border pt-3">
           <button
             type="button"
             disabled={!canEditOrDelete}
             title={purchased ? "Ya lo ha comprado algun participante: crea un objeto nuevo para una variante distinta." : undefined}
             onClick={() => setEditing(true)}
-            className="rounded-md border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded-control border border-border-strong px-3 py-1 text-xs font-medium text-ink hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-40"
           >
             Editar
           </button>
           <form action={forSaleAction}>
-            <button type="submit" className="rounded-md border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50">
+            <button type="submit" className="rounded-control border border-border-strong px-3 py-1 text-xs font-medium text-ink hover:bg-surface-muted">
               {item.isForSale ? "Retirar de la venta" : "Reponer a la venta"}
             </button>
           </form>
@@ -124,7 +124,7 @@ function ItemCard({
               type="submit"
               disabled={purchased}
               title={purchased ? "No se puede eliminar: ya lo ha comprado algun participante." : undefined}
-              className="rounded-md border border-red-300 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
+              className="rounded-control border border-danger/30 px-3 py-1 text-xs font-medium text-danger-ink hover:bg-danger-soft disabled:cursor-not-allowed disabled:opacity-40"
             >
               Eliminar
             </button>
@@ -157,25 +157,25 @@ export function StoreItemsPanel({
   return (
     <div className="space-y-3">
       <h3 className="text-base font-semibold">Catalogo de objetos</h3>
-      <p className="text-sm text-slate-600">
+      <p className="text-sm text-text-muted">
         Cada objeto afecta exactamente a un KPI activo con un bonus del conjunto cerrado (10/20/30/40/50 %), y
         pertenece a una unica ranura. Solo se administra con el mercado cerrado; despues de la primera compra, el
         objeto queda inmutable salvo retirarlo o reponerlo a la venta.
       </p>
-      {locked && <p className="text-sm text-amber-700">Cierra el mercado para crear, editar o eliminar objetos.</p>}
+      {locked && <p className="text-sm text-reward-ink">Cierra el mercado para crear, editar o eliminar objetos.</p>}
       {slots.length === 0 && (
-        <p className="rounded-md border border-dashed border-slate-300 px-4 py-4 text-sm text-slate-500">
+        <p className="rounded-card border border-dashed border-border-strong px-4 py-4 text-sm text-text-muted">
           Crea al menos una ranura de equipo antes de anadir objetos.
         </p>
       )}
       {activeKpis.length === 0 && (
-        <p className="rounded-md border border-dashed border-slate-300 px-4 py-4 text-sm text-slate-500">
+        <p className="rounded-card border border-dashed border-border-strong px-4 py-4 text-sm text-text-muted">
           Activa al menos un KPI en &quot;KPI del split&quot; antes de anadir objetos.
         </p>
       )}
 
       {items.length === 0 ? (
-        <p className="rounded-md border border-dashed border-slate-300 px-4 py-6 text-center text-sm text-slate-500">
+        <p className="rounded-card border border-dashed border-border-strong px-4 py-6 text-center text-sm text-text-muted">
           Todavia no hay ningun objeto en el catalogo.
         </p>
       ) : (
@@ -187,8 +187,8 @@ export function StoreItemsPanel({
       )}
 
       {!locked && slots.length > 0 && activeKpis.length > 0 && (
-        <form action={createAction} className="space-y-3 rounded-lg border border-dashed border-slate-300 bg-white p-4">
-          <h4 className="text-sm font-semibold text-slate-700">Nuevo objeto</h4>
+        <form action={createAction} className="space-y-3 rounded-card border border-dashed border-border-strong bg-surface p-4">
+          <h4 className="text-sm font-semibold text-ink">Nuevo objeto</h4>
           <StoreItemFormFields idPrefix="item-new" activeKpis={activeKpis} slots={slots} />
           <SaveButton />
           {!createState.ok && createState.error && <ErrorMessage>{createState.error}</ErrorMessage>}

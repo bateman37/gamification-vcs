@@ -11,7 +11,7 @@ function ActivateButton() {
     <button
       type="submit"
       disabled={pending}
-      className="rounded-md bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800 disabled:cursor-not-allowed disabled:opacity-60"
+      className="rounded-control bg-success px-4 py-2 text-sm font-medium text-white hover:bg-success/90 disabled:cursor-not-allowed disabled:opacity-60"
     >
       {pending ? "Activando..." : "Activar split"}
     </button>

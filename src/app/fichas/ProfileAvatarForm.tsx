@@ -10,7 +10,7 @@ import { AVATAR_ACCEPT_ATTRIBUTE, AVATAR_MAX_DIMENSION } from "@/domain/avatar-c
 function UploadAvatarButton({ label }: { label: string }) {
   const { pending } = useFormStatus();
   return (
-    <SubmitButton pending={pending} className="bg-slate-700 hover:bg-slate-600">
+    <SubmitButton pending={pending} className="bg-ink/90 hover:bg-ink/80">
       {label}
     </SubmitButton>
   );
@@ -22,7 +22,7 @@ function DeleteAvatarButton() {
     <button
       type="submit"
       disabled={pending}
-      className="rounded-md border border-red-300 px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+      className="rounded-control border border-danger/30 px-3 py-2 text-sm font-medium text-danger-ink hover:bg-danger-soft disabled:cursor-not-allowed disabled:opacity-50"
     >
       {pending ? "Eliminando..." : "Eliminar avatar"}
     </button>
@@ -66,7 +66,7 @@ export function ProfileAvatarForm({
   return (
     <div className="space-y-2">
       <form action={saveAction} className="space-y-2">
-        <label htmlFor={`avatar-${splitParticipantId}`} className="block text-xs font-medium text-slate-600">
+        <label htmlFor={`avatar-${splitParticipantId}`} className="block text-xs font-medium text-text-muted">
           {hasAvatar ? "Reemplazar avatar" : "Subir avatar"}
         </label>
         <input
@@ -75,17 +75,17 @@ export function ProfileAvatarForm({
           type="file"
           accept={AVATAR_ACCEPT_ATTRIBUTE}
           onChange={handleFileChange}
-          className="block w-full text-sm text-slate-600 file:mr-3 file:rounded-md file:border file:border-slate-300 file:bg-white file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-slate-700"
+          className="block w-full text-sm text-text-muted file:mr-3 file:rounded-control file:border file:border-border-strong file:bg-surface file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-ink"
         />
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-text-muted">
           JPEG, PNG o WebP. Maximo 5 MB. La imagen se recorta a {AVATAR_MAX_DIMENSION} px como maximo por lado, se elimina
           su informacion EXIF y se guarda en formato WebP.
         </p>
         {previewUrl && (
           <div className="flex items-center gap-2">
             {/* eslint-disable-next-line @next/next/no-img-element -- previsualizacion local del archivo elegido (blob:), nunca una URL remota. */}
-            <img src={previewUrl} alt="Previsualizacion del avatar elegido" className="h-16 w-16 rounded-full border border-slate-200 object-cover" />
-            <span className="text-xs text-slate-500">Previsualizacion (todavia sin guardar).</span>
+            <img src={previewUrl} alt="Previsualizacion del avatar elegido" className="h-16 w-16 rounded-full border border-border object-cover" />
+            <span className="text-xs text-text-muted">Previsualizacion (todavia sin guardar).</span>
           </div>
         )}
         <UploadAvatarButton label={hasAvatar ? "Reemplazar" : "Subir"} />

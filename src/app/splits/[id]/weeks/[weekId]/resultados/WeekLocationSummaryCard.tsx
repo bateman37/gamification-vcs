@@ -13,7 +13,7 @@ export function WeekLocationSummaryCard({ location }: { location: WeekLocationSu
   const kpiName = KPI_CATALOG[location.kpiCode as keyof typeof KPI_CATALOG]?.name ?? location.kpiCode;
 
   return (
-    <div className="rounded-lg border border-teal-200 bg-teal-50 p-4 text-sm text-teal-900">
+    <div className="rounded-lg border border-info/30 bg-info-soft p-4 text-sm text-info-ink">
       <p className="font-semibold">{location.name}</p>
       <p>
         Potencia: {kpiName} · {locationBonusLabel(location.bonusPercent)}

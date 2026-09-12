@@ -33,7 +33,7 @@ export default async function FichasPage() {
       <div className="space-y-6">
         <div>
           <h1 className="text-xl font-semibold">Fichas</h1>
-          <p className="text-sm text-slate-600">Tu alias, tu profesion y tu avatar en cada split.</p>
+          <p className="text-sm text-text-muted">Tu alias, tu profesion y tu avatar en cada split.</p>
         </div>
         <EmptyState>Tu cuenta no esta vinculada a ninguna persona. Contacta con un administrador.</EmptyState>
       </div>
@@ -46,7 +46,7 @@ export default async function FichasPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-xl font-semibold">Fichas</h1>
-        <p className="text-sm text-slate-600">
+        <p className="text-sm text-text-muted">
           Una ficha por cada split en el que participas: alias, profesion y avatar son propios de cada split.
         </p>
       </div>
@@ -56,7 +56,7 @@ export default async function FichasPage() {
       ) : (
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
           {cards.map((card) => (
-            <section key={card.splitParticipantId} className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
+            <section key={card.splitParticipantId} className="space-y-4 rounded-card border border-border bg-surface p-4">
               <div className="flex flex-wrap items-start gap-4">
                 <ProfileAvatar
                   splitParticipantId={card.splitParticipantId}
@@ -68,70 +68,70 @@ export default async function FichasPage() {
                     <h2 className="text-base font-semibold">{card.splitName}</h2>
                     <Badge tone={STATUS_TONE[card.splitStatus]}>{SPLIT_STATUS_LABELS[card.splitStatus]}</Badge>
                   </div>
-                  <p className="mt-1 text-sm text-slate-600">Inicio: {formatCalendarDate(card.splitStartDate)}</p>
+                  <p className="mt-1 text-sm text-text-muted">Inicio: {formatCalendarDate(card.splitStartDate)}</p>
                   <dl className="mt-2 grid grid-cols-2 gap-2 text-sm">
                     <div>
-                      <dt className="text-xs text-slate-500">Alias</dt>
+                      <dt className="text-xs text-text-muted">Alias</dt>
                       <dd className="font-medium">{card.alias}</dd>
                     </div>
                     <div>
-                      <dt className="text-xs text-slate-500">Nivel tecnico</dt>
+                      <dt className="text-xs text-text-muted">Nivel tecnico</dt>
                       <dd className="font-medium">{card.level}</dd>
                     </div>
                     <div>
-                      <dt className="text-xs text-slate-500">Faccion</dt>
+                      <dt className="text-xs text-text-muted">Faccion</dt>
                       <dd className="font-medium">
                         {card.faction ? (
                           <span className="inline-flex items-center gap-1.5">
                             <span
                               aria-hidden
-                              className="h-3 w-3 rounded-full border border-slate-300"
+                              className="h-3 w-3 rounded-full border border-border-strong"
                               style={{ backgroundColor: card.faction.color }}
                             />
                             {card.faction.name}
                           </span>
                         ) : (
-                          <span className="text-slate-400">—</span>
+                          <span className="text-text-muted">—</span>
                         )}
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-xs text-slate-500">Profesion</dt>
+                      <dt className="text-xs text-text-muted">Profesion</dt>
                       <dd className="font-medium">
                         {card.profession ? (
                           <>
                             {card.profession.name}
-                            <span className="block text-xs font-normal text-slate-500">{formatPoweredKpis(card.profession)}</span>
-                            <span className="block text-xs font-normal text-slate-500">{PROFESSION_BONUS_LABEL}</span>
+                            <span className="block text-xs font-normal text-text-muted">{formatPoweredKpis(card.profession)}</span>
+                            <span className="block text-xs font-normal text-text-muted">{PROFESSION_BONUS_LABEL}</span>
                           </>
                         ) : card.splitUsesProfessions ? (
-                          <span className="inline-block rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                          <span className="inline-block rounded-full bg-reward-soft px-2 py-0.5 text-xs font-medium text-reward-ink">
                             Sin elegir
                           </span>
                         ) : (
-                          <span className="text-slate-400">—</span>
+                          <span className="text-text-muted">—</span>
                         )}
                       </dd>
                     </div>
                   </dl>
                   <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-sm">
                     {card.hasPublishedResults && (
-                      <Link href={`/resultados?vista=por-split&split=${card.splitId}`} className="underline hover:text-slate-900">
+                      <Link href={`/resultados?vista=por-split&split=${card.splitId}`} className="underline hover:text-ink">
                         Ver mis resultados de este split
                       </Link>
                     )}
-                    <Link href={`/fichas/${card.splitParticipantId}`} className="underline hover:text-slate-900">
+                    <Link href={`/fichas/${card.splitParticipantId}`} className="underline hover:text-ink">
                       Configurar personaje
                     </Link>
                   </p>
                   {card.activeLocation && (
-                    <div className="mt-3 rounded-md border border-teal-200 bg-teal-50 p-3 text-sm text-teal-900">
+                    <div className="mt-3 rounded-md border border-info/30 bg-info-soft p-3 text-sm text-info-ink">
                       <p className="font-semibold">Localizacion activa esta semana</p>
                       <p>{card.activeLocation.name}</p>
                       <p>
                         Potencia: {card.activeLocation.kpiName} · {card.activeLocation.bonusLabel}
                       </p>
-                      <p className="text-xs text-teal-700">
+                      <p className="text-xs text-info-ink">
                         Activa del {formatCalendarDateEs(card.activeLocation.startDate)} al{" "}
                         {formatCalendarDateEs(card.activeLocation.endDate)}
                       </p>
@@ -141,7 +141,7 @@ export default async function FichasPage() {
               </div>
 
               {card.editable ? (
-                <div className="grid grid-cols-1 gap-4 border-t border-slate-100 pt-4 md:grid-cols-2">
+                <div className="grid grid-cols-1 gap-4 border-t border-border pt-4 md:grid-cols-2">
                   <ProfileAliasForm splitParticipantId={card.splitParticipantId} alias={card.alias} />
                   <ProfileAvatarForm splitParticipantId={card.splitParticipantId} hasAvatar={card.avatarVersion !== null} />
                   <div className="md:col-span-2">
@@ -156,7 +156,7 @@ export default async function FichasPage() {
                   </div>
                 </div>
               ) : (
-                <p className="border-t border-slate-100 pt-4 text-sm text-slate-500">
+                <p className="border-t border-border pt-4 text-sm text-text-muted">
                   El split esta cerrado: esta ficha es de solo lectura.
                 </p>
               )}

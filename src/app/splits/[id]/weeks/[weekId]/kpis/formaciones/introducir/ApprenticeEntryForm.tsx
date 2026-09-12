@@ -16,7 +16,7 @@ function SaveButton({ label }: { label: string }) {
     <button
       type="submit"
       disabled={pending}
-      className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+      className="rounded-control bg-ink px-4 py-2 text-sm font-medium text-white hover:bg-ink/90 disabled:cursor-not-allowed disabled:opacity-60"
     >
       {pending ? "Guardando..." : label}
     </button>
@@ -56,22 +56,22 @@ export function ApprenticeEntryForm({
 
   if (formView.rows.length === 0) {
     return (
-      <p className="rounded-md border border-dashed border-slate-300 px-4 py-6 text-center text-sm text-slate-500">
+      <p className="rounded-card border border-dashed border-border-strong px-4 py-6 text-center text-sm text-text-muted">
         No hay participantes aplicables en esta semana.
       </p>
     );
   }
 
   return (
-    <form action={formAction} className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
+    <form action={formAction} className="space-y-4 rounded-card border border-border bg-surface p-4">
       {!state.ok && state.error && <ErrorMessage>{state.error}</ErrorMessage>}
-      <p className="text-sm text-slate-600">
+      <p className="text-sm text-text-muted">
         Máximo configurado: <strong>{formView.targetValue}</strong>
       </p>
 
-      <div className="overflow-x-auto rounded-md border border-slate-200">
+      <div className="overflow-x-auto rounded-card border border-border">
         <table className="w-full text-left text-sm">
-          <thead className="border-b border-slate-200 bg-slate-100 text-slate-600">
+          <thead className="border-b border-border bg-surface-muted text-text-muted">
             <tr>
               <th className="px-3 py-2 font-medium">Alias</th>
               <th className="px-3 py-2 font-medium">Nombre real</th>
@@ -83,7 +83,7 @@ export function ApprenticeEntryForm({
             {formView.rows.map((row) => {
               const errorMessage = fieldErrorMessage(state, row.participantId, "completedTrainings");
               return (
-                <tr key={row.participantId} className="border-b border-slate-100">
+                <tr key={row.participantId} className="border-b border-border">
                   <td className="px-3 py-2">{row.alias}</td>
                   <td className="px-3 py-2">{row.fullName}</td>
                   <td className="px-3 py-2">{row.level}</td>
@@ -95,11 +95,11 @@ export function ApprenticeEntryForm({
                       defaultValue={row.completedTrainings ?? ""}
                       max={formView.targetValue}
                       aria-invalid={errorMessage ? "true" : undefined}
-                      className="w-20 rounded-md border border-slate-300 px-2 py-1 text-sm"
+                      className="w-20 rounded-control border border-border-strong px-2 py-1 text-sm"
                     />
                     <FieldError message={errorMessage} />
                     {!errorMessage && row.exceedsTarget && (
-                      <p className="mt-1 text-xs text-amber-700">
+                      <p className="mt-1 text-xs text-reward-ink">
                         Este valor supera el máximo actual ({formView.targetValue}); introduce un valor válido antes de guardar.
                       </p>
                     )}

@@ -1,3 +1,3 @@
 export default function LoadingSplits() {
-  return <p className="text-sm text-slate-500">Cargando splits...</p>;
+  return <p className="text-sm text-text-muted">Cargando splits...</p>;
 }

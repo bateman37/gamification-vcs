@@ -63,42 +63,42 @@ export async function PorSplitSection({
     <div className="space-y-6">
       <SplitSelector splits={splits} selectedSplitId={selectedSplitId} personId={isAdmin ? personId : null} gamificationMode={gamificationMode} />
 
-      <div className="rounded-lg border border-slate-200 bg-white p-4">
+      <div className="rounded-card border border-border bg-surface p-4">
         <h2 className="text-base font-semibold">{detail.splitName}</h2>
         <dl className="mt-2 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
           <div>
-            <dt className="text-xs text-slate-500">Posicion actual</dt>
+            <dt className="text-xs text-text-muted">Posicion actual</dt>
             <dd className="font-semibold">
               {detail.currentRank ?? "—"} de {detail.splitParticipantCount}
             </dd>
-            <dd className="text-xs text-slate-500">Clasificacion oficial calculada con gamificacion</dd>
+            <dd className="text-xs text-text-muted">Clasificacion oficial calculada con gamificacion</dd>
           </div>
           <div>
-            <dt className="text-xs text-slate-500">Puntos de posicion acumulados</dt>
+            <dt className="text-xs text-text-muted">Puntos de posicion acumulados</dt>
             <dd className="font-semibold">{formatPoints(detail.totalPositionPoints)}</dd>
-            <dd className="text-xs text-slate-500">Oficiales, no cambian con el selector</dd>
+            <dd className="text-xs text-text-muted">Oficiales, no cambian con el selector</dd>
           </div>
           <div>
-            <dt className="text-xs text-slate-500">{gamificationMode === "con" ? "Total puntos KPI publicados" : "Total puntos KPI reales"}</dt>
+            <dt className="text-xs text-text-muted">{gamificationMode === "con" ? "Total puntos KPI publicados" : "Total puntos KPI reales"}</dt>
             <dd className="font-semibold">{formatPoints(realTotalKpiPoints)}</dd>
             {gamificationMode === "sin" && totalBonus > 0 && (
-              <dd className="text-xs text-slate-500">Impacto de gamificacion: +{formatPoints(totalBonus)} puntos</dd>
+              <dd className="text-xs text-text-muted">Impacto de gamificacion: +{formatPoints(totalBonus)} puntos</dd>
             )}
           </div>
           <div>
-            <dt className="text-xs text-slate-500">Semanas publicadas</dt>
+            <dt className="text-xs text-text-muted">Semanas publicadas</dt>
             <dd className="font-semibold">{detail.weeks.length}</dd>
           </div>
           <div>
-            <dt className="text-xs text-slate-500">Creditos ganados oficiales</dt>
+            <dt className="text-xs text-text-muted">Creditos ganados oficiales</dt>
             <dd className="font-semibold">{detail.totalCreditsEarned}</dd>
           </div>
           {detail.currentFaction && (
             <div>
-              <dt className="text-xs text-slate-500">Tu faccion</dt>
+              <dt className="text-xs text-text-muted">Tu faccion</dt>
               <dd className="font-semibold">
                 <span className="inline-flex items-center gap-1.5">
-                  <span aria-hidden className="h-3 w-3 rounded-full border border-slate-300" style={{ backgroundColor: detail.currentFaction.color }} />
+                  <span aria-hidden className="h-3 w-3 rounded-full border border-border-strong" style={{ backgroundColor: detail.currentFaction.color }} />
                   {detail.currentFaction.name}
                 </span>
               </dd>
@@ -108,10 +108,10 @@ export async function PorSplitSection({
       </div>
 
       <div className="space-y-3">
-        <h3 className="text-sm font-semibold text-slate-700">Evolucion semana a semana</h3>
-        <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+        <h3 className="text-sm font-semibold text-ink">Evolucion semana a semana</h3>
+        <div className="overflow-x-auto rounded-card border border-border bg-surface">
           <table className="w-full text-left text-sm">
-            <thead className="border-b border-slate-200 bg-slate-50 text-slate-600">
+            <thead className="border-b border-border bg-canvas text-text-muted">
               <tr>
                 <th className="px-3 py-2 font-medium">Semana</th>
                 {showProfessionColumn && <th className="px-3 py-2 font-medium">Profesion</th>}
@@ -134,28 +134,28 @@ export async function PorSplitSection({
                 const percentage =
                   week.applicableMaxPoints && week.applicableMaxPoints > 0 ? (weekDisplayTotal / week.applicableMaxPoints) * 100 : null;
                 return (
-                  <tr key={week.splitWeekId} className="border-b border-slate-100">
+                  <tr key={week.splitWeekId} className="border-b border-border">
                     <td className="px-3 py-2 font-medium">
                       S{week.weekSequenceNumber}
-                      <span className="block text-xs font-normal text-slate-500">{formatCalendarDateEs(week.weekStartDate)}</span>
+                      <span className="block text-xs font-normal text-text-muted">{formatCalendarDateEs(week.weekStartDate)}</span>
                       {week.location && (
-                        <span className="block text-xs font-normal text-teal-700">
+                        <span className="block text-xs font-normal text-info-ink">
                           {week.location.name} (+{week.location.bonusPercent} %)
                         </span>
                       )}
                     </td>
                     {showProfessionColumn && (
-                      <td className="px-3 py-2 text-slate-600">
+                      <td className="px-3 py-2 text-text-muted">
                         {week.profession ? (
                           <>
-                            <span className="font-medium text-slate-800">{week.profession.name}</span>
-                            {week.profession.kpiNames && <span className="block text-xs text-slate-500">{week.profession.kpiNames}</span>}
+                            <span className="font-medium text-ink">{week.profession.name}</span>
+                            {week.profession.kpiNames && <span className="block text-xs text-text-muted">{week.profession.kpiNames}</span>}
                             {gamificationMode === "con" && week.professionBonusTotal > 0 && (
-                              <span className="block text-xs text-indigo-700">+{formatPoints(week.professionBonusTotal)} por profesion</span>
+                              <span className="block text-xs text-game-ink">+{formatPoints(week.professionBonusTotal)} por profesion</span>
                             )}
                           </>
                         ) : (
-                          <span className="text-slate-400">—</span>
+                          <span className="text-text-muted">—</span>
                         )}
                       </td>
                     )}
@@ -199,34 +199,34 @@ export async function PorSplitSection({
                       const breakdown = breakdownLines.length > 0 ? breakdownLines.join(" | ") : undefined;
                       const borderClass =
                         professionApplied && locationApplied
-                          ? "border-2 border-dashed border-violet-500"
+                          ? "border-2 border-dashed border-reward"
                           : professionApplied
-                            ? "border-2 border-dashed border-indigo-500"
+                            ? "border-2 border-dashed border-game"
                             : locationApplied
-                              ? "border-2 border-dashed border-teal-500"
+                              ? "border-2 border-dashed border-info"
                               : equipmentApplied
-                                ? "border-2 border-dashed border-amber-500"
+                                ? "border-2 border-dashed border-reward"
                                 : "";
                       return (
                         <td key={cell.kpiCode} title={breakdown} className={`px-3 py-2 text-center ${COLOR_BAND_CLASSES[band.band]} ${borderClass}`}>
                           {formatPoints(cellPoints)}
                           {professionApplied && (
-                            <span className="mt-1 block rounded bg-indigo-100 px-1 py-0.5 text-[10px] font-semibold text-indigo-800">
+                            <span className="mt-1 block rounded bg-game-soft px-1 py-0.5 text-[10px] font-semibold text-game-ink">
                               +{PROFESSION_BONUS_PERCENT} % profesion
                             </span>
                           )}
                           {locationApplied && (
-                            <span className="mt-1 block rounded bg-teal-100 px-1 py-0.5 text-[10px] font-semibold text-teal-800">
+                            <span className="mt-1 block rounded bg-info-soft px-1 py-0.5 text-[10px] font-semibold text-info-ink">
                               +{week.location?.bonusPercent ?? ""} % localizacion
                             </span>
                           )}
                           {equipmentApplied && (
-                            <span className="mt-1 block rounded bg-amber-100 px-1 py-0.5 text-[10px] font-semibold text-amber-800">
+                            <span className="mt-1 block rounded bg-reward-soft px-1 py-0.5 text-[10px] font-semibold text-reward-ink">
                               +{formatPoints(cell.equipmentBonusPoints!)} objeto
                             </span>
                           )}
                           {breakdown && <span className="sr-only"> ({breakdown})</span>}
-                          <div className="text-xs text-slate-500">
+                          <div className="text-xs text-text-muted">
                             {cell.kpiRank ?? "—"} de {detail.splitParticipantCount}
                           </div>
                         </td>
@@ -235,12 +235,12 @@ export async function PorSplitSection({
                     <td className="px-3 py-2 text-center font-semibold">
                       {formatPoints(weekDisplayTotal)}
                       {gamificationMode === "sin" && weekBonusTotal > 0 && (
-                        <span className="block text-xs font-normal text-slate-500">
+                        <span className="block text-xs font-normal text-text-muted">
                           Impacto: +{formatPoints(computeGamificationImpact(week.totalKpiPoints, weekDisplayTotal))}
                         </span>
                       )}
                     </td>
-                    <td className="px-3 py-2 text-center text-slate-600">{percentage === null ? "—" : `${formatPoints(percentage)} %`}</td>
+                    <td className="px-3 py-2 text-center text-text-muted">{percentage === null ? "—" : `${formatPoints(percentage)} %`}</td>
                     <td className="px-3 py-2 text-center font-semibold">
                       {week.weeklyRank} de {detail.splitParticipantCount}
                     </td>
@@ -249,7 +249,7 @@ export async function PorSplitSection({
                       {isAdmin && (
                         <Link
                           href={`/splits/${detail.splitId}/weeks/${week.splitWeekId}/resultados`}
-                          className="text-xs text-slate-600 underline hover:text-slate-900"
+                          className="text-xs text-text-muted underline hover:text-ink"
                         >
                           Ver semana
                         </Link>
@@ -261,11 +261,11 @@ export async function PorSplitSection({
             </tbody>
           </table>
         </div>
-        <p className="text-xs text-slate-500">Publicada por ultima vez el {formatCalendarDate(detail.weeks.at(-1)!.publishedAt)}.</p>
+        <p className="text-xs text-text-muted">Publicada por ultima vez el {formatCalendarDate(detail.weeks.at(-1)!.publishedAt)}.</p>
       </div>
 
       <div className="space-y-3">
-        <h3 className="text-sm font-semibold text-slate-700">Clasificacion general del split</h3>
+        <h3 className="text-sm font-semibold text-ink">Clasificacion general del split</h3>
         <LimitedClassificationTable
           classification={classification}
           selfSplitParticipantId={classification.entries.find((entry) => entry.personId === personId)?.splitParticipantId ?? null}
@@ -274,7 +274,7 @@ export async function PorSplitSection({
 
       {factionClassification.hasFactionData && (
         <div className="space-y-3">
-          <h3 className="text-sm font-semibold text-slate-700">Clasificacion general de facciones</h3>
+          <h3 className="text-sm font-semibold text-ink">Clasificacion general de facciones</h3>
           <LimitedFactionClassificationTable
             classification={factionClassification}
             selfFactionId={detail.currentFaction?.id ?? null}

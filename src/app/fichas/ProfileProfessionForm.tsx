@@ -11,7 +11,7 @@ import { formatAvailableLevels, formatPoweredKpis, type ProfessionView } from "@
 function SaveProfessionButton() {
   const { pending } = useFormStatus();
   return (
-    <SubmitButton pending={pending} className="bg-slate-700 hover:bg-slate-600">
+    <SubmitButton pending={pending} className="bg-ink/90 hover:bg-ink/80">
       Guardar profesion
     </SubmitButton>
   );
@@ -19,11 +19,11 @@ function SaveProfessionButton() {
 
 function ProfessionDetails({ profession }: { profession: ProfessionView }) {
   return (
-    <div className="rounded-md bg-slate-50 px-3 py-2 text-sm">
-      <p className="font-medium text-slate-800">{profession.name}</p>
-      <p className="text-slate-600">Disponible para: {formatAvailableLevels(profession)}</p>
-      <p className="text-slate-600">Potencia: {formatPoweredKpis(profession)}</p>
-      <p className="text-slate-600">Bonus: {PROFESSION_BONUS_LABEL}</p>
+    <div className="rounded-md bg-canvas px-3 py-2 text-sm">
+      <p className="font-medium text-ink">{profession.name}</p>
+      <p className="text-text-muted">Disponible para: {formatAvailableLevels(profession)}</p>
+      <p className="text-text-muted">Potencia: {formatPoweredKpis(profession)}</p>
+      <p className="text-text-muted">Bonus: {PROFESSION_BONUS_LABEL}</p>
     </div>
   );
 }
@@ -54,7 +54,7 @@ export function ProfileProfessionForm({
   const [selectedId, setSelectedId] = useState(profession?.id ?? "");
 
   if (!splitUsesProfessions) {
-    return <p className="text-sm text-slate-500">Este split no utiliza profesiones.</p>;
+    return <p className="text-sm text-text-muted">Este split no utiliza profesiones.</p>;
   }
 
   const selected = availableProfessions.find((candidate) => candidate.id === selectedId) ?? null;
@@ -62,8 +62,8 @@ export function ProfileProfessionForm({
   if (locked || !editable) {
     return (
       <div className="space-y-2">
-        {profession ? <ProfessionDetails profession={profession} /> : <p className="text-sm text-slate-500">Sin profesion elegida.</p>}
-        <p className="text-sm text-amber-700">
+        {profession ? <ProfessionDetails profession={profession} /> : <p className="text-sm text-text-muted">Sin profesion elegida.</p>}
+        <p className="text-sm text-reward-ink">
           {locked ? "Profesión bloqueada desde la publicación de la primera semana." : "El split esta cerrado: la ficha es de solo lectura."}
         </p>
       </div>
@@ -72,7 +72,7 @@ export function ProfileProfessionForm({
 
   return (
     <form action={formAction} className="space-y-2">
-      <label htmlFor={`profession-${splitParticipantId}`} className="block text-xs font-medium text-slate-600">
+      <label htmlFor={`profession-${splitParticipantId}`} className="block text-xs font-medium text-text-muted">
         Profesion
       </label>
       <div className="flex flex-wrap items-start gap-2">
@@ -81,7 +81,7 @@ export function ProfileProfessionForm({
           name="professionId"
           value={selectedId}
           onChange={(event) => setSelectedId(event.target.value)}
-          className="min-w-0 flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm"
+          className="min-w-0 flex-1 rounded-control border border-border-strong px-3 py-2 text-sm"
         >
           <option value="">Sin elegir</option>
           {availableProfessions.map((candidate) => (
@@ -93,7 +93,7 @@ export function ProfileProfessionForm({
         <SaveProfessionButton />
       </div>
       {availableProfessions.length === 0 && (
-        <p className="text-sm text-amber-700">No hay ninguna profesion disponible para tu nivel. Contacta con un administrador.</p>
+        <p className="text-sm text-reward-ink">No hay ninguna profesion disponible para tu nivel. Contacta con un administrador.</p>
       )}
       {selected && <ProfessionDetails profession={selected} />}
       <FieldError message={state.fieldErrors?.professionId} />

@@ -11,16 +11,16 @@ export function InventoryPanel({ items }: { items: OwnedItemView[] }) {
   return (
     <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
       {items.map((item) => (
-        <li key={item.ownedItemId} className="space-y-1 rounded-md border border-slate-200 bg-white p-3 text-sm">
+        <li key={item.ownedItemId} className="space-y-1 rounded-md border border-border bg-surface p-3 text-sm">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="font-medium text-slate-800">{item.name}</span>
+            <span className="font-medium text-ink">{item.name}</span>
             {item.equipped && <Badge tone="green">Equipado</Badge>}
           </div>
-          <p className="text-slate-600">Ranura: {item.equipmentSlotName}</p>
-          <p className="text-slate-600">
+          <p className="text-text-muted">Ranura: {item.equipmentSlotName}</p>
+          <p className="text-text-muted">
             {item.kpiName} · +{item.bonusPercent} %
           </p>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-text-muted">
             Comprado el {formatCalendarDateEs(item.acquiredAt)} por {item.priceCredits} creditos.
           </p>
         </li>

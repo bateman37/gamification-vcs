@@ -17,10 +17,10 @@ function SaveButton() {
 }
 
 function FactionBadge({ faction }: { faction: { name: string; color: string } | null }) {
-  if (!faction) return <span className="text-slate-400">—</span>;
+  if (!faction) return <span className="text-text-muted">—</span>;
   return (
     <span className="inline-flex items-center gap-1.5">
-      <span aria-hidden className="h-3 w-3 rounded-full border border-slate-300" style={{ backgroundColor: faction.color }} />
+      <span aria-hidden className="h-3 w-3 rounded-full border border-border-strong" style={{ backgroundColor: faction.color }} />
       {faction.name}
     </span>
   );
@@ -39,10 +39,10 @@ function ProfessionCell({
   profession: ProfessionView | null;
   splitUsesProfessions: boolean;
 }) {
-  if (!splitUsesProfessions) return <span className="text-slate-400">—</span>;
+  if (!splitUsesProfessions) return <span className="text-text-muted">—</span>;
   if (!profession) {
     return (
-      <span className="inline-block rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+      <span className="inline-block rounded-full bg-reward-soft px-2 py-0.5 text-xs font-medium text-reward-ink">
         Sin elegir
       </span>
     );
@@ -50,7 +50,7 @@ function ProfessionCell({
   return (
     <span className="block">
       <span className="font-medium">{profession.name}</span>
-      <span className="block text-xs text-slate-500">{formatPoweredKpis(profession)}</span>
+      <span className="block text-xs text-text-muted">{formatPoweredKpis(profession)}</span>
     </span>
   );
 }
@@ -87,7 +87,7 @@ export function ParticipantEditRow({
 
   if (!editing) {
     return (
-      <tr className="border-b border-slate-100">
+      <tr className="border-b border-border">
         <td className="px-3 py-2">{participant.person.fullName}</td>
         <td className="px-3 py-2 font-medium">{participant.alias}</td>
         <td className="px-3 py-2">{participant.level}</td>
@@ -102,7 +102,7 @@ export function ParticipantEditRow({
           <button
             type="button"
             onClick={() => setEditing(true)}
-            className="text-sm font-medium text-slate-700 underline hover:text-slate-900"
+            className="text-sm font-medium text-ink underline hover:text-ink"
           >
             Editar
           </button>
@@ -112,27 +112,27 @@ export function ParticipantEditRow({
   }
 
   return (
-    <tr className="border-b border-slate-100 bg-slate-50">
+    <tr className="border-b border-border bg-canvas">
       <td className="px-3 py-2">{participant.person.fullName}</td>
       <td colSpan={6} className="px-3 py-3">
         <form action={formAction} className="flex flex-wrap items-start gap-3">
           <div>
-            <label className="block text-xs font-medium text-slate-600">Alias</label>
+            <label className="block text-xs font-medium text-text-muted">Alias</label>
             <input
               name="alias"
               defaultValue={participant.alias}
               required
-              className="mt-1 rounded-md border border-slate-300 px-2 py-1 text-sm"
+              className="mt-1 rounded-control border border-border-strong px-2 py-1 text-sm"
             />
             <FieldError message={state.fieldErrors?.alias} />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-600">Nivel</label>
+            <label className="block text-xs font-medium text-text-muted">Nivel</label>
             <select
               name="level"
               value={level}
               onChange={(event) => setLevel(event.target.value as ParticipantLevel)}
-              className="mt-1 rounded-md border border-slate-300 px-2 py-1 text-sm"
+              className="mt-1 rounded-control border border-border-strong px-2 py-1 text-sm"
             >
               <option value="N0">N0</option>
               <option value="N1">N1</option>
@@ -142,12 +142,12 @@ export function ParticipantEditRow({
           </div>
           {factions.length > 0 && (
             <div>
-              <label className="block text-xs font-medium text-slate-600">Faccion</label>
+              <label className="block text-xs font-medium text-text-muted">Faccion</label>
               <select
                 name="factionId"
                 defaultValue={participant.factionId ?? ""}
                 required
-                className="mt-1 rounded-md border border-slate-300 px-2 py-1 text-sm"
+                className="mt-1 rounded-control border border-border-strong px-2 py-1 text-sm"
               >
                 <option value="" disabled>
                   Selecciona una faccion
@@ -163,14 +163,14 @@ export function ParticipantEditRow({
           )}
           {splitUsesProfessions && (
             <div>
-              <label className="block text-xs font-medium text-slate-600">Profesion</label>
+              <label className="block text-xs font-medium text-text-muted">Profesion</label>
               {professionLocked ? (
                 <>
                   {/* La profesion congelada se reenvia tal cual: el servidor rechaza igualmente cualquier cambio. */}
                   <input type="hidden" name="professionId" value={participant.professionId ?? ""} />
                   <p className="mt-1 text-sm">
                     {participant.profession ? participant.profession.name : "Sin elegir"}
-                    <span className="block text-xs text-slate-500">Bloqueada desde la primera publicacion.</span>
+                    <span className="block text-xs text-text-muted">Bloqueada desde la primera publicacion.</span>
                   </p>
                 </>
               ) : (
@@ -178,7 +178,7 @@ export function ParticipantEditRow({
                   <select
                     name="professionId"
                     defaultValue={participant.professionId ?? ""}
-                    className="mt-1 rounded-md border border-slate-300 px-2 py-1 text-sm"
+                    className="mt-1 rounded-control border border-border-strong px-2 py-1 text-sm"
                   >
                     <option value="">Sin elegir</option>
                     {availableProfessions.map((profession) => (
@@ -187,7 +187,7 @@ export function ParticipantEditRow({
                       </option>
                     ))}
                   </select>
-                  <p className="mt-1 text-xs text-slate-500">{PROFESSION_BONUS_LABEL}</p>
+                  <p className="mt-1 text-xs text-text-muted">{PROFESSION_BONUS_LABEL}</p>
                 </>
               )}
               <FieldError message={state.fieldErrors?.professionId} />
@@ -198,7 +198,7 @@ export function ParticipantEditRow({
             <button
               type="button"
               onClick={() => setEditing(false)}
-              className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="rounded-control border border-border-strong px-3 py-2 text-sm"
             >
               Cancelar
             </button>

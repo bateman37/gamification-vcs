@@ -108,23 +108,23 @@ function KpiCellView({ cell, weekLocation }: { cell: ResultKpiCell; weekLocation
     breakdown ? ` - ${breakdown}` : ""
   }`;
   const borderClass = cell.professionApplied && cell.locationApplied
-    ? "border-2 border-dashed border-violet-500"
+    ? "border-2 border-dashed border-reward"
     : cell.professionApplied
-      ? "border-2 border-dashed border-indigo-500"
+      ? "border-2 border-dashed border-game"
       : cell.locationApplied
-        ? "border-2 border-dashed border-teal-500"
+        ? "border-2 border-dashed border-info"
         : "";
   return (
     <td className={`px-3 py-2 text-center font-medium ${COLOR_BAND_CLASSES[bandInfo.band]} ${borderClass}`} title={title}>
       {formatPoints(displayPoints)}
       {cell.capped && <span aria-hidden="true"> *</span>}
       {cell.professionApplied && (
-        <span className="mt-1 block rounded bg-indigo-100 px-1 py-0.5 text-[10px] font-semibold text-indigo-800">
+        <span className="mt-1 block rounded bg-game-soft px-1 py-0.5 text-[10px] font-semibold text-game-ink">
           +{PROFESSION_BONUS_PERCENT} % profesion
         </span>
       )}
       {cell.locationApplied && (
-        <span className="mt-1 block rounded bg-teal-100 px-1 py-0.5 text-[10px] font-semibold text-teal-800">
+        <span className="mt-1 block rounded bg-info-soft px-1 py-0.5 text-[10px] font-semibold text-info-ink">
           +{weekLocation?.bonusPercent ?? ""} % localizacion
         </span>
       )}
@@ -192,11 +192,11 @@ export function WeeklyResultsTable({
 
   return (
     <div className="space-y-3">
-      <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+      <div className="overflow-x-auto rounded-card border border-border bg-surface">
         <table className="w-full text-left text-sm">
-          <thead className="border-b border-slate-200 bg-slate-50 text-slate-600">
+          <thead className="border-b border-border bg-canvas text-text-muted">
             <tr>
-              <th className="sticky left-0 z-10 bg-slate-50 px-3 py-2">{headerButton("Alias", "alias")}</th>
+              <th className="sticky left-0 z-10 bg-canvas px-3 py-2">{headerButton("Alias", "alias")}</th>
               <th className="px-3 py-2 font-medium">Nombre real</th>
               <th className="px-3 py-2 font-medium">Nivel</th>
               {showProfessionColumn && <th className="px-3 py-2 font-medium">Profesion</th>}
@@ -215,24 +215,24 @@ export function WeeklyResultsTable({
             {sortedRows.map((row) => {
               const percentage = row.applicableMaxPoints && row.applicableMaxPoints > 0 ? (row.totalKpiPoints / row.applicableMaxPoints) * 100 : null;
               return (
-                <tr key={row.splitParticipantId} className="border-b border-slate-100">
-                  <td className="sticky left-0 z-10 bg-white px-3 py-2 font-medium">{row.alias}</td>
-                  <td className="px-3 py-2 text-slate-600">{row.fullName}</td>
-                  <td className="px-3 py-2 text-slate-600">{row.level}</td>
+                <tr key={row.splitParticipantId} className="border-b border-border">
+                  <td className="sticky left-0 z-10 bg-surface px-3 py-2 font-medium">{row.alias}</td>
+                  <td className="px-3 py-2 text-text-muted">{row.fullName}</td>
+                  <td className="px-3 py-2 text-text-muted">{row.level}</td>
                   {showProfessionColumn && (
-                    <td className="px-3 py-2 text-slate-600">
+                    <td className="px-3 py-2 text-text-muted">
                       {row.professionName ? (
                         <>
-                          <span className="font-medium text-slate-800">{row.professionName}</span>
-                          {row.professionKpiNames && <span className="block text-xs text-slate-500">{row.professionKpiNames}</span>}
+                          <span className="font-medium text-ink">{row.professionName}</span>
+                          {row.professionKpiNames && <span className="block text-xs text-text-muted">{row.professionKpiNames}</span>}
                           {row.professionBonusTotal > 0 && (
-                            <span className="block text-xs text-indigo-700">
+                            <span className="block text-xs text-game-ink">
                               Bonus semanal: +{formatPoints(row.professionBonusTotal)}
                             </span>
                           )}
                         </>
                       ) : (
-                        <span className="inline-block rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                        <span className="inline-block rounded-full bg-reward-soft px-2 py-0.5 text-xs font-medium text-reward-ink">
                           Sin elegir
                         </span>
                       )}
@@ -247,9 +247,9 @@ export function WeeklyResultsTable({
                     );
                   })}
                   <td className="px-3 py-2 text-center font-semibold">{formatPoints(row.totalKpiPoints)}</td>
-                  <td className="px-3 py-2 text-center text-slate-600">{percentage === null ? "—" : `${formatPoints(percentage)} %`}</td>
+                  <td className="px-3 py-2 text-center text-text-muted">{percentage === null ? "—" : `${formatPoints(percentage)} %`}</td>
                   <td className="px-3 py-2 text-center font-semibold">
-                    {row.weeklyRank} <span className="text-xs font-normal text-slate-500">de {splitParticipantCount}</span>
+                    {row.weeklyRank} <span className="text-xs font-normal text-text-muted">de {splitParticipantCount}</span>
                   </td>
                   <td className="px-3 py-2 text-center font-semibold">{row.positionPoints ?? "—"}</td>
                 </tr>
@@ -259,7 +259,7 @@ export function WeeklyResultsTable({
         </table>
       </div>
 
-      <div className="flex flex-wrap gap-3 text-xs text-slate-600">
+      <div className="flex flex-wrap gap-3 text-xs text-text-muted">
         <span className="font-medium">Leyenda:</span>
         <span className={`rounded px-2 py-0.5 ${COLOR_BAND_CLASSES["below-zero"]}`}>Por debajo de 0 %</span>
         <span className={`rounded px-2 py-0.5 ${COLOR_BAND_CLASSES["very-low"]}`}>0-25 %</span>
@@ -270,13 +270,13 @@ export function WeeklyResultsTable({
         <span className={`rounded px-2 py-0.5 ${COLOR_BAND_CLASSES["not-applicable"]}`}>No aplica</span>
         <span>* = limitado por el maximo configurado</span>
         {showProfessionColumn && (
-          <span className="rounded border-2 border-dashed border-indigo-500 px-2 py-0.5 text-indigo-800">
+          <span className="rounded border-2 border-dashed border-game px-2 py-0.5 text-game-ink">
             Borde y badge &quot;+{PROFESSION_BONUS_PERCENT} % profesion&quot; = bonus de profesion aplicado (el desglose esta en la
             ayuda de la celda)
           </span>
         )}
         {weekLocation && (
-          <span className="rounded border-2 border-dashed border-teal-500 px-2 py-0.5 text-teal-800">
+          <span className="rounded border-2 border-dashed border-info px-2 py-0.5 text-info-ink">
             Borde y badge &quot;+{weekLocation.bonusPercent} % localizacion&quot; = bonus de la localizacion &quot;{weekLocation.name}&quot;
             aplicado (el desglose esta en la ayuda de la celda)
           </span>

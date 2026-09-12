@@ -11,7 +11,7 @@ import { FactionClassificationFilters } from "./FactionClassificationFilters";
 function FactionSwatch({ name, color }: { name: string; color: string }) {
   return (
     <span className="inline-flex items-center gap-1.5">
-      <span aria-hidden className="h-3 w-3 rounded-full border border-slate-300" style={{ backgroundColor: color }} />
+      <span aria-hidden className="h-3 w-3 rounded-full border border-border-strong" style={{ backgroundColor: color }} />
       {name}
     </span>
   );
@@ -35,11 +35,11 @@ export default async function FactionClassificationPage({
   return (
     <div className="space-y-6">
       <div>
-        <Link href={`/splits/${split.id}`} className="text-sm text-slate-600 underline hover:text-slate-900">
+        <Link href={`/splits/${split.id}`} className="text-sm text-text-muted underline hover:text-ink">
           Volver al split
         </Link>
         <h1 className="mt-2 text-xl font-semibold">Clasificacion detallada de facciones - {split.name}</h1>
-        <p className="mt-1 text-sm text-slate-600">
+        <p className="mt-1 text-sm text-text-muted">
           Renombre = puntos por posicion. La puntuacion semanal de cada faccion es la suma de los tres mejores
           (nunca una media).
         </p>
@@ -55,15 +55,15 @@ export default async function FactionClassificationPage({
           <FactionClassificationFilters weeks={classification.weeks} selectedWeek={selectedWeek} />
 
           {selectedWeek === "acumulado" ? (
-            <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+            <div className="overflow-x-auto rounded-card border border-border bg-surface">
               <table className="w-full text-left text-sm">
-                <thead className="border-b border-slate-200 bg-slate-50 text-slate-600">
+                <thead className="border-b border-border bg-canvas text-text-muted">
                   <tr>
-                    <th className="sticky left-0 z-10 bg-slate-50 px-3 py-2 font-medium">Pos.</th>
-                    <th className="sticky left-10 z-10 bg-slate-50 px-3 py-2 font-medium">Faccion</th>
+                    <th className="sticky left-0 z-10 bg-canvas px-3 py-2 font-medium">Pos.</th>
+                    <th className="sticky left-10 z-10 bg-canvas px-3 py-2 font-medium">Faccion</th>
                     {classification.weeks.map((week) => (
                       <th key={week.splitWeekId} className="px-3 py-2 text-center font-medium">
-                        <Link href={`?semana=${week.splitWeekId}`} className="underline hover:text-slate-900">
+                        <Link href={`?semana=${week.splitWeekId}`} className="underline hover:text-ink">
                           S{week.weekSequenceNumber}
                         </Link>
                       </th>
@@ -73,13 +73,13 @@ export default async function FactionClassificationPage({
                 </thead>
                 <tbody>
                   {classification.accumulated.map((entry) => (
-                    <tr key={entry.factionId} className="border-b border-slate-100">
-                      <td className="sticky left-0 z-10 bg-white px-3 py-2 font-medium">{entry.rank}</td>
-                      <td className="sticky left-10 z-10 bg-white px-3 py-2 font-medium">
+                    <tr key={entry.factionId} className="border-b border-border">
+                      <td className="sticky left-0 z-10 bg-surface px-3 py-2 font-medium">{entry.rank}</td>
+                      <td className="sticky left-10 z-10 bg-surface px-3 py-2 font-medium">
                         <FactionSwatch name={entry.name} color={entry.color} />
                       </td>
                       {classification.weeks.map((week) => (
-                        <td key={week.splitWeekId} className="px-3 py-2 text-center text-slate-600">
+                        <td key={week.splitWeekId} className="px-3 py-2 text-center text-text-muted">
                           {entry.scoreByWeek.get(week.splitWeekId) ?? "—"}
                         </td>
                       ))}
@@ -92,9 +92,9 @@ export default async function FactionClassificationPage({
           ) : !weekClassification ? (
             <EmptyState>No hay clasificacion de facciones publicada para esta semana.</EmptyState>
           ) : (
-            <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+            <div className="overflow-x-auto rounded-card border border-border bg-surface">
               <table className="w-full text-left text-sm">
-                <thead className="border-b border-slate-200 bg-slate-50 text-slate-600">
+                <thead className="border-b border-border bg-canvas text-text-muted">
                   <tr>
                     <th className="px-3 py-2 font-medium">Pos. semanal</th>
                     <th className="px-3 py-2 font-medium">Faccion</th>
@@ -108,7 +108,7 @@ export default async function FactionClassificationPage({
                 </thead>
                 <tbody>
                   {weekClassification.entries.map((entry) => (
-                    <tr key={entry.factionId} className="border-b border-slate-100">
+                    <tr key={entry.factionId} className="border-b border-border">
                       <td className="px-3 py-2 font-medium">{entry.weeklyRank}</td>
                       <td className="px-3 py-2">
                         <FactionSwatch name={entry.name} color={entry.color} />
@@ -116,7 +116,7 @@ export default async function FactionClassificationPage({
                       {[0, 1, 2].map((index) => {
                         const contributor = entry.topContributors[index];
                         return (
-                          <td key={index} className="px-3 py-2 text-slate-600">
+                          <td key={index} className="px-3 py-2 text-text-muted">
                             {contributor ? `${contributor.alias} (${formatPoints(contributor.positionPoints)})` : "—"}
                           </td>
                         );

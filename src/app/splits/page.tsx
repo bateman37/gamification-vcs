@@ -21,19 +21,19 @@ export default async function SplitsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold">Splits</h1>
-          <p className="text-sm text-slate-600">Ediciones de la gamificacion periodica.</p>
+          <p className="text-sm text-text-muted">Ediciones de la gamificacion periodica.</p>
         </div>
         <Link
           href="/splits/nuevo"
-          className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700"
+          className="rounded-control bg-ink px-4 py-2 text-sm font-medium text-white hover:bg-ink/90"
         >
           Crear split
         </Link>
       </div>
 
-      <div className="rounded-lg border border-slate-200 bg-white">
+      <div className="rounded-card border border-border bg-surface">
         <table className="w-full text-left text-sm">
-          <thead className="border-b border-slate-200 bg-slate-50 text-slate-600">
+          <thead className="border-b border-border bg-canvas text-text-muted">
             <tr>
               <th className="px-3 py-2 font-medium">Nombre</th>
               <th className="px-3 py-2 font-medium">Fechas</th>
@@ -47,9 +47,9 @@ export default async function SplitsPage() {
             {splits.map((split) => {
               const endDate = addCalendarDays(split.startDate, split.numberOfWeeks * 7 - 1);
               return (
-                <tr key={split.id} className="border-b border-slate-100">
+                <tr key={split.id} className="border-b border-border">
                   <td className="px-3 py-2 font-medium">{split.name}</td>
-                  <td className="px-3 py-2 text-slate-600">
+                  <td className="px-3 py-2 text-text-muted">
                     {formatCalendarDate(split.startDate)} - {formatCalendarDate(endDate)}
                   </td>
                   <td className="px-3 py-2 text-center">{split.numberOfWeeks}</td>
@@ -58,7 +58,7 @@ export default async function SplitsPage() {
                   </td>
                   <td className="px-3 py-2 text-center">{split.participantCount}</td>
                   <td className="px-3 py-2 text-right">
-                    <Link href={`/splits/${split.id}`} className="text-sm font-medium text-slate-700 underline">
+                    <Link href={`/splits/${split.id}`} className="text-sm font-medium text-ink underline">
                       Ver detalle
                     </Link>
                   </td>

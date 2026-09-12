@@ -11,7 +11,7 @@ export function ClassificationSummarySection({ splitId, classification }: { spli
     <section id="clasificacion-general-individual" className="scroll-mt-6 space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-semibold">Clasificacion general individual</h2>
-        <Link href={`/splits/${splitId}/clasificacion`} className="text-sm font-medium text-slate-700 underline hover:text-slate-900">
+        <Link href={`/splits/${splitId}/clasificacion`} className="text-sm font-medium text-ink underline hover:text-ink">
           Ver clasificacion detallada
         </Link>
       </div>
@@ -19,12 +19,12 @@ export function ClassificationSummarySection({ splitId, classification }: { spli
       {entries.length === 0 ? (
         <EmptyState>Todavia no hay ninguna semana publicada en este split.</EmptyState>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+        <div className="overflow-x-auto rounded-card border border-border bg-surface">
           <table className="w-full text-left text-sm">
-            <thead className="border-b border-slate-200 bg-slate-50 text-slate-600">
+            <thead className="border-b border-border bg-canvas text-text-muted">
               <tr>
-                <th className="sticky left-0 z-10 bg-slate-50 px-3 py-2 font-medium">Pos.</th>
-                <th className="sticky left-10 z-10 bg-slate-50 px-3 py-2 font-medium">Alias</th>
+                <th className="sticky left-0 z-10 bg-canvas px-3 py-2 font-medium">Pos.</th>
+                <th className="sticky left-10 z-10 bg-canvas px-3 py-2 font-medium">Alias</th>
                 <th className="px-3 py-2 font-medium">Nombre real</th>
                 {weeks.map((week) => (
                   <th key={week.splitWeekId} className="px-3 py-2 text-center font-medium">
@@ -36,12 +36,12 @@ export function ClassificationSummarySection({ splitId, classification }: { spli
             </thead>
             <tbody>
               {entries.map((entry) => (
-                <tr key={entry.splitParticipantId} className="border-b border-slate-100">
-                  <td className="sticky left-0 z-10 bg-white px-3 py-2 font-medium">{entry.rank}</td>
-                  <td className="sticky left-10 z-10 bg-white px-3 py-2 font-medium">{entry.alias}</td>
-                  <td className="px-3 py-2 text-slate-600">{entry.fullName}</td>
+                <tr key={entry.splitParticipantId} className="border-b border-border">
+                  <td className="sticky left-0 z-10 bg-surface px-3 py-2 font-medium">{entry.rank}</td>
+                  <td className="sticky left-10 z-10 bg-surface px-3 py-2 font-medium">{entry.alias}</td>
+                  <td className="px-3 py-2 text-text-muted">{entry.fullName}</td>
                   {weeks.map((week) => (
-                    <td key={week.splitWeekId} className="px-3 py-2 text-center text-slate-600">
+                    <td key={week.splitWeekId} className="px-3 py-2 text-center text-text-muted">
                       {entry.pointsByWeek.get(week.splitWeekId) ?? "—"}
                     </td>
                   ))}

@@ -13,12 +13,12 @@ export function LimitedClassificationTable({ classification, selfSplitParticipan
   if (entries.length === 0) return null;
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+    <div className="overflow-x-auto rounded-card border border-border bg-surface">
       <table className="w-full text-left text-sm">
-        <thead className="border-b border-slate-200 bg-slate-50 text-slate-600">
+        <thead className="border-b border-border bg-canvas text-text-muted">
           <tr>
-            <th className="sticky left-0 z-10 bg-slate-50 px-3 py-2 font-medium">Pos.</th>
-            <th className="sticky left-10 z-10 bg-slate-50 px-3 py-2 font-medium">Alias</th>
+            <th className="sticky left-0 z-10 bg-canvas px-3 py-2 font-medium">Pos.</th>
+            <th className="sticky left-10 z-10 bg-canvas px-3 py-2 font-medium">Alias</th>
             {weeks.map((week) => (
               <th key={week.splitWeekId} className="px-3 py-2 text-center font-medium">
                 S{week.weekSequenceNumber}
@@ -32,11 +32,11 @@ export function LimitedClassificationTable({ classification, selfSplitParticipan
           {entries.map((entry) => {
             const isSelf = entry.splitParticipantId === selfSplitParticipantId;
             return (
-              <tr key={entry.splitParticipantId} className={`border-b border-slate-100 ${isSelf ? "bg-amber-50" : ""}`}>
+              <tr key={entry.splitParticipantId} className={`border-b border-border ${isSelf ? "bg-reward-soft" : ""}`}>
                 <td className="sticky left-0 z-10 bg-inherit px-3 py-2 font-medium">{entry.rank}</td>
                 <td className="sticky left-10 z-10 bg-inherit px-3 py-2 font-medium">
                   {entry.alias}
-                  {isSelf && <span className="ml-1 text-xs text-amber-700">(tu)</span>}
+                  {isSelf && <span className="ml-1 text-xs text-reward-ink">(tu)</span>}
                 </td>
                 {weeks.map((week) => {
                   const points = entry.pointsByWeek.get(week.splitWeekId);
@@ -45,7 +45,7 @@ export function LimitedClassificationTable({ classification, selfSplitParticipan
                   return (
                     <td
                       key={week.splitWeekId}
-                      className="px-3 py-2 text-center text-slate-600"
+                      className="px-3 py-2 text-center text-text-muted"
                       title={
                         points === undefined
                           ? "No participa esta semana"

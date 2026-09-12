@@ -18,7 +18,7 @@ export function FactionClassificationSummarySection({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-semibold">Clasificacion general facciones</h2>
         {hasFactionData && (
-          <Link href={`/splits/${splitId}/clasificacion-facciones`} className="text-sm font-medium text-slate-700 underline hover:text-slate-900">
+          <Link href={`/splits/${splitId}/clasificacion-facciones`} className="text-sm font-medium text-ink underline hover:text-ink">
             Ver clasificacion detallada
           </Link>
         )}
@@ -30,12 +30,12 @@ export function FactionClassificationSummarySection({
           para verla aqui.
         </EmptyState>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+        <div className="overflow-x-auto rounded-card border border-border bg-surface">
           <table className="w-full text-left text-sm">
-            <thead className="border-b border-slate-200 bg-slate-50 text-slate-600">
+            <thead className="border-b border-border bg-canvas text-text-muted">
               <tr>
-                <th className="sticky left-0 z-10 bg-slate-50 px-3 py-2 font-medium">Pos.</th>
-                <th className="sticky left-10 z-10 bg-slate-50 px-3 py-2 font-medium">Faccion</th>
+                <th className="sticky left-0 z-10 bg-canvas px-3 py-2 font-medium">Pos.</th>
+                <th className="sticky left-10 z-10 bg-canvas px-3 py-2 font-medium">Faccion</th>
                 {weeks.map((week) => (
                   <th key={week.splitWeekId} className="px-3 py-2 text-center font-medium">
                     S{week.weekSequenceNumber}
@@ -46,16 +46,16 @@ export function FactionClassificationSummarySection({
             </thead>
             <tbody>
               {accumulated.map((entry) => (
-                <tr key={entry.factionId} className="border-b border-slate-100">
-                  <td className="sticky left-0 z-10 bg-white px-3 py-2 font-medium">{entry.rank}</td>
-                  <td className="sticky left-10 z-10 bg-white px-3 py-2 font-medium">
+                <tr key={entry.factionId} className="border-b border-border">
+                  <td className="sticky left-0 z-10 bg-surface px-3 py-2 font-medium">{entry.rank}</td>
+                  <td className="sticky left-10 z-10 bg-surface px-3 py-2 font-medium">
                     <span className="inline-flex items-center gap-1.5">
-                      <span aria-hidden className="h-3 w-3 rounded-full border border-slate-300" style={{ backgroundColor: entry.color }} />
+                      <span aria-hidden className="h-3 w-3 rounded-full border border-border-strong" style={{ backgroundColor: entry.color }} />
                       {entry.name}
                     </span>
                   </td>
                   {weeks.map((week) => (
-                    <td key={week.splitWeekId} className="px-3 py-2 text-center text-slate-600">
+                    <td key={week.splitWeekId} className="px-3 py-2 text-center text-text-muted">
                       {entry.scoreByWeek.get(week.splitWeekId) ?? "—"}
                     </td>
                   ))}

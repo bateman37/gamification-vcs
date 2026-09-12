@@ -17,29 +17,29 @@ export default async function ChronomancyEntryPage({ params }: { params: { id: s
   return (
     <div className="space-y-6">
       <div>
-        <Link href={backHref} className="text-sm text-slate-600 underline hover:text-slate-900">
+        <Link href={backHref} className="text-sm text-text-muted underline hover:text-ink">
           Volver a las cargas de la semana
         </Link>
         <h1 className="mt-2 text-xl font-semibold">Introducir Cronomagia laboral</h1>
-        <p className="mt-1 text-sm text-slate-600">
+        <p className="mt-1 text-sm text-text-muted">
           {split.name} - Semana {week.sequenceNumber} ({formatCalendarDate(week.startDate)} a{" "}
           {formatCalendarDate(week.endDate)})
         </p>
-        <p className="mt-2 text-sm text-slate-600">
+        <p className="mt-2 text-sm text-text-muted">
           <strong>Horas totales = 0</strong> significa vacaciones toda la semana (AVISO): la fila se guarda igual y
           cuenta como completa, pero no otorga puntos. Las horas productivas pueden superar las horas totales, no es
           un error.
         </p>
         <Link
           href={`/splits/${split.id}#kpi-configuracion`}
-          className="mt-1 inline-block text-sm text-slate-600 underline hover:text-slate-900"
+          className="mt-1 inline-block text-sm text-text-muted underline hover:text-ink"
         >
           Ir a la configuracion de KPI
         </Link>
       </div>
 
       {split.status !== "ACTIVE" ? (
-        <p className="rounded-md border border-dashed border-slate-300 px-4 py-6 text-center text-sm text-slate-500">
+        <p className="rounded-card border border-dashed border-border-strong px-4 py-6 text-center text-sm text-text-muted">
           Solo se puede introducir o actualizar Cronomagia laboral en un split activo.
         </p>
       ) : (

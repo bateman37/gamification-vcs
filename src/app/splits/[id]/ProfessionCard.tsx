@@ -12,7 +12,7 @@ import { ProfessionFormFields } from "./ProfessionFormFields";
 function SaveProfessionButton() {
   const { pending } = useFormStatus();
   return (
-    <SubmitButton pending={pending} className="bg-slate-700 hover:bg-slate-600">
+    <SubmitButton pending={pending} className="bg-ink/90 hover:bg-ink/80">
       Guardar
     </SubmitButton>
   );
@@ -25,7 +25,7 @@ function DeleteProfessionButton({ disabled, title }: { disabled: boolean; title?
       type="submit"
       disabled={disabled || pending}
       title={title}
-      className="rounded-md border border-red-300 px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+      className="rounded-control border border-danger/30 px-3 py-2 text-sm font-medium text-danger-ink hover:bg-danger-soft disabled:cursor-not-allowed disabled:opacity-50"
     >
       {pending ? "Eliminando..." : "Eliminar"}
     </button>
@@ -36,10 +36,10 @@ function DeleteProfessionButton({ disabled, title }: { disabled: boolean; title?
 export function ProfessionSummary({ profession }: { profession: ProfessionView }) {
   return (
     <div className="space-y-0.5 text-sm">
-      <p className="font-medium text-slate-800">{profession.name}</p>
-      <p className="text-slate-600">Disponible para: {formatAvailableLevels(profession)}</p>
-      <p className="text-slate-600">Potencia: {formatPoweredKpis(profession)}</p>
-      <p className="text-slate-600">Bonus: {PROFESSION_BONUS_LABEL}</p>
+      <p className="font-medium text-ink">{profession.name}</p>
+      <p className="text-text-muted">Disponible para: {formatAvailableLevels(profession)}</p>
+      <p className="text-text-muted">Potencia: {formatPoweredKpis(profession)}</p>
+      <p className="text-text-muted">Bonus: {PROFESSION_BONUS_LABEL}</p>
     </div>
   );
 }
@@ -73,7 +73,7 @@ export function ProfessionCard({
       : undefined;
 
   return (
-    <div className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
+    <div className="space-y-3 rounded-card border border-border bg-surface p-4">
       {editing && canEditOrDelete && !readOnly ? (
         <form action={updateAction} className="space-y-3">
           <ProfessionFormFields
@@ -93,7 +93,7 @@ export function ProfessionCard({
             <button
               type="button"
               onClick={() => setEditing(false)}
-              className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="rounded-control border border-border-strong px-3 py-2 text-sm"
             >
               Cancelar
             </button>
@@ -103,8 +103,8 @@ export function ProfessionCard({
       ) : (
         <>
           <ProfessionSummary profession={profession} />
-          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3 text-sm">
-            <span className="text-slate-600">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3 text-sm">
+            <span className="text-text-muted">
               {participantCount} participante{participantCount === 1 ? "" : "s"} asignado
               {participantCount === 1 ? "" : "s"}
             </span>
@@ -115,7 +115,7 @@ export function ProfessionCard({
                   disabled={!canEditOrDelete}
                   title={!canEditOrDelete ? lockedReason : undefined}
                   onClick={() => setEditing(true)}
-                  className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-control border border-border-strong px-3 py-2 text-sm font-medium text-ink hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Editar
                 </button>

@@ -8,9 +8,9 @@ export function EconomySummaryPanel({ summary }: { summary: ParticipantEconomySu
   }
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+    <div className="overflow-x-auto rounded-card border border-border bg-surface">
       <table className="w-full text-left text-sm">
-        <thead className="border-b border-slate-200 bg-slate-50 text-slate-600">
+        <thead className="border-b border-border bg-canvas text-text-muted">
           <tr>
             <th className="px-3 py-2 font-medium">Participante</th>
             <th className="px-3 py-2 text-right font-medium">Saldo</th>
@@ -21,11 +21,11 @@ export function EconomySummaryPanel({ summary }: { summary: ParticipantEconomySu
         </thead>
         <tbody>
           {summary.map((row) => (
-            <tr key={row.splitParticipantId} className="border-b border-slate-100">
+            <tr key={row.splitParticipantId} className="border-b border-border">
               <td className="px-3 py-2">{row.alias}</td>
               <td className="px-3 py-2 text-right font-medium">{row.balance}</td>
-              <td className="px-3 py-2 text-right text-green-700">+{row.totalEarned}</td>
-              <td className="px-3 py-2 text-right text-red-700">-{row.totalSpent}</td>
+              <td className="px-3 py-2 text-right text-success">+{row.totalEarned}</td>
+              <td className="px-3 py-2 text-right text-danger-ink">-{row.totalSpent}</td>
               <td className="px-3 py-2 text-right">{row.purchaseCount}</td>
             </tr>
           ))}

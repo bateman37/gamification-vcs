@@ -11,7 +11,7 @@ export function WeekKpiLoadedCount({ summary }: { summary: WeekKpiLoadSummary })
 
   if (totalActiveCount === 0) {
     return (
-      <span className="text-sm text-slate-500" title="Este split no tiene ningun KPI activo.">
+      <span className="text-sm text-text-muted" title="Este split no tiene ningun KPI activo.">
         0/0
       </span>
     );
@@ -23,7 +23,7 @@ export function WeekKpiLoadedCount({ summary }: { summary: WeekKpiLoadSummary })
     : `${loadedCount} de ${totalActiveCount} KPI cargados`;
 
   return (
-    <span className={`text-sm font-medium ${complete ? "text-green-700" : "text-slate-700"}`} title={accessibleText}>
+    <span className={`text-sm font-medium ${complete ? "text-success" : "text-ink"}`} title={accessibleText}>
       {loadedCount}/{totalActiveCount}
       <span className="sr-only"> - {accessibleText}</span>
     </span>

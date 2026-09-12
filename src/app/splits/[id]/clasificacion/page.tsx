@@ -146,7 +146,7 @@ export default async function SplitClassificationPage({
   return (
     <div className="space-y-6">
       <div>
-        <Link href={`/splits/${splitId}`} className="text-sm text-slate-600 underline hover:text-slate-900">
+        <Link href={`/splits/${splitId}`} className="text-sm text-text-muted underline hover:text-ink">
           Volver al split
         </Link>
         <h1 className="mt-2 text-xl font-semibold">Clasificacion detallada individual - {split.name}</h1>
@@ -162,9 +162,9 @@ export default async function SplitClassificationPage({
       {rows.length === 0 ? (
         <EmptyState>No hay datos publicados para este filtro.</EmptyState>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+        <div className="overflow-x-auto rounded-card border border-border bg-surface">
           <table className="w-full text-left text-sm">
-            <thead className="border-b border-slate-200 bg-slate-50 text-slate-600">
+            <thead className="border-b border-border bg-canvas text-text-muted">
               <tr>
                 <th className="px-3 py-2 font-medium">{selectedKpiCode ? "Posicion KPI" : "Posicion"}</th>
                 <th className="px-3 py-2 font-medium">Nombre real</th>
@@ -185,13 +185,13 @@ export default async function SplitClassificationPage({
             </thead>
             <tbody>
               {rows.map((row) => (
-                <tr key={row.splitParticipantId} className="border-b border-slate-100">
+                <tr key={row.splitParticipantId} className="border-b border-border">
                   <td className="px-3 py-2 font-medium">
                     {selectedKpiCode ? (row.kpiRank ?? "—") : row.positionRank} de {splitParticipantCount}
                   </td>
-                  <td className="px-3 py-2 text-slate-600">{row.fullName}</td>
+                  <td className="px-3 py-2 text-text-muted">{row.fullName}</td>
                   <td className="px-3 py-2 font-medium">{row.alias}</td>
-                  <td className="px-3 py-2 text-slate-600">{row.level}</td>
+                  <td className="px-3 py-2 text-text-muted">{row.level}</td>
                   <td className="px-3 py-2 text-center">{row.publishedWeekCount}</td>
                   <td className="px-3 py-2 text-center font-semibold">{formatPoints(row.positionPoints)}</td>
                   <td className="px-3 py-2 text-center">{formatPoints(row.totalKpiPoints)}</td>
@@ -208,7 +208,7 @@ export default async function SplitClassificationPage({
                         {selectedWeek !== "acumulado" && (
                           <Link
                             href={`/splits/${splitId}/weeks/${selectedWeek}/resultados`}
-                            className="text-xs text-slate-600 underline hover:text-slate-900"
+                            className="text-xs text-text-muted underline hover:text-ink"
                           >
                             Ver semana
                           </Link>

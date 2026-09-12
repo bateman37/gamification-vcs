@@ -102,38 +102,38 @@ export default async function WeeklyKpisPage({
   return (
     <div className="space-y-6">
       <div>
-        <Link href={`/splits/${split.id}`} className="text-sm text-slate-600 underline hover:text-slate-900">
+        <Link href={`/splits/${split.id}`} className="text-sm text-text-muted underline hover:text-ink">
           Volver al split
         </Link>
         <h1 className="mt-2 text-xl font-semibold">{split.name}</h1>
-        <p className="mt-1 text-sm text-slate-600">
+        <p className="mt-1 text-sm text-text-muted">
           Semana {week.sequenceNumber} - {formatCalendarDate(week.startDate)} a {formatCalendarDate(week.endDate)}
         </p>
         {split.status === "DRAFT" && (
-          <p className="mt-2 text-sm text-amber-700">Activa el split para introducir KPI.</p>
+          <p className="mt-2 text-sm text-reward-ink">Activa el split para introducir KPI.</p>
         )}
         {split.status === "CLOSED" && (
-          <p className="mt-2 text-sm text-slate-500">El split esta cerrado: solo puedes consultar los KPI.</p>
+          <p className="mt-2 text-sm text-text-muted">El split esta cerrado: solo puedes consultar los KPI.</p>
         )}
         {publication && (
-          <p className="mt-2 text-sm font-medium text-sky-700">
+          <p className="mt-2 text-sm font-medium text-success">
             Semana publicada: los datos estan bloqueados y no se pueden modificar.
           </p>
         )}
       </div>
 
-      <section className="rounded-lg border border-slate-200 bg-white p-4">
+      <section className="rounded-card border border-border bg-surface p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             {location ? (
               <>
-                <p className="text-sm font-semibold text-slate-800">{location.name}</p>
-                <p className="text-sm text-slate-600">
+                <p className="text-sm font-semibold text-ink">{location.name}</p>
+                <p className="text-sm text-text-muted">
                   Potencia: {KPI_CATALOG[location.kpiCode].name} · {locationBonusLabel(location.bonusPercent)}
                 </p>
               </>
             ) : (
-              <p className="text-sm text-slate-500">Esta semana no tiene localizacion.</p>
+              <p className="text-sm text-text-muted">Esta semana no tiene localizacion.</p>
             )}
           </div>
           <div className="flex items-center gap-2">
@@ -141,7 +141,7 @@ export default async function WeeklyKpisPage({
             {locationWindow.editable && (
               <Link
                 href={`/splits/${split.id}/weeks/${week.id}/localizacion`}
-                className="text-sm font-medium text-slate-700 underline hover:text-slate-900"
+                className="text-sm font-medium text-ink underline hover:text-ink"
               >
                 {location ? "Editar" : "Configurar"}
               </Link>
@@ -149,7 +149,7 @@ export default async function WeeklyKpisPage({
             {!locationWindow.editable && location && (
               <Link
                 href={`/splits/${split.id}/weeks/${week.id}/localizacion`}
-                className="text-sm text-slate-600 underline hover:text-slate-900"
+                className="text-sm text-text-muted underline hover:text-ink"
               >
                 Ver
               </Link>
@@ -159,7 +159,7 @@ export default async function WeeklyKpisPage({
       </section>
 
       {activeCatalogEntries.length === 0 ? (
-        <p className="rounded-md border border-dashed border-slate-300 px-4 py-6 text-center text-sm text-slate-500">
+        <p className="rounded-card border border-dashed border-border-strong px-4 py-6 text-center text-sm text-text-muted">
           Este split no tiene ningun KPI activo.
         </p>
       ) : (
@@ -172,20 +172,20 @@ export default async function WeeklyKpisPage({
             const loadHref = group.routeSlug ? `/splits/${split.id}/weeks/${week.id}/kpis/${group.routeSlug}/${loadAction}` : "#";
             const checkHref = group.routeSlug ? `/splits/${split.id}/weeks/${week.id}/kpis/${group.routeSlug}/comprobar` : "#";
             return (
-              <li key={group.key} className="rounded-lg border border-slate-200 bg-white p-4">
+              <li key={group.key} className="rounded-card border border-border bg-surface p-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <h2 className="text-base font-semibold">{group.title}</h2>
-                    <p className="text-sm text-slate-600">{group.kpiNames.join(" y ")}</p>
+                    <p className="text-sm text-text-muted">{group.kpiNames.join(" y ")}</p>
                     {!group.implemented && (
-                      <p className="mt-1 text-xs text-slate-500">Carga todavia no implementada.</p>
+                      <p className="mt-1 text-xs text-text-muted">Carga todavia no implementada.</p>
                     )}
                     {group.key === "ESCALATION_TAMER" && !productivityImportExists && (
-                      <p className="mt-1 text-xs text-amber-700">
+                      <p className="mt-1 text-xs text-reward-ink">
                         Falta Productividad de esta semana.{" "}
                         <Link
                           href={`/splits/${split.id}/weeks/${week.id}/kpis/productividad/cargar`}
-                          className="underline hover:text-amber-900"
+                          className="underline hover:text-reward-ink"
                         >
                           Cargar Productividad
                         </Link>
@@ -198,7 +198,7 @@ export default async function WeeklyKpisPage({
                       {canLoad ? (
                         <Link
                           href={loadHref}
-                          className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700"
+                          className="rounded-control bg-ink px-3 py-1.5 text-sm font-medium text-white hover:bg-ink/90"
                         >
                           {loadLabel}
                         </Link>
@@ -206,7 +206,7 @@ export default async function WeeklyKpisPage({
                         <button
                           type="button"
                           disabled
-                          className="rounded-md bg-slate-200 px-3 py-1.5 text-sm font-medium text-slate-400"
+                          className="rounded-control bg-surface-muted px-3 py-1.5 text-sm font-medium text-text-muted"
                         >
                           {loadLabel}
                         </button>
@@ -214,7 +214,7 @@ export default async function WeeklyKpisPage({
                       {canCheck ? (
                         <Link
                           href={checkHref}
-                          className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                          className="rounded-control border border-border-strong px-3 py-1.5 text-sm font-medium text-ink hover:bg-surface-muted"
                         >
                           Comprobar
                         </Link>
@@ -222,7 +222,7 @@ export default async function WeeklyKpisPage({
                         <button
                           type="button"
                           disabled
-                          className="rounded-md border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-400"
+                          className="rounded-control border border-border px-3 py-1.5 text-sm font-medium text-text-muted"
                         >
                           Comprobar
                         </button>
@@ -237,31 +237,31 @@ export default async function WeeklyKpisPage({
       )}
 
       {activeCatalogEntries.length > 0 && (
-        <section className="rounded-lg border border-slate-200 bg-white p-4">
+        <section className="rounded-card border border-border bg-surface p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-sm font-medium text-slate-700">
+            <p className="text-sm font-medium text-ink">
               KPI cargados: {loadSummary.loadedCount}/{loadSummary.totalActiveCount}
             </p>
             {publication ? (
               <div className="flex items-center gap-2">
-                <span className="rounded-full bg-sky-100 px-2 py-0.5 text-xs font-medium text-sky-800">Semana publicada</span>
-                <Link href={resultsHref} className="text-sm font-medium text-slate-700 underline hover:text-slate-900">
+                <span className="rounded-full bg-success-soft px-2 py-0.5 text-xs font-medium text-success">Semana publicada</span>
+                <Link href={resultsHref} className="text-sm font-medium text-ink underline hover:text-ink">
                   Ver resultados
                 </Link>
               </div>
             ) : isWeekComplete ? (
               <Link
                 href={resultsHref}
-                className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700"
+                className="rounded-control bg-ink px-4 py-2 text-sm font-medium text-white hover:bg-ink/90"
               >
                 Ver resultados de la semana
               </Link>
             ) : (
               <div className="text-right">
-                <button type="button" disabled className="rounded-md bg-slate-200 px-4 py-2 text-sm font-medium text-slate-400">
+                <button type="button" disabled className="rounded-control bg-surface-muted px-4 py-2 text-sm font-medium text-text-muted">
                   Ver resultados de la semana
                 </button>
-                <p className="mt-1 text-xs text-slate-500">
+                <p className="mt-1 text-xs text-text-muted">
                   Completa los {loadSummary.totalActiveCount} KPI activos para poder ver los resultados.
                 </p>
               </div>
