@@ -11,7 +11,7 @@ import { ErrorMessage, FieldError, SubmitButton, SuccessMessage } from "@/compon
 
 function SavePositionPointsButton() {
   const { pending } = useFormStatus();
-  return <SubmitButton pending={pending}>Guardar puntos por posicion</SubmitButton>;
+  return <SubmitButton pending={pending}>Guardar puntos por posición</SubmitButton>;
 }
 
 function fieldErrorMessage(state: PositionPointsActionState, position: number): string | undefined {
@@ -40,13 +40,13 @@ export function PositionPointsSection({
 
   return (
     <section id="puntos-posicion" className="scroll-mt-20 space-y-3">
-      <h2 className="text-lg font-semibold">Puntos por posicion semanal</h2>
+      <h2 className="text-lg font-semibold">Puntos por posición semanal</h2>
       <p className="text-sm text-text-muted">
-        Configura los puntos que recibira cada posicion (1 a 15) al calcular la clasificacion semanal.
+        Configura los puntos que recibirá cada posición (1 a 15) al calcular la clasificación semanal.
       </p>
       {splitStatus === "CLOSED" ? (
         <p className="text-sm text-text-muted">
-          El split esta cerrado: los puntos por posicion se muestran en modo solo lectura.
+          El split está cerrado: los puntos por posición se muestran en modo solo lectura.
         </p>
       ) : (
         locked && (
@@ -81,7 +81,7 @@ export function PositionPointsSection({
                             inputMode="numeric"
                             name={`points__${rule.position}`}
                             defaultValue={rule.points}
-                            aria-label={`Puntos de la posicion ${rule.position}`}
+                            aria-label={`Puntos de la posición ${rule.position}`}
                             aria-invalid={errorMessage ? "true" : undefined}
                             className="w-20 rounded-control border border-border-strong px-2 py-1 text-sm"
                           />
@@ -99,7 +99,7 @@ export function PositionPointsSection({
         {!readOnly && (
           <div className="mt-4 space-y-3">
             {!state.ok && state.error && <ErrorMessage>{state.error}</ErrorMessage>}
-            {state.ok && state.saved && <SuccessMessage>Puntos por posicion guardados correctamente.</SuccessMessage>}
+            {state.ok && state.saved && <SuccessMessage>Puntos por posición guardados correctamente.</SuccessMessage>}
             <SavePositionPointsButton />
           </div>
         )}

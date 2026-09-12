@@ -74,7 +74,7 @@ export function AudienceSelectorForm({
           className="mt-1 w-full rounded-control border border-border-strong bg-surface px-2 py-1.5 text-sm text-ink"
         >
           <option value="SPLIT">Todo el split</option>
-          <option value="FACTION">Una faccion</option>
+          <option value="FACTION">Una facción</option>
           <option value="PERSON">Una persona participante</option>
         </select>
       </div>
@@ -91,7 +91,7 @@ export function AudienceSelectorForm({
             onChange={() => formRef.current?.requestSubmit()}
             className="mt-1 w-full rounded-control border border-border-strong bg-surface px-2 py-1.5 text-sm text-ink"
           >
-            <option value="">Selecciona una faccion</option>
+            <option value="">Selecciona una facción</option>
             {factions.map((faction) => (
               <option key={faction.id} value={faction.id}>
                 {faction.name}

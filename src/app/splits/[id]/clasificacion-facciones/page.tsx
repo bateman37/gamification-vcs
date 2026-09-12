@@ -40,7 +40,7 @@ export default async function FactionClassificationPage({
         </Link>
         <h1 className="mt-2 text-xl font-semibold">Clasificación detallada de facciones - {split.name}</h1>
         <p className="mt-1 text-sm text-text-muted">
-          Renombre = puntos por posicion. La puntuacion semanal de cada faccion es la suma de los tres mejores
+          Renombre = puntos por posición. La puntuación semanal de cada facción es la suma de los tres mejores
           (nunca una media).
         </p>
       </div>
@@ -90,7 +90,7 @@ export default async function FactionClassificationPage({
               </table>
             </div>
           ) : !weekClassification ? (
-            <EmptyState>No hay clasificacion de facciones publicada para esta semana.</EmptyState>
+            <EmptyState>No hay clasificación de facciones publicada para esta semana.</EmptyState>
           ) : (
             <div className="overflow-x-auto rounded-card border border-border bg-surface">
               <table className="w-full text-left text-sm">

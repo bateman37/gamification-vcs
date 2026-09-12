@@ -80,7 +80,7 @@ export function FactionRevealCard({ entry }: { entry: PresentationFaction }) {
         <span aria-hidden className="h-6 w-6 shrink-0 rounded-full border border-white/40" style={{ backgroundColor: entry.color }} />
         <div className="min-w-0 flex-1">
           <p className="truncate text-lg font-semibold">{entry.name}</p>
-          <p className="text-sm text-white/70">Puntuacion de faccion (suma de los tres mejores)</p>
+          <p className="text-sm text-white/70">Puntuación de facción (suma de los tres mejores)</p>
         </div>
         <span className="tabular shrink-0 text-2xl font-bold">{formatPoints(entry.score)}</span>
       </div>

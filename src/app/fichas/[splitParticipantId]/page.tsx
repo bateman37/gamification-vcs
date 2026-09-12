@@ -67,7 +67,7 @@ export default async function CharacterConfigPage({ params }: { params: { splitP
       </div>
 
       <section id="personaje" className="space-y-3">
-        <h2 className="text-lg font-semibold">Alias, avatar y profesion</h2>
+        <h2 className="text-lg font-semibold">Alias, avatar y profesión</h2>
         {character.editable ? (
           <div className="grid grid-cols-1 gap-4 rounded-card border border-border bg-surface p-4 md:grid-cols-2">
             <ProfileAliasForm splitParticipantId={character.splitParticipantId} alias={character.alias} />
@@ -85,7 +85,7 @@ export default async function CharacterConfigPage({ params }: { params: { splitP
           </div>
         ) : (
           <p className="rounded-card border border-border bg-surface p-4 text-sm text-text-muted">
-            El split esta cerrado: esta ficha es de solo lectura.
+            El split está cerrado: esta ficha es de solo lectura.
           </p>
         )}
       </section>
@@ -117,14 +117,14 @@ export default async function CharacterConfigPage({ params }: { params: { splitP
           </div>
           <div>
             <dt className="text-xs text-text-muted">Moneda actual</dt>
-            <dd className="font-medium">{character.balance} creditos</dd>
+            <dd className="font-medium">{character.balance} créditos</dd>
           </div>
           <div>
             <dt className="text-xs text-text-muted">Total puntos KPI oficiales</dt>
             <dd className="font-medium">{character.totalOfficialKpiPoints.toFixed(2)}</dd>
           </div>
           <div>
-            <dt className="text-xs text-text-muted">Total puntos de posicion</dt>
+            <dt className="text-xs text-text-muted">Total puntos de posición</dt>
             <dd className="font-medium">{character.totalPositionPoints}</dd>
           </div>
           <div>

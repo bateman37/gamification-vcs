@@ -9,7 +9,7 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-app", display: "swap
 
 export const metadata: Metadata = {
   title: "Gamification VCS",
-  description: "Administracion de gamificaciones periodicas del equipo de Customer Service.",
+  description: "Administración de gamificaciones periódicas del equipo de Customer Service.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

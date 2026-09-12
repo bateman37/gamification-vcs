@@ -13,7 +13,7 @@ export function HistoryPanel({ ledger, weekLocations }: { ledger: LedgerEntryVie
   return (
     <div className="space-y-6">
       <div>
-        <h4 className="text-sm font-semibold text-ink">Movimientos de creditos</h4>
+        <h4 className="text-sm font-semibold text-ink">Movimientos de créditos</h4>
         {ledger.length === 0 ? (
           <EmptyState>Todavía no tienes ningún movimiento.</EmptyState>
         ) : (
@@ -44,7 +44,7 @@ export function HistoryPanel({ ledger, weekLocations }: { ledger: LedgerEntryVie
               <li key={row.weekSequenceNumber} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
                 <span>{formatCalendarDateEs(row.weekStartDate)}</span>
                 <span className="text-text-muted">
-                  {row.location ? `${row.location.name} · ${row.location.kpiName} · +${row.location.bonusPercent} %` : "Sin localizacion"}
+                  {row.location ? `${row.location.name} · ${row.location.kpiName} · +${row.location.bonusPercent} %` : "Sin localización"}
                 </span>
               </li>
             ))}

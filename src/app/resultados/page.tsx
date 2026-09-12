@@ -49,7 +49,7 @@ export default async function ResultadosPage({
     <div className="space-y-6">
       <div>
         <h1 className="text-xl font-semibold">Resultados</h1>
-        <p className="text-sm text-text-muted">Evolucion y clasificacion a partir de las semanas publicadas.</p>
+        <p className="text-sm text-text-muted">Evolución y clasificación a partir de las semanas publicadas.</p>
       </div>
 
       {isAdmin && <PersonSelector persons={persons} selectedPersonId={personId} gamificationMode={gamificationMode} />}

@@ -21,7 +21,7 @@ export function InventoryPanel({ items }: { items: OwnedItemView[] }) {
             {item.kpiName} · +{item.bonusPercent} %
           </p>
           <p className="text-xs text-text-muted">
-            Comprado el {formatCalendarDateEs(item.acquiredAt)} por {item.priceCredits} creditos.
+            Comprado el {formatCalendarDateEs(item.acquiredAt)} por {item.priceCredits} créditos.
           </p>
         </li>
       ))}

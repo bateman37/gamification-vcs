@@ -20,7 +20,7 @@ export function LoginForm() {
     setPending(false);
 
     if (!result || result.error) {
-      setError("Correo o contrasena incorrectos, o la cuenta esta desactivada.");
+      setError("Correo o contraseña incorrectos, o la cuenta está desactivada.");
       return;
     }
     router.push("/");

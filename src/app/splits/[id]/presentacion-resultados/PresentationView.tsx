@@ -181,12 +181,12 @@ export function PresentationView({ splitId, data }: { splitId: string; data: Spl
 
   const liveMessage = useMemo(() => {
     if (phase === "cover") return `${data.splitName}: presentacion lista para comenzar.`;
-    if (phase === "summary") return "Resumen final de la clasificacion general.";
+    if (phase === "summary") return "Resumen final de la clasificación general.";
     if (revealedCount === 0) return `${PHASE_TITLES[phase]}: sin revelar todavía.`;
     const group = currentGroups[revealedCount - 1] ?? [];
     const rank = group[0]?.rank;
     const names = group.map((entry) => ("alias" in entry ? entry.alias : entry.name)).join(", ");
-    return `Se revela la posicion ${rank}: ${names}.`;
+    return `Se revela la posición ${rank}: ${names}.`;
   }, [phase, revealedCount, currentGroups, data.splitName]);
 
   return (
@@ -248,7 +248,7 @@ export function PresentationView({ splitId, data }: { splitId: string; data: Spl
                     <ParticipantRevealCard
                       key={entry.splitParticipantId}
                       entry={entry}
-                      pointsLabel={phase === "weekly-individual" ? "Puntos KPI de la semana" : "Puntos por posicion acumulados"}
+                      pointsLabel={phase === "weekly-individual" ? "Puntos KPI de la semana" : "Puntos por posición acumulados"}
                     />
                   ) : (
                     <FactionRevealCard key={`${groupIndex}-${entry.factionId}`} entry={entry} />

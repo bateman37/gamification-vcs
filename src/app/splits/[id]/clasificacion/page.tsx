@@ -171,7 +171,7 @@ export default async function SplitClassificationPage({
                 <th className="px-3 py-2 font-medium">Alias</th>
                 <th className="px-3 py-2 font-medium">Nivel</th>
                 <th className="px-3 py-2 text-center font-medium">Semanas publicadas</th>
-                {sortHeader("posicion", "Puntos por posicion")}
+                {sortHeader("posicion", "Puntos por posición")}
                 {sortHeader("totalKpi", "Total KPI")}
                 {selectedKpiCode && (
                   <>

@@ -52,7 +52,7 @@ export default async function AdministrarNoticiasPage({
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Enviar noticia" description="Mensaje manual segmentado por split, faccion o persona (seccion 40 del encargo)." />
+      <PageHeader title="Enviar noticia" description="Mensaje manual segmentado por split, facción o persona (sección 40 del encargo)." />
 
       <Card className="space-y-4">
         <SectionHeader title="Destinatarios" />

@@ -59,7 +59,7 @@ export default async function NoticiasPage({
     <div className="space-y-6">
       <PageHeader
         title="Noticias"
-        description="Novedades de tus splits: publicaciones, mercado, facciones, profesiones y avisos de administracion."
+        description="Novedades de tus splits: publicaciones, mercado, facciones, profesiones y avisos de administración."
         actions={
           session.user.role === "ADMIN" ? (
             <LinkButton href="/noticias/administrar" variant="primary">

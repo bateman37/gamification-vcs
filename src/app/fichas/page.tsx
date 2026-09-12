@@ -22,9 +22,9 @@ export default async function FichasPage() {
       <div className="space-y-6">
         <div>
           <h1 className="text-xl font-semibold">Fichas</h1>
-          <p className="text-sm text-text-muted">Tu alias, tu profesion y tu avatar en cada split.</p>
+          <p className="text-sm text-text-muted">Tu alias, tu profesión y tu avatar en cada split.</p>
         </div>
-        <EmptyState>Tu cuenta no esta vinculada a ninguna persona. Contacta con un administrador.</EmptyState>
+        <EmptyState>Tu cuenta no está vinculada a ninguna persona. Contacta con un administrador.</EmptyState>
       </div>
     );
   }
@@ -37,7 +37,7 @@ export default async function FichasPage() {
       <div>
         <h1 className="text-xl font-semibold">Fichas</h1>
         <p className="text-sm text-text-muted">
-          Una ficha por cada split en el que participas: alias, profesion y avatar son propios de cada split.
+          Una ficha por cada split en el que participas: alias, profesión y avatar son propios de cada split.
         </p>
       </div>
 

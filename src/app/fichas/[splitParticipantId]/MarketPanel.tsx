@@ -80,7 +80,7 @@ export function MarketPanel({
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-3">
         <Badge tone={marketStatus === "OPEN" ? "green" : "gray"}>{marketStatus === "OPEN" ? "Mercado abierto" : "Mercado cerrado"}</Badge>
-        <span className="text-sm font-medium text-ink">Saldo disponible: {balance} creditos</span>
+        <span className="text-sm font-medium text-ink">Saldo disponible: {balance} créditos</span>
       </div>
       {marketStatus === "CLOSED" && (
         <p className="text-sm text-text-muted">El mercado esta cerrado: puedes ver el catalogo, pero no comprar.</p>
@@ -103,7 +103,7 @@ export function MarketPanel({
                 {item.kpiName} · +{item.bonusPercent} %
               </p>
               {item.description && <p className="text-text-muted">{item.description}</p>}
-              <p className="font-medium text-ink">{item.priceCredits} creditos</p>
+              <p className="font-medium text-ink">{item.priceCredits} créditos</p>
               {item.status === "DISPONIBLE" && <BuyForm splitParticipantId={splitParticipantId} item={item} />}
             </li>
           ))}

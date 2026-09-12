@@ -78,7 +78,7 @@ export function ProfileAvatarForm({
           className="block w-full text-sm text-text-muted file:mr-3 file:rounded-control file:border file:border-border-strong file:bg-surface file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-ink"
         />
         <p className="text-xs text-text-muted">
-          JPEG, PNG o WebP. Máximo 5 MB. La imagen se recorta a {AVATAR_MAX_DIMENSION} px como maximo por lado, se elimina
+          JPEG, PNG o WebP. Máximo 5 MB. La imagen se recorta a {AVATAR_MAX_DIMENSION} px como máximo por lado, se elimina
           su informacion EXIF y se guarda en formato WebP.
         </p>
         {previewUrl && (

@@ -97,9 +97,9 @@ export default async function SplitDetailPage({ params }: { params: { id: string
     { href: "#profesiones", label: "Profesiones", icon: "Briefcase" },
     { href: "#economia", label: "Economía y mercado", icon: "Store" },
     { href: "#participantes", label: "Participantes", icon: "Users" },
-    ...(showAddParticipant ? [{ href: "#anadir-participante", label: "Anadir participante", icon: "UserPlus" }] : []),
+    ...(showAddParticipant ? [{ href: "#anadir-participante", label: "Añadir participante", icon: "UserPlus" }] : []),
     { href: "#kpi-configuracion", label: "KPI del split", icon: "SlidersHorizontal" },
-    { href: "#puntos-posicion", label: "Puntos por posicion semanal", icon: "ListOrdered" },
+    { href: "#puntos-posicion", label: "Puntos por posición semanal", icon: "ListOrdered" },
     ...(split.status === "DRAFT" ? [{ href: "#editar-split", label: "Editar split", icon: "Settings" }] : []),
   ];
 
@@ -121,7 +121,7 @@ export default async function SplitDetailPage({ params }: { params: { id: string
           <p className="mt-2 text-sm text-text-muted">
             KPI activos: {activeKpiCount} de {TOTAL_KPI_COUNT}.{" "}
             <a href="#kpi-configuracion" className="underline hover:text-ink">
-              Ir a la configuracion de KPI
+              Ir a la configuración de KPI
             </a>
           </p>
           {activeKpiCount === 0 && (

@@ -59,7 +59,7 @@ export function LimitedFactionClassificationTable({
                     <span className="inline-flex items-center gap-1.5">
                       <span aria-hidden className="h-3 w-3 rounded-full border border-border-strong" style={{ backgroundColor: entry.color }} />
                       {entry.name}
-                      {isSelf && <span className="ml-1 text-xs text-reward-ink">(tu faccion)</span>}
+                      {isSelf && <span className="ml-1 text-xs text-reward-ink">(tu facción)</span>}
                     </span>
                   </td>
                   {weeks.map((week) => (
@@ -82,7 +82,7 @@ export function LimitedFactionClassificationTable({
               <tr>
                 <th className="px-3 py-2 font-medium">Pos.</th>
                 <th className="px-3 py-2 font-medium">Facción</th>
-                <th className="px-3 py-2 font-medium">Los tres que puntuaron (Renombre = puntos por posicion)</th>
+                <th className="px-3 py-2 font-medium">Los tres que puntuaron (Renombre = puntos por posición)</th>
                 <th className="px-3 py-2 text-center font-medium">Suma semanal</th>
               </tr>
             </thead>
