@@ -207,7 +207,7 @@ export function AddParticipantForm({
             id="startWeekSequenceNumber"
             name="startWeekSequenceNumber"
             defaultValue="1"
-            aria-describedby={splitStatus === "ACTIVE" ? "startWeekSequenceNumber-help" : undefined}
+            aria-describedby="startWeekSequenceNumber-help"
             className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
           >
             {weeks.map((week) => (
@@ -224,11 +224,12 @@ export function AddParticipantForm({
         </div>
       </div>
 
-      {splitStatus === "ACTIVE" && (
-        <p id="startWeekSequenceNumber-help" className="text-xs text-slate-500">
-          * En un split activo, indica desde que semana empieza a competir esta persona.
-        </p>
-      )}
+      {/* Fix (`0.8.5` / MVP-2C): esta nota debe mostrarse siempre, con "Persona existente" y con
+          "Nueva persona", porque el label "Semana inicial *" conserva el asterisco en ambos modos y
+          sin depender del estado del split; antes solo aparecia cuando splitStatus === "ACTIVE". */}
+      <p id="startWeekSequenceNumber-help" className="text-xs text-slate-500">
+        * En un split activo, indica desde que semana empieza a competir esta persona.
+      </p>
 
       {!state.ok && state.error && <ErrorMessage>{state.error}</ErrorMessage>}
       {state.ok && <SuccessMessage>Participante anadido correctamente.</SuccessMessage>}
