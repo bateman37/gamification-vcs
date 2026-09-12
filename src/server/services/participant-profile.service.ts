@@ -5,6 +5,8 @@ import { isProfessionAvailableForLevel } from "@/domain/profession-bonus";
 import { toProfessionView, type ProfessionView } from "@/domain/profession-display";
 import { processAvatarImage } from "@/server/services/avatar-image";
 import { splitHasAnyPublication } from "@/server/services/profession.service";
+import { listActiveWeekLocationsForSplits } from "@/server/services/location.service";
+import { locationBonusLabel } from "@/domain/location-bonus";
 
 /**
  * Fichas privadas de participante (`0.8.0` / MVP-2B, ver
@@ -45,6 +47,23 @@ export interface ProfileCard {
   avatarVersion: string | null;
   /** `true` si el split tiene alguna semana publicada (para enlazar a los resultados). */
   hasPublishedResults: boolean;
+  /**
+   * Localizacion activa esta semana (`0.8.5` / MVP-2C, ver
+   * docs/WEEKLY_LOCATIONS.md). `null` si el split no esta `ACTIVE`, la
+   * semana actual no tiene localizacion, o el participante todavia no se
+   * ha incorporado esa semana. Es de solo lectura: la ficha no permite
+   * cambiarla.
+   */
+  activeLocation: ProfileActiveLocation | null;
+}
+
+export interface ProfileActiveLocation {
+  name: string;
+  kpiName: string;
+  bonusPercent: number;
+  bonusLabel: string;
+  startDate: Date;
+  endDate: Date;
 }
 
 const SPLIT_STATUS_ORDER: Record<SplitStatus, number> = { ACTIVE: 0, DRAFT: 1, CLOSED: 2 };
@@ -66,9 +85,11 @@ export async function listProfileCardsForPerson(db: Db, personId: string): Promi
   if (participations.length === 0) return [];
 
   const splitIds = Array.from(new Set(participations.map((participation) => participation.splitId)));
-  const [professions, publications] = await Promise.all([
+  const [professions, publications, activeLocationsBySplit] = await Promise.all([
     db.splitProfession.findMany({ where: { splitId: { in: splitIds } }, orderBy: { name: "asc" } }),
     db.weekPublication.findMany({ where: { splitWeek: { splitId: { in: splitIds } } }, select: { splitWeek: { select: { splitId: true } } } }),
+    // Una sola consulta para todos los splits de esta persona (seccion 23 y 29 del encargo: nunca N+1 por ficha).
+    listActiveWeekLocationsForSplits(db, splitIds),
   ]);
 
   const professionsBySplit = new Map<string, typeof professions>();
@@ -83,6 +104,26 @@ export async function listProfileCardsForPerson(db: Db, personId: string): Promi
     .map((participation) => {
       const splitProfessions = professionsBySplit.get(participation.splitId) ?? [];
       const hasPublications = publishedSplitIds.has(participation.splitId);
+
+      // Solo splits ACTIVE pueden tener una localizacion activa (seccion 22 del encargo); un
+      // participante que todavia no se ha incorporado esa semana nunca la recibe como bonus propio.
+      const activeLocationForSplit = participation.split.status === "ACTIVE" ? activeLocationsBySplit.get(participation.splitId) : undefined;
+      const isApplicableThisWeek =
+        activeLocationForSplit !== undefined &&
+        participation.startWeekSequenceNumber <= activeLocationForSplit.weekSequenceNumber &&
+        (participation.endWeekSequenceNumber === null || participation.endWeekSequenceNumber >= activeLocationForSplit.weekSequenceNumber);
+      const activeLocation: ProfileActiveLocation | null =
+        activeLocationForSplit && isApplicableThisWeek
+          ? {
+              name: activeLocationForSplit.name,
+              kpiName: activeLocationForSplit.kpiName,
+              bonusPercent: activeLocationForSplit.bonusPercent,
+              bonusLabel: locationBonusLabel(activeLocationForSplit.bonusPercent),
+              startDate: activeLocationForSplit.weekStartDate,
+              endDate: activeLocationForSplit.weekEndDate,
+            }
+          : null;
+
       return {
         splitParticipantId: participation.id,
         splitId: participation.splitId,
@@ -101,6 +142,7 @@ export async function listProfileCardsForPerson(db: Db, personId: string): Promi
         editable: participation.split.status !== "CLOSED",
         avatarVersion: participation.avatar?.sha256 ?? null,
         hasPublishedResults: hasPublications,
+        activeLocation,
       } satisfies ProfileCard;
     })
     .sort(

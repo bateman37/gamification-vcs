@@ -127,6 +127,7 @@ model SplitWeek {
   studentEntries           StudentWeeklyEntry[]
   apprenticeEntries        ApprenticeWeeklyEntry[]
   publication              WeekPublication?
+  location                 SplitWeekLocation?
 
   @@unique([splitId, sequenceNumber])
 }
@@ -604,11 +605,49 @@ model WeekPublication {
   splitWeekId       String   @unique
   publishedAt       DateTime @default(now())
   publishedByUserId String?
-  createdAt         DateTime @default(now())
+  /// Localizacion semanal congelada (`0.8.5` / MVP-2C, ver
+  /// docs/WEEKLY_LOCATIONS.md). Los cuatro campos son `null` cuando la
+  /// semana no tenia localizacion o en publicaciones anteriores a esta
+  /// version: nunca se completan retroactivamente. Como la localizacion es
+  /// unica y comun a toda la semana, se congela una sola vez aqui en vez de
+  /// repetirla en cada fila de participante.
+  locationId                   String?
+  locationNameSnapshot         String?
+  locationKpiCodeSnapshot      KpiCode?
+  locationBonusPercentSnapshot Int?
+  createdAt                    DateTime @default(now())
 
   splitWeek          SplitWeek                          @relation(fields: [splitWeekId], references: [id], onDelete: Restrict)
   publishedByUser    User?                              @relation(fields: [publishedByUserId], references: [id])
+  // SetNull defensivo: una localizacion referenciada por una publicacion nunca deberia poder
+  // borrarse (la ventana temporal ya lo impide), pero si ocurriera no debe arrastrar la publicacion.
+  location           SplitWeekLocation?                 @relation(fields: [locationId], references: [id], onDelete: SetNull)
   participantResults PublishedParticipantWeeklyResult[]
+}
+
+/// Localizacion semanal (`0.8.5` / MVP-2C, ver docs/WEEKLY_LOCATIONS.md):
+/// capa de juego opcional, con cero o una localizacion por `SplitWeek`.
+/// Afecta por igual a todos los participantes aplicables de la semana en un
+/// unico KPI activo, con un bonus posterior al maximo base (igual que la
+/// profesion, pero sin encadenarse con ella). No hay catalogo global: cada
+/// semana declara su propio nombre, KPI y porcentaje.
+model SplitWeekLocation {
+  id        String   @id @default(uuid())
+  /// Como mucho una localizacion por semana: la identidad funcional siempre
+  /// es `splitWeekId`, nunca un numero de semana ISO ni un texto libre.
+  splitWeekId String @unique
+  name        String
+  /// KPI potenciado. Debe estar activo en el split al crear o editar la
+  /// localizacion (comprobado en servicio, no solo en el selector).
+  kpiCode     KpiCode
+  /// Porcentaje del bonus: unicamente 10, 20, 30, 40 o 50 (restriccion de
+  /// base de datos `SplitWeekLocation_bonusPercent_allowed_check`).
+  bonusPercent Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  splitWeek    SplitWeek         @relation(fields: [splitWeekId], references: [id], onDelete: Cascade)
+  publications WeekPublication[]
 }
 
 /// Fila congelada de un participante en una semana publicada: nombre,
@@ -701,6 +740,13 @@ model PublishedKpiResult {
   /// Nombre de la profesion que produjo el bonus, congelado para poder
   /// explicar el efecto sin consultar la definicion actual.
   professionNameSnapshot    String?
+  /// Puntos anadidos por la localizacion semanal (`0.8.5` / MVP-2C, ver
+  /// docs/WEEKLY_LOCATIONS.md), calculados sobre el mismo
+  /// `basePointsBeforeProfession` que la profesion, nunca encadenados entre
+  /// si. `null` en publicaciones anteriores; `0` cuando no aplica.
+  locationBonusPoints       Decimal?                  @db.Decimal(14, 4)
+  /// `true` solo si el bonus de localizacion se aplico realmente a este KPI.
+  locationApplied           Boolean                   @default(false)
   kpiRank                   Int?
   rankedParticipantCount    Int?
   createdAt                 DateTime                  @default(now())

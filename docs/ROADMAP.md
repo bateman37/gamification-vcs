@@ -268,11 +268,50 @@ satisfactorias.
 - Fuera de alcance: localizaciones, objetos, economia de creditos,
   misiones, fichas en PDF y cualquier otra capa de juego (ver mas abajo).
 
+## `0.8.5` / MVP-2C — Localizaciones semanales
+
+**Estado: completado.**
+
+- **Localizaciones semanales configurables** (`SplitWeekLocation`),
+  opcionales igual que facciones y profesiones: cero o una por
+  `SplitWeek`, con nombre, un unico KPI potenciado (debe estar activo en
+  el split) y un bonus entre `10 %`/`20 %`/`30 %`/`40 %`/`50 %`. Sin
+  catalogo global ni entidad reutilizable entre semanas.
+- **Ventana temporal editable solo antes de `startDate`**
+  (`resolveWeekLocationWindow`, funcion pura con fecha inyectada,
+  `src/domain/location-window.ts`): bloqueada desde que la semana
+  comienza, y siempre de solo lectura en una semana publicada o en un
+  split `CLOSED`. El miercoles es la operativa habitual esperada, nunca
+  una restriccion tecnica por dia de la semana. `findNextWeek` destaca la
+  proxima semana sin localizacion como accion principal del calendario.
+- **Bloqueo de consistencia con KPI:** no se puede desactivar un KPI
+  usado por una localizacion futura; el mensaje identifica la semana
+  afectada y la localizacion no se borra ni se cambia en silencio.
+- **Bonus independiente y no encadenado con la profesion**
+  (`applyLocationBonus`, `src/domain/location-bonus.ts`): ambos actuan
+  sobre el mismo `baseFinalPoints` y se suman una sola vez
+  (`70 + 20 % + 30 % = 105`, nunca `109,20`). Nunca se aplica a
+  `VAC`/`AVISO`, `No aplica`, cero ni negativos; `applicableMaxPoints`
+  sigue sumando maximos base (hasta `170 %` visual con ambos bonus).
+- **Instantanea publicada ampliada:** localizacion de la semana congelada
+  una sola vez en `WeekPublication` (nombre, KPI, porcentaje) y desglose
+  por KPI en `PublishedKpiResult` (`locationBonusPoints`,
+  `locationApplied`). Ninguna publicacion anterior se recalcula.
+- **Visibilidad completa:** columna `Localizacion` en el calendario de
+  semanas, tarjeta en la pantalla semanal de KPI, desglose en
+  previsualizacion/publicacion, tarjeta `Localizacion activa esta semana`
+  en `/fichas` (solo lectura, resuelta desde `session.user.personId`) y
+  desglose en `/resultados` (por split e historico general).
+- **Minicorreccion:** la nota del asterisco de `Semana inicial *` en
+  `Añadir participante` se muestra siempre, en los dos modos de alta.
+- Detalle completo en `docs/WEEKLY_LOCATIONS.md`.
+- Fuera de alcance: objetos, economia de creditos, misiones y cualquier
+  otra capa de juego (ver mas abajo).
+
 ## Capas posteriores (fuera de alcance por ahora)
 
 **Estado: pendiente**, documentadas unicamente para no perder contexto:
 
-- Localizaciones, con bonus semanales.
 - Objetos permanentes y efectos acumulables.
 - Economia: creditos equivalentes a puntos KPI, compras y saldo.
 - Renombre derivado de la posicion semanal, y ajustes de juego.

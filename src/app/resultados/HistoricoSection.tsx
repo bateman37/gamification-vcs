@@ -84,6 +84,11 @@ export async function HistoricoSection({
                               +{formatPoints(cell.professionBonusSum)} por profesion
                             </div>
                           )}
+                          {cell.locationBonusSum > 0 && (
+                            <div className="text-xs font-medium text-teal-800">
+                              +{formatPoints(cell.locationBonusSum)} localizacion
+                            </div>
+                          )}
                         </td>
                       );
                     })}
@@ -93,6 +98,11 @@ export async function HistoricoSection({
                       {group.professionBonusSum > 0 && (
                         <span className="block text-xs font-medium text-indigo-800">
                           Bonus profesion: {formatPoints(group.professionBonusSum)}
+                        </span>
+                      )}
+                      {group.locationBonusSum > 0 && (
+                        <span className="block text-xs font-medium text-teal-800">
+                          +{formatPoints(group.locationBonusSum)} localizacion
                         </span>
                       )}
                     </td>

@@ -1,4 +1,4 @@
-# Modelo de datos — MVP-1A a `0.8.0` / MVP-2B
+# Modelo de datos — MVP-1A a `0.8.5` / MVP-2C
 
 Fuente de verdad: `prisma/schema.prisma` y las migraciones
 `prisma/migrations/20260910133815_init/migration.sql` (MVP-1A),
@@ -18,7 +18,9 @@ Fuente de verdad: `prisma/schema.prisma` y las migraciones
 `prisma/migrations/20260911205212_add_factions/migration.sql`
 (`0.7.0` / MVP-2A) y
 `prisma/migrations/20260911222334_add_professions_and_participant_profiles/migration.sql`
-(`0.8.0` / MVP-2B). Este documento describe y explica ese esquema; en caso
+(`0.8.0` / MVP-2B) y
+`prisma/migrations/20260912003932_add_weekly_locations/migration.sql`
+(`0.8.5` / MVP-2C). Este documento describe y explica ese esquema; en caso
 de discrepancia, el esquema real manda.
 
 ## Diagrama entidad-relacion
@@ -61,6 +63,8 @@ erDiagram
     SplitWeek ||--o{ ApprenticeWeeklyEntry : "tiene entrada"
     SplitParticipant ||--o{ ApprenticeWeeklyEntry : "tiene fila en"
     Person ||--o| User : "tiene cuenta"
+    SplitWeek ||--o| SplitWeekLocation : "tiene localizacion"
+    SplitWeekLocation ||--o{ WeekPublication : "congelada en"
     SplitWeek ||--o| WeekPublication : "tiene publicacion"
     User ||--o{ WeekPublication : "publica"
     WeekPublication ||--o{ PublishedParticipantWeeklyResult : "contiene"
@@ -86,7 +90,21 @@ erDiagram
         string splitWeekId FK "unico: una publicacion por semana"
         datetime publishedAt
         string publishedByUserId FK "opcional"
+        string locationId FK "opcional; localizacion congelada (0.8.5)"
+        string locationNameSnapshot "opcional, congelado al publicar"
+        enum locationKpiCodeSnapshot "opcional, congelado al publicar"
+        int locationBonusPercentSnapshot "opcional, 10/20/30/40/50 cuando existe"
         datetime createdAt
+    }
+
+    SplitWeekLocation {
+        string id PK
+        string splitWeekId FK "unico: como mucho una localizacion por semana"
+        string name
+        enum kpiCode "catalogo cerrado; debe estar activo en el split"
+        int bonusPercent "10, 20, 30, 40 o 50"
+        datetime createdAt
+        datetime updatedAt
     }
 
     PublishedParticipantWeeklyResult {
@@ -129,6 +147,8 @@ erDiagram
         decimal professionBonusPoints "opcional; puntos anadidos por la profesion"
         boolean professionApplied "si el bonus se aplico realmente a este KPI"
         string professionNameSnapshot "opcional, congelado al publicar"
+        decimal locationBonusPoints "opcional; puntos anadidos por la localizacion (0.8.5)"
+        boolean locationApplied "si el bonus de localizacion se aplico realmente a este KPI"
         int kpiRank "opcional, mayor o igual que 1"
         int rankedParticipantCount "opcional"
         datetime createdAt
@@ -736,10 +756,42 @@ entradas de esa semana (ver `docs/RESULTS_PUBLICATION.md`).
 - `publishedAt`: fecha/hora de la publicacion.
 - `publishedByUserId`: referencia opcional a `User` (`onDelete: SetNull`),
   para conservar el historial de quien publico cuando sea posible.
+- `locationId`, `locationNameSnapshot`, `locationKpiCodeSnapshot`,
+  `locationBonusPercentSnapshot` (`0.8.5` / MVP-2C, ver
+  `docs/WEEKLY_LOCATIONS.md`): localizacion de la semana congelada al
+  publicar. Los cuatro campos son opcionales: `null` cuando la semana no
+  tenia localizacion o en publicaciones anteriores a esta version, que
+  nunca se completan retroactivamente. Como la localizacion es unica y
+  comun a toda la semana, se congela una sola vez aqui (no se repite en
+  cada fila de participante). `locationId` es una referencia opcional a
+  `SplitWeekLocation` con `onDelete: SetNull` (defensivo: la ventana
+  temporal ya impide borrar una localizacion referenciada por una
+  publicacion).
 
 `WeekPublication` es la unica fuente de verdad de que una semana esta
 publicada: no se mezcla con `SplitStatus.CLOSED`, que sigue cerrando el
 split completo. No existe "despublicar" ni "reabrir" en esta entrega.
+
+### `SplitWeekLocation` (`0.8.5` / MVP-2C)
+
+Localizacion semanal (ver `docs/WEEKLY_LOCATIONS.md`). Capa opcional: una
+semana sin localizacion se comporta exactamente como en `0.8.0`.
+
+- `id`: UUID, clave primaria.
+- `splitWeekId`: referencia **unica** a `SplitWeek` (`onDelete: Cascade`,
+  igual que las entradas manuales semanales): como mucho una localizacion
+  por semana. El split se deduce siempre via `splitWeek.splitId`, sin
+  duplicar `splitId` en esta tabla.
+- `name`: obligatorio, recortado de espacios exteriores, maximo 80
+  caracteres.
+- `kpiCode`: enum `KpiCode` del catalogo cerrado; debe estar activo en el
+  split al crear o editar la localizacion (comprobado en servicio).
+- `bonusPercent`: `Int`, restringido en base de datos
+  (`SplitWeekLocation_bonusPercent_allowed_check`) a exactamente `10`,
+  `20`, `30`, `40` o `50`.
+- No se borra ni se cambia en silencio si el KPI que potencia se
+  desactiva: `updateKpiConfig` rechaza esa desactivacion mientras exista
+  una localizacion **futura** que lo use (ver `docs/WEEKLY_LOCATIONS.md`).
 
 ### `PublishedParticipantWeeklyResult` y `PublishedKpiResult` (`0.6.0` / MVP-1C)
 
@@ -793,9 +845,17 @@ nunca modifica estas filas.
   `PublishedParticipantWeeklyResult_professionId_idx`.
 - `PublishedKpiResult.basePointsBeforeProfession`,
   `professionBonusPoints`, `professionApplied` y `professionNameSnapshot`
-  (`0.8.0` / MVP-2B): desglose congelado del bonus de cada KPI.
-  `finalPoints` sigue siendo el valor definitivo y desde `0.8.0` ya incluye
-  el bonus; en publicaciones anteriores coincide con los puntos tras el
+  (`0.8.0` / MVP-2B): desglose congelado del bonus de profesion de cada
+  KPI. Desde `0.8.5` / MVP-2C, `basePointsBeforeProfession` es tambien la
+  base anterior al bonus de localizacion (no se ha renombrado: sigue
+  siendo la unica fuente numerica persistida para ese concepto, ver
+  `docs/WEEKLY_LOCATIONS.md`).
+  `PublishedKpiResult.locationBonusPoints` y `locationApplied` (`0.8.5` /
+  MVP-2C) son el desglose congelado del bonus de localizacion, calculado
+  de forma independiente sobre esa misma base, nunca encadenado con el de
+  profesion. `finalPoints` sigue siendo el valor definitivo
+  (`baseFinalPoints + professionBonusPoints + locationBonusPoints`); en
+  publicaciones anteriores a `0.8.0` coincide con los puntos tras el
   maximo base, porque entonces no existia ningun bonus.
 
 ## Decisiones sobre fechas
@@ -810,6 +870,13 @@ nunca modifica estas filas.
   en domingo (o viceversa) por la zona horaria del proceso.
 - La generacion de semanas (`generateSplitWeeks`) es una funcion pura que
   no depende de la hora actual ni de la zona horaria del servidor.
+- `currentCalendarDate()` (`0.8.5` / MVP-2C) obtiene "hoy" como fecha de
+  calendario UTC, para comparar con `SplitWeek.startDate`/`endDate` (ver
+  `docs/WEEKLY_LOCATIONS.md`). Acepta un `now` opcional para que la
+  logica que la usa (`resolveWeekLocationWindow`, `findNextWeek`,
+  `src/domain/location-window.ts`) siga siendo una funcion pura y
+  comprobable con una fecha inyectada, nunca con el reloj real ni
+  `sleep`.
 
 ## Backfill de splits existentes (`MVP-1B`)
 
@@ -832,11 +899,13 @@ tenga que redescubrirlas:
 - Despublicar/reabrir una semana ya publicada, o cierre irreversible de un
   split completo (`SplitStatus.CLOSED` ya existe, pero no se activa
   automaticamente).
-- Localizaciones, objetos y economia de creditos. Las facciones se
+- Objetos permanentes y economia de creditos. Las facciones se
   implementaron en `0.7.0` / MVP-2A (`SplitFaction`, ver
-  `docs/FACTIONS.md`) y las profesiones en `0.8.0` / MVP-2B
-  (`SplitProfession`, ver `docs/PROFESSIONS_AND_PROFILES.md`); "renombre"
-  no es una entidad propia, es `positionPoints` ya existente.
+  `docs/FACTIONS.md`), las profesiones en `0.8.0` / MVP-2B
+  (`SplitProfession`, ver `docs/PROFESSIONS_AND_PROFILES.md`) y las
+  localizaciones semanales en `0.8.5` / MVP-2C (`SplitWeekLocation`, ver
+  `docs/WEEKLY_LOCATIONS.md`); "renombre" no es una entidad propia, es
+  `positionPoints` ya existente.
 
 Con `0.6.0` / MVP-1C, ademas de los diez origenes de datos de KPI
 (`ProductivityImport`/`ProductivityWeeklyRow`,
@@ -861,3 +930,11 @@ desde `SplitParticipant` y su snapshot en
 propia ni contador persistido: es una funcion pura aplicada en el momento
 de calcular la semana y congelada despues en la instantanea publicada (ver
 `docs/PROFESSIONS_AND_PROFILES.md`).
+
+Con `0.8.5` / MVP-2C se anade `SplitWeekLocation` (relacion uno-a-uno
+opcional desde `SplitWeek`), su snapshot en `WeekPublication` (una sola
+vez por semana, no por participante) y su desglose por KPI en
+`PublishedKpiResult`. Igual que el bonus de profesion, no tiene contador
+persistido propio: es una funcion pura (`applyLocationBonus`) aplicada de
+forma independiente sobre el mismo `baseFinalPoints` y congelada despues
+en la instantanea publicada (ver `docs/WEEKLY_LOCATIONS.md`).

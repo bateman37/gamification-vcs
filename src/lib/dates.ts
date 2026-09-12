@@ -61,6 +61,19 @@ export function isMonday(date: Date): boolean {
   return isoWeekday(date) === 1;
 }
 
+/**
+ * Fecha de calendario "de hoy" (medianoche UTC), lista para compararse con
+ * fechas de negocio como `SplitWeek.startDate`/`endDate` (`0.8.5` / MVP-2C,
+ * ver docs/WEEKLY_LOCATIONS.md). Igual que el resto de fechas de este
+ * fichero, no depende de una zona horaria local: usa siempre los
+ * componentes UTC del reloj real del servidor. Acepta un `now` opcional
+ * para que el codigo que la use siga siendo comprobable sin depender del
+ * reloj real ni de `sleep`.
+ */
+export function currentCalendarDate(now: Date = new Date()): Date {
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+}
+
 /** Suma (o resta) dias de calendario a una fecha UTC de medianoche. */
 export function addCalendarDays(date: Date, days: number): Date {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() + days));

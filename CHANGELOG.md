@@ -4,6 +4,74 @@ Formato inspirado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/)
 Este proyecto usa versionado `0.x` mientras se construye el nucleo
 funcional; la primera version publicada es `0.1.0`.
 
+## [0.8.5] - MVP-2C — Localizaciones semanales
+
+### Anadido
+
+- **Localizaciones semanales configurables (`SplitWeekLocation`):**
+  opcionales, cero o una por `SplitWeek`, con nombre, un unico KPI
+  potenciado (debe estar activo en el split) y un porcentaje de bonus
+  cerrado (`10`/`20`/`30`/`40`/`50 %`, `LOCATION_BONUS_PERCENTS`,
+  `src/domain/location-bonus.ts`). Sin catalogo global ni entidad
+  reutilizable entre semanas; el mismo nombre puede repetirse en semanas
+  o splits distintos.
+- **Ventana temporal editable solo antes de `startDate`**
+  (`resolveWeekLocationWindow`, funcion pura que recibe siempre la fecha
+  actual como argumento, `src/domain/location-window.ts`): bloqueada
+  desde el primer dia de la semana, y siempre de solo lectura en una
+  semana publicada o en un split `CLOSED`. El miercoles es la operativa
+  habitual esperada, nunca una restriccion tecnica por dia de la semana.
+  `findNextWeek` identifica la proxima semana sin localizacion como
+  accion principal del calendario administrativo.
+- **Bloqueo de consistencia con la configuracion de KPI:** no se puede
+  desactivar un KPI usado por una localizacion futura
+  (`findFutureLocationsUsingKpi`); el mensaje identifica la semana
+  afectada y la localizacion nunca se borra ni se cambia en silencio.
+- **Bonus independiente y no encadenado con la profesion**
+  (`applyLocationBonus`, `src/domain/location-bonus.ts`): ambos se
+  calculan sobre el mismo `baseFinalPoints` tras el maximo base y se
+  suman una sola vez en `weekly-results.service.ts`
+  (`70 + 20 % + 30 % = 105`, nunca `109,20`). No depende del nivel
+  tecnico, la faccion ni la profesion; nunca se aplica a `VAC`/`AVISO`,
+  `No aplica`, cero ni negativos. `applicableMaxPoints` sigue sumando
+  maximos base, sin inflarlos (hasta `170 %` visual con ambos bonus).
+- **Instantanea publicada ampliada:** localizacion de la semana congelada
+  una sola vez en `WeekPublication` (`locationId`,
+  `locationNameSnapshot`, `locationKpiCodeSnapshot`,
+  `locationBonusPercentSnapshot`, porque es unica y comun a toda la
+  semana) y desglose del bonus por KPI en `PublishedKpiResult`
+  (`locationBonusPoints`, `locationApplied`). Las publicaciones
+  anteriores a esta version se siguen leyendo sin errores, con estos
+  campos `null`/`false`, sin recalculo retroactivo.
+- **Administracion:** columna `Localizacion` en el calendario de semanas
+  de `/splits/[id]`, ruta dedicada
+  `/splits/[id]/weeks/[weekId]/localizacion` con formulario (nombre, KPI
+  activo, bonus y resumen antes de guardar) y opcion de eliminar mientras
+  sea editable, y tarjeta con estado
+  (`Proxima`/`Activa`/`Finalizada`/`Publicada`) en la pantalla semanal de
+  KPI.
+- **Previsualizacion y publicacion:** tarjeta superior con la
+  localizacion de la semana, indicador y borde distintivo en la celda del
+  KPI afectado (combinado con el de profesion cuando coinciden en el
+  mismo KPI) y desglose completo en la ayuda accesible de la celda.
+- **Fichas y resultados:** tarjeta `Localizacion activa esta semana` en
+  `/fichas` (solo lectura, resuelta siempre desde
+  `session.user.personId`, sin N+1 por ficha), desglose en
+  `/resultados > Por split` y agregado `+N localizacion` en
+  `/resultados > Historico general`, sumando exclusivamente los
+  `locationBonusPoints` publicados.
+- **Minicorreccion:** la nota del asterisco de `Semana inicial *` en
+  `Añadir participante` (`AddParticipantForm.tsx`) se muestra siempre,
+  con `Persona existente` y con `Nueva persona`, en vez de solo cuando el
+  split estaba `ACTIVE`.
+
+### Documentacion
+
+- Nuevo `docs/WEEKLY_LOCATIONS.md` con el detalle funcional completo.
+- Actualizados `docs/DATA_MODEL.md`, `docs/RESULTS_PUBLICATION.md`,
+  `docs/PROFESSIONS_AND_PROFILES.md`, `docs/AUTHENTICATION.md`,
+  `docs/ROADMAP.md`, `docs/DECISIONS.md`, `README.md` y `CLAUDE.md`.
+
 ## [0.8.0] - MVP-2B — Profesiones, bonus de KPI y fichas de participante
 
 ### Anadido

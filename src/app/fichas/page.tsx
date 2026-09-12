@@ -2,7 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/session";
 import { listProfileCardsForPerson } from "@/server/services/participant-profile.service";
-import { formatCalendarDate } from "@/lib/dates";
+import { formatCalendarDate, formatCalendarDateEs } from "@/lib/dates";
 import { SPLIT_STATUS_LABELS } from "@/lib/labels";
 import { Badge, EmptyState } from "@/components/ui";
 import { PROFESSION_BONUS_LABEL } from "@/domain/profession-bonus";
@@ -120,6 +120,19 @@ export default async function FichasPage() {
                         Ver mis resultados de este split
                       </Link>
                     </p>
+                  )}
+                  {card.activeLocation && (
+                    <div className="mt-3 rounded-md border border-teal-200 bg-teal-50 p-3 text-sm text-teal-900">
+                      <p className="font-semibold">Localizacion activa esta semana</p>
+                      <p>{card.activeLocation.name}</p>
+                      <p>
+                        Potencia: {card.activeLocation.kpiName} · {card.activeLocation.bonusLabel}
+                      </p>
+                      <p className="text-xs text-teal-700">
+                        Activa del {formatCalendarDateEs(card.activeLocation.startDate)} al{" "}
+                        {formatCalendarDateEs(card.activeLocation.endDate)}
+                      </p>
+                    </div>
                   )}
                 </div>
               </div>

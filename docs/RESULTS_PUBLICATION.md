@@ -87,6 +87,34 @@ puntos tras el maximo son **estrictamente positivos**. `VAC`,
 vuelve a aplicar despues, asi que un resultado puede superar su maximo base
 hasta un 20 % (`70 -> 84`).
 
+### 2.1.ter Bonus de localizacion semanal (`0.8.5` / MVP-2C)
+
+Igual patron que la profesion, pero como capa **independiente y no
+encadenada**: la localizacion (ver `docs/WEEKLY_LOCATIONS.md`) tambien actua
+sobre `baseFinalPoints` (los puntos tras el maximo base), nunca sobre el
+resultado que ya incluye el bonus de profesion, ni al reves.
+
+```text
+baseFinalPoints -> +profesion (si corresponde) -> professionBonusPoints
+baseFinalPoints -> +localizacion (si corresponde) -> locationBonusPoints
+finalPoints = baseFinalPoints + professionBonusPoints + locationBonusPoints
+```
+
+Se aplica mediante `applyLocationBonus`
+(`src/domain/location-bonus.ts`), invocada con el mismo
+`baseFinalPoints` que `applyProfessionBonus`, nunca con el resultado de
+esta. Solo se aplica cuando la semana tiene una localizacion, su KPI
+coincide con el de la localizacion, ese KPI sigue activo en el split, el
+participante es aplicable esa semana y los puntos tras el maximo son
+estrictamente positivos. No depende del nivel tecnico, la faccion ni la
+profesion. `VAC`, `NOT_APPLICABLE`, cero y negativos nunca reciben este
+bonus tampoco.
+
+Con profesion y localizacion sobre el mismo KPI, `70 + 20 % + 30 %`
+produce `105` (`70 + 14 + 21`), nunca `109,20` (que resultaria de
+encadenar `70 x 1,20 x 1,30`): cada bonus se calcula sobre la misma base y
+se suma una sola vez.
+
 ### 2.2 Totales de la fila
 
 Para cada participante:
@@ -98,9 +126,10 @@ Para cada participante:
 - `applicableMaxPoints`: suma de `baseMax` solo de los KPI `COMPUTED`
   (`NOT_APPLICABLE` no infla el denominador; si ninguno esta `COMPUTED`,
   es `null`, mostrado como `—`, nunca `NaN`). Sigue sumando **maximos
-  base**, nunca maximos inflados por profesion: por eso el porcentaje
-  mostrado puede superar el `100 %` cuando hubo bonus, lo que es un
-  resultado valido (`0.8.0` / MVP-2B).
+  base**, nunca maximos inflados por profesion ni por localizacion: por
+  eso el porcentaje mostrado puede superar el `100 %` cuando hubo bonus,
+  hasta el `170 %` con ambos a la vez sobre el mismo KPI (`0.8.0` /
+  MVP-2B y `0.8.5` / MVP-2C).
 
 No existe una columna de "medallas": el Excel historico la tenia, pero no
 es un concepto configurado en la aplicacion.
@@ -205,11 +234,15 @@ publicada.
 1. valida en servidor: split `ACTIVE`, semana perteneciente al split,
    semana todavia no publicada;
 2. **recalcula** con `computeWeeklyResults` usando el mismo `PrismaClient`
-   (nunca confia en totales enviados por el navegador);
+   (nunca confia en totales enviados por el navegador), que vuelve a leer
+   tambien la localizacion vigente de la semana (`0.8.5` / MVP-2C, ver
+   `docs/WEEKLY_LOCATIONS.md`);
 3. exige `isComplete`, al menos un participante y `blockingIssues` vacio;
-4. crea `WeekPublication`, un `PublishedParticipantWeeklyResult` por
-   participante y sus `PublishedKpiResult` dentro de una unica transaccion
-   con aislamiento `Serializable`;
+4. crea `WeekPublication` (con el nombre, KPI y porcentaje de la
+   localizacion congelados una sola vez, si la semana tenia alguna), un
+   `PublishedParticipantWeeklyResult` por participante y sus
+   `PublishedKpiResult` (con el desglose del bonus de localizacion por
+   KPI) dentro de una unica transaccion con aislamiento `Serializable`;
 5. una carrera concurrente (restriccion unica sobre `splitWeekId`, o
    fallo de serializacion) no se propaga como error: si al comprobar de
    nuevo ya existe una publicacion, se devuelve como resultado idempotente
@@ -279,8 +312,14 @@ funcional:
   con varios splits en el filtro, el nombre del split aparece como texto
   secundario. Cada celda por KPI anade `+N por profesion` cuando el periodo
   tuvo bonus, sumando exclusivamente los `professionBonusPoints`
-  **publicados** (nunca se recalculan con la profesion actual). `Mes` y
-  `Año` no cambian.
+  **publicados** (nunca se recalculan con la profesion actual). **Desde
+  `0.8.5` / MVP-2C**, cada celda anade tambien `+N localizacion` cuando el
+  periodo tuvo ese bonus, sumando exclusivamente los
+  `locationBonusPoints` publicados (ver `docs/WEEKLY_LOCATIONS.md`); con
+  agrupacion `Mes`/`Año` y varias localizaciones distintas en el periodo,
+  el texto sigue siendo solo el importe agregado, nunca el nombre de una
+  unica localizacion como si representara todo el periodo. `Mes` y `Año`
+  no cambian.
 
 Toda lectura de participante viene exclusivamente de tablas publicadas
 (`PublishedParticipantWeeklyResult`/`PublishedKpiResult`): nunca se
@@ -365,8 +404,10 @@ Excel/PDF de resultados; medallas; API publica; facciones, profesiones,
 economia, tienda, objetos o recompensas.
 
 Las facciones se implementaron en `0.7.0` / MVP-2A (ver
-`docs/FACTIONS.md`) y las profesiones con su bonus del `+20 %` en `0.8.0` /
-MVP-2B (ver `docs/PROFESSIONS_AND_PROFILES.md`), sin tocar ninguna de las
-formulas de KPI descritas en este documento: el bonus es una capa posterior
-al maximo base, aplicada una sola vez y congelada al publicar. El resto de
-la lista sigue fuera de alcance.
+`docs/FACTIONS.md`), las profesiones con su bonus del `+20 %` en `0.8.0` /
+MVP-2B (ver `docs/PROFESSIONS_AND_PROFILES.md`) y las localizaciones
+semanales con su bonus configurable en `0.8.5` / MVP-2C (ver
+`docs/WEEKLY_LOCATIONS.md`), sin tocar ninguna de las formulas de KPI
+descritas en este documento: cada bonus es una capa posterior al maximo
+base, independiente del otro, aplicada una sola vez por semana y congelada
+al publicar. El resto de la lista sigue fuera de alcance.

@@ -11,16 +11,19 @@ export interface ResultKpiCell {
   kpiCode: string;
   kpiName: string;
   status: KpiResultStatus;
-  /** Puntos definitivos, ya con el bonus de profesion incluido (`0.8.0` / MVP-2B). */
+  /** Puntos definitivos, ya con los bonus de profesion y localizacion incluidos. */
   finalPoints: number | null;
   baseMax: number | null;
   capped: boolean;
-  /** Puntos tras el maximo base y antes del bonus. `null` en publicaciones anteriores a `0.8.0`. */
+  /** Puntos tras el maximo base y antes de cualquier bonus. `null` en publicaciones anteriores a `0.8.0`. */
   basePointsBeforeProfession: number | null;
   /** Puntos anadidos por la profesion. `null` en publicaciones anteriores a `0.8.0`. */
   professionBonusPoints: number | null;
   professionApplied: boolean;
   professionName: string | null;
+  /** Puntos anadidos por la localizacion semanal (`0.8.5` / MVP-2C). `null` en publicaciones anteriores a esta version. */
+  locationBonusPoints: number | null;
+  locationApplied: boolean;
   kpiRank: number | null;
   rankedParticipantCount: number | null;
 }
@@ -45,20 +48,48 @@ export interface ResultRow {
 
 type SortKey = "position" | "alias" | "total" | `kpi:${string}`;
 
-/** Desglose textual del bonus, identico en previsualizacion y en semana publicada (seccion 24 del encargo). */
+/** Localizacion de la semana, comun a toda la tabla (no se repite por KPI ni por participante). */
+export interface WeekLocationSummary {
+  name: string;
+  kpiCode: string;
+  bonusPercent: number;
+}
+
+/** Desglose textual del bonus, identico en previsualizacion y en semana publicada (secciones 20 y 24 del encargo). */
 export function formatProfessionBreakdown(cell: ResultKpiCell): string | null {
   if (!cell.professionApplied || cell.basePointsBeforeProfession === null || cell.professionBonusPoints === null) {
     return null;
   }
   const name = cell.professionName ?? "profesión";
-  return [
-    `Resultado tras máximo: ${formatPoints(cell.basePointsBeforeProfession)}`,
-    `Bonus ${name} (+${PROFESSION_BONUS_PERCENT} %): +${formatPoints(cell.professionBonusPoints)}`,
-    `Resultado final: ${formatPoints(cell.finalPoints ?? 0)}`,
-  ].join(" | ");
+  return `Bonus profesión ${name} (+${PROFESSION_BONUS_PERCENT} %): +${formatPoints(cell.professionBonusPoints)}`;
 }
 
-function KpiCellView({ cell }: { cell: ResultKpiCell }) {
+/** Desglose textual del bonus de localizacion para un KPI concreto. `null` si no se aplico. */
+export function formatLocationBreakdown(cell: ResultKpiCell, weekLocation: WeekLocationSummary | null): string | null {
+  if (!cell.locationApplied || cell.locationBonusPoints === null) return null;
+  const name = weekLocation?.name ?? "localización";
+  const percent = weekLocation?.bonusPercent;
+  const percentLabel = percent !== undefined ? ` (+${percent} %)` : "";
+  return `Bonus localización ${name}${percentLabel}: +${formatPoints(cell.locationBonusPoints)}`;
+}
+
+/** Desglose completo de un KPI: base tras el maximo, cada bonus aplicado y el resultado final. */
+function formatBonusBreakdown(cell: ResultKpiCell, weekLocation: WeekLocationSummary | null): string | null {
+  const professionLine = formatProfessionBreakdown(cell);
+  const locationLine = formatLocationBreakdown(cell, weekLocation);
+  if ((!professionLine && !locationLine) || cell.basePointsBeforeProfession === null) return null;
+
+  return [
+    `Resultado tras máximo: ${formatPoints(cell.basePointsBeforeProfession)}`,
+    professionLine,
+    locationLine,
+    `Resultado final: ${formatPoints(cell.finalPoints ?? 0)}`,
+  ]
+    .filter((line): line is string => line !== null)
+    .join(" | ");
+}
+
+function KpiCellView({ cell, weekLocation }: { cell: ResultKpiCell; weekLocation: WeekLocationSummary | null }) {
   if (cell.status === "NOT_APPLICABLE") {
     return (
       <td className={`px-3 py-2 text-center ${COLOR_BAND_CLASSES[NOT_APPLICABLE_COLOR_BAND.band]}`} title="Este KPI no aplica a este nivel">
@@ -68,25 +99,33 @@ function KpiCellView({ cell }: { cell: ResultKpiCell }) {
   }
   // VAC se muestra como el valor numerico 0, igual que cualquier otro cero (hotfix AVISO/0, ver docs/DECISIONS.md).
   const displayPoints = resolveKpiResultDisplayPoints(cell.status, cell.finalPoints) ?? 0;
-  // El porcentaje se calcula sobre el maximo base, que no se infla con el bonus: por eso puede superar el 100 %.
+  // El porcentaje se calcula sobre el maximo base, que no se infla con ningun bonus: por eso puede superar el 100 %
+  // (hasta el 170 % con profesion y localizacion a la vez sobre el mismo KPI, seccion 14 del encargo).
   const percentage = cell.baseMax && cell.baseMax > 0 ? (displayPoints / cell.baseMax) * 100 : 0;
   const bandInfo = colorBandForPercentage(percentage);
-  const breakdown = formatProfessionBreakdown(cell);
+  const breakdown = formatBonusBreakdown(cell, weekLocation);
   const title = `${formatPoints(percentage)} % del maximo${cell.capped ? " (limitado por el maximo)" : ""}${
     breakdown ? ` - ${breakdown}` : ""
   }`;
+  const borderClass = cell.professionApplied && cell.locationApplied
+    ? "border-2 border-dashed border-violet-500"
+    : cell.professionApplied
+      ? "border-2 border-dashed border-indigo-500"
+      : cell.locationApplied
+        ? "border-2 border-dashed border-teal-500"
+        : "";
   return (
-    <td
-      className={`px-3 py-2 text-center font-medium ${COLOR_BAND_CLASSES[bandInfo.band]} ${
-        breakdown ? "border-2 border-dashed border-indigo-500" : ""
-      }`}
-      title={title}
-    >
+    <td className={`px-3 py-2 text-center font-medium ${COLOR_BAND_CLASSES[bandInfo.band]} ${borderClass}`} title={title}>
       {formatPoints(displayPoints)}
       {cell.capped && <span aria-hidden="true"> *</span>}
-      {breakdown && (
+      {cell.professionApplied && (
         <span className="mt-1 block rounded bg-indigo-100 px-1 py-0.5 text-[10px] font-semibold text-indigo-800">
           +{PROFESSION_BONUS_PERCENT} % profesion
+        </span>
+      )}
+      {cell.locationApplied && (
+        <span className="mt-1 block rounded bg-teal-100 px-1 py-0.5 text-[10px] font-semibold text-teal-800">
+          +{weekLocation?.bonusPercent ?? ""} % localizacion
         </span>
       )}
       <span className="sr-only"> ({title})</span>
@@ -99,6 +138,7 @@ export function WeeklyResultsTable({
   activeKpis,
   splitParticipantCount,
   showProfessionColumn,
+  weekLocation,
 }: {
   rows: ResultRow[];
   activeKpis: { code: string; name: string }[];
@@ -106,6 +146,8 @@ export function WeeklyResultsTable({
   splitParticipantCount: number;
   /** `false` cuando el split no usa profesiones: la columna no se muestra (comportamiento identico a `0.7.0`). */
   showProfessionColumn: boolean;
+  /** Localizacion de esta semana (`0.8.5` / MVP-2C), o `null` si no tiene. */
+  weekLocation: WeekLocationSummary | null;
 }) {
   const [sortKey, setSortKey] = useState<SortKey>("position");
   const [sortDir, setSortDir] = useState<1 | -1>(1);
@@ -198,7 +240,11 @@ export function WeeklyResultsTable({
                   )}
                   {activeKpis.map((kpi) => {
                     const cell = row.kpiCells.find((entry) => entry.kpiCode === kpi.code);
-                    return cell ? <KpiCellView key={kpi.code} cell={cell} /> : <td key={kpi.code} className="px-3 py-2 text-center">-</td>;
+                    return cell ? (
+                      <KpiCellView key={kpi.code} cell={cell} weekLocation={weekLocation} />
+                    ) : (
+                      <td key={kpi.code} className="px-3 py-2 text-center">-</td>
+                    );
                   })}
                   <td className="px-3 py-2 text-center font-semibold">{formatPoints(row.totalKpiPoints)}</td>
                   <td className="px-3 py-2 text-center text-slate-600">{percentage === null ? "—" : `${formatPoints(percentage)} %`}</td>
@@ -227,6 +273,12 @@ export function WeeklyResultsTable({
           <span className="rounded border-2 border-dashed border-indigo-500 px-2 py-0.5 text-indigo-800">
             Borde y badge &quot;+{PROFESSION_BONUS_PERCENT} % profesion&quot; = bonus de profesion aplicado (el desglose esta en la
             ayuda de la celda)
+          </span>
+        )}
+        {weekLocation && (
+          <span className="rounded border-2 border-dashed border-teal-500 px-2 py-0.5 text-teal-800">
+            Borde y badge &quot;+{weekLocation.bonusPercent} % localizacion&quot; = bonus de la localizacion &quot;{weekLocation.name}&quot;
+            aplicado (el desglose esta en la ayuda de la celda)
           </span>
         )}
       </div>

@@ -20,7 +20,9 @@ tomadas sin justificarlo explicitamente, y `docs/DISCOVERY-1-SPLIT-8.md`,
 `docs/POSITION_POINTS_CONFIGURATION.md` si vas a trabajar en KPI, cargas de
 datos, motor de calculo o en la configuracion de puntos por posicion, y
 `docs/FACTIONS.md` y `docs/PROFESSIONS_AND_PROFILES.md` si vas a trabajar en
-facciones, profesiones, bonus de KPI, fichas de participante o avatares.
+facciones, profesiones, bonus de KPI, fichas de participante o avatares, y
+`docs/WEEKLY_LOCATIONS.md` si vas a trabajar en localizaciones semanales o
+en la composicion de sus bonus con la profesion.
 
 ## Estado real de las cargas semanales (no romper sin justificarlo)
 
@@ -151,6 +153,48 @@ motivo en `docs/DECISIONS.md` (detalle completo en
   imagenes, y no selecciones `imageData` en ningun listado: solo al servir
   la imagen. El formato real se valida decodificando el contenido con
   `sharp`, nunca por extension o `File.type`.
+
+## Localizaciones semanales (`0.8.5` / MVP-2C, no romper sin justificarlo)
+
+Reglas asentadas que una sesion futura no debe deshacer sin registrar el
+motivo en `docs/DECISIONS.md` (detalle completo en
+`docs/WEEKLY_LOCATIONS.md`):
+
+- Como mucho **una localizacion por `SplitWeek`**, opcional: una semana
+  sin ella se comporta exactamente como en `0.8.0`. No crees un catalogo
+  global de localizaciones ni una entidad reutilizable entre semanas.
+- Editable (crear, editar, eliminar) **solo antes de `startDate`**
+  (`resolveWeekLocationWindow`, `src/domain/location-window.ts`, funcion
+  pura con la fecha inyectada). Bloqueada desde el primer dia de la
+  semana, y siempre de solo lectura en una semana publicada, aunque por
+  un error de fechas se intentara editar antes. No introduzcas ninguna
+  restriccion por dia de la semana (el miercoles es la operativa
+  habitual, no una regla tecnica).
+- El bonus (`applyLocationBonus`, `src/domain/location-bonus.ts`) es
+  **independiente y no encadenado** con el de profesion: ambos se
+  calculan sobre el mismo `baseFinalPoints` y se suman una sola vez en
+  `weekly-results.service.ts`. Nunca pases `professionOutcome.finalPoints`
+  como base de la localizacion ni al reves; `70 + 20 % + 30 %` debe dar
+  `105`, nunca `109,20`.
+- El porcentaje solo puede ser `10`, `20`, `30`, `40` o `50`
+  (`LOCATION_BONUS_PERCENTS`, unica lista tipada): no lo hagas libre ni
+  amplies el conjunto sin que el usuario lo pida.
+- El bonus no se aplica nunca a `VAC`/`AVISO`, `NOT_APPLICABLE`, cero ni
+  negativos, ni a un KPI que no sea el de la localizacion o que este
+  inactivo. `applicableMaxPoints` sigue sumando maximos base, sin
+  inflarlos.
+- No se puede desactivar un KPI usado por una localizacion **futura**
+  (`findFutureLocationsUsingKpi`): el mensaje debe identificar la semana
+  afectada, y la localizacion nunca se borra ni se cambia en silencio.
+- La publicacion congela nombre, KPI y porcentaje **una sola vez por
+  semana** en `WeekPublication` (no por participante, a diferencia de la
+  profesion): nunca dupliques esos tres campos en cada
+  `PublishedKpiResult`. Las vistas historicas explican una semana
+  publicada siempre con ese snapshot, nunca con la configuracion viva.
+- En `/fichas`, la tarjeta de localizacion activa se resuelve siempre
+  desde `session.user.personId` y respeta las semanas inicial/final del
+  participante; nunca la muestres para una semana futura, pasada, de otro
+  split, o a alguien todavia no incorporado esa semana.
 
 ## Reglas de trabajo
 

@@ -12,12 +12,29 @@ import { getChronomancyLoadStatus } from "@/server/services/chronomancy-entry.se
 import { getWriterLoadStatus } from "@/server/services/writer-entry.service";
 import { getStudentLoadStatus } from "@/server/services/student-entry.service";
 import { getApprenticeLoadStatus } from "@/server/services/apprentice-entry.service";
-import { KPI_CATALOG_LIST } from "@/domain/kpis/catalog";
+import { KPI_CATALOG_LIST, KPI_CATALOG } from "@/domain/kpis/catalog";
 import { buildWeeklyLoadGroups, type LoadCoverageStatus, type LoadOrigin } from "@/domain/kpis/loadGroups";
 import { getWeeklyKpiLoadSummary } from "@/server/services/kpi-load-summary.service";
+import { getWeekLocation } from "@/server/services/location.service";
+import { locationBonusLabel } from "@/domain/location-bonus";
 import { requireAdminSession } from "@/lib/session";
 import { formatCalendarDate } from "@/lib/dates";
+import { Badge } from "@/components/ui";
 import { StatusIndicator } from "./StatusIndicator";
+
+const LOCATION_STATUS_LABEL: Record<string, string> = {
+  PROXIMA: "Proxima",
+  ACTIVA: "Activa",
+  FINALIZADA: "Finalizada",
+  PUBLICADA: "Publicada",
+};
+
+const LOCATION_STATUS_TONE: Record<string, "slate" | "green" | "gray"> = {
+  PROXIMA: "slate",
+  ACTIVA: "green",
+  FINALIZADA: "gray",
+  PUBLICADA: "gray",
+};
 
 export default async function WeeklyKpisPage({
   params,
@@ -30,9 +47,10 @@ export default async function WeeklyKpisPage({
   const week = await getSplitWeek(prisma, params.id, params.weekId);
   if (!week) notFound();
 
-  const [loadSummaryByWeek, publication] = await Promise.all([
+  const [loadSummaryByWeek, publication, { location, window: locationWindow }] = await Promise.all([
     getWeeklyKpiLoadSummary(prisma, split.id, [week]),
     prisma.weekPublication.findUnique({ where: { splitWeekId: week.id } }),
+    getWeekLocation(prisma, split.id, week.id),
   ]);
   const loadSummary = loadSummaryByWeek.get(week.id) ?? { loadedCount: 0, totalActiveCount: 0 };
   const isWeekComplete = loadSummary.totalActiveCount > 0 && loadSummary.loadedCount === loadSummary.totalActiveCount;
@@ -103,6 +121,42 @@ export default async function WeeklyKpisPage({
           </p>
         )}
       </div>
+
+      <section className="rounded-lg border border-slate-200 bg-white p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            {location ? (
+              <>
+                <p className="text-sm font-semibold text-slate-800">{location.name}</p>
+                <p className="text-sm text-slate-600">
+                  Potencia: {KPI_CATALOG[location.kpiCode].name} · {locationBonusLabel(location.bonusPercent)}
+                </p>
+              </>
+            ) : (
+              <p className="text-sm text-slate-500">Esta semana no tiene localizacion.</p>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge tone={LOCATION_STATUS_TONE[locationWindow.status]}>{LOCATION_STATUS_LABEL[locationWindow.status]}</Badge>
+            {locationWindow.editable && (
+              <Link
+                href={`/splits/${split.id}/weeks/${week.id}/localizacion`}
+                className="text-sm font-medium text-slate-700 underline hover:text-slate-900"
+              >
+                {location ? "Editar" : "Configurar"}
+              </Link>
+            )}
+            {!locationWindow.editable && location && (
+              <Link
+                href={`/splits/${split.id}/weeks/${week.id}/localizacion`}
+                className="text-sm text-slate-600 underline hover:text-slate-900"
+              >
+                Ver
+              </Link>
+            )}
+          </div>
+        </div>
+      </section>
 
       {activeCatalogEntries.length === 0 ? (
         <p className="rounded-md border border-dashed border-slate-300 px-4 py-6 text-center text-sm text-slate-500">

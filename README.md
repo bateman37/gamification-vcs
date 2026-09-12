@@ -15,9 +15,10 @@ Calidad y Llamadas**, **MVP-1C.3 / INPUT-1C — Cargas manuales y
 completitud semanal**, **BUGFIX-1 / UX-SPLIT-1 — Correcciones de
 formularios manuales y configuracion compacta del split**, **`0.6.0` /
 MVP-1C — Resultados, publicacion y clasificacion**, **`0.7.0` / MVP-2A —
-Facciones, clasificacion de facciones y consolidacion de UX** y **`0.8.0` /
-MVP-2B — Profesiones, bonus de KPI y fichas de participante** (ver
-`docs/ROADMAP.md`). Version actual: `0.8.0`.
+Facciones, clasificacion de facciones y consolidacion de UX**, **`0.8.0` /
+MVP-2B — Profesiones, bonus de KPI y fichas de participante** y **`0.8.5` /
+MVP-2C — Localizaciones semanales** (ver `docs/ROADMAP.md`). Version
+actual: `0.8.5`.
 
 Estas entregas implementan:
 
@@ -107,9 +108,22 @@ Estas entregas implementan:
 - Correccion del rotulo semanal del historico general: fecha de inicio real
   de la semana en vez de `Semana N`.
 
+- Tercera capa de juego: **localizaciones semanales configurables**
+  (cero o una por semana, un unico KPI potenciado activo y un bonus entre
+  `10 %` y `50 %`), editable solo antes de que empiece la semana y
+  bloqueada desde ese momento o al publicar. Su bonus se calcula de forma
+  **independiente** de la profesion sobre la misma base (nunca
+  encadenado: `70 + 20 % + 30 % = 105`, no `109,20`), se congela al
+  publicar y se muestra en el calendario de semanas, la pantalla de KPI,
+  la previsualizacion/publicacion, las fichas privadas (tarjeta
+  `Localizacion activa esta semana`) y `/resultados`. Ver
+  `docs/WEEKLY_LOCATIONS.md`.
+- Minicorreccion: la nota del asterisco de `Semana inicial *` en
+  `Anadir participante` se muestra siempre, en los dos modos de alta.
+
 Todavia **no** incluye despublicar/reabrir una semana, exportacion
-Excel/PDF de resultados, ni localizaciones, objetos o economia de
-creditos. Consulta `docs/ROADMAP.md` para el plan completo.
+Excel/PDF de resultados, ni objetos, economia de creditos o misiones.
+Consulta `docs/ROADMAP.md` para el plan completo.
 
 ## Pila tecnologica
 
@@ -667,6 +681,59 @@ Segunda capa de juego. Detalle funcional exhaustivo en
 20. Prueba `Fichas` y resultados en movil (~360 px), a 1366 px y en
     pantalla panoramica.
 
+## Localizaciones semanales (`0.8.5` / MVP-2C)
+
+Tercera capa de juego. Detalle funcional exhaustivo en
+[`docs/WEEKLY_LOCATIONS.md`](docs/WEEKLY_LOCATIONS.md).
+
+- **Columna `Localizacion`** en el calendario de semanas de
+  `/splits/[id]`: `Sin localizacion`, o nombre/KPI/porcentaje con
+  indicador `Activa`/`Bloqueada` segun corresponda.
+- **Configurar/editar** en `/splits/[id]/weeks/[weekId]/localizacion`:
+  nombre, un KPI activo del split y un bonus (`10`/`20`/`30`/`40`/`50 %`),
+  con resumen antes de guardar. Solo antes de que la semana comience.
+- **Bloqueo automatico** desde el primer dia de la semana, y siempre en
+  una semana ya publicada.
+- **Bonus independiente de la profesion**, calculado sobre la misma base:
+  `70 + 20 % + 30 % = 105`, nunca `109,20`.
+- **Tarjeta en fichas** (`Localizacion activa esta semana`) y desglose en
+  previsualizacion, publicacion e historico general.
+
+### Comprobar manualmente
+
+1. Abre un split `ACTIVE` con varias semanas futuras.
+2. Confirma la nueva columna `Localizacion` en el calendario.
+3. Configura para la semana siguiente un nombre, un KPI activo y `30 %`.
+4. Verifica que la semana actual no queda afectada.
+5. Edita nombre, KPI y porcentaje antes del inicio de esa semana.
+6. Comprueba que no se acepta un KPI inactivo ni un porcentaje fuera del
+   selector.
+7. Configura otra semana futura y confirma que cada semana mantiene su
+   propia localizacion.
+8. Llegada la fecha de inicio de la semana, comprueba que su localizacion
+   queda bloqueada (no editable ni eliminable).
+9. Entra como participante y comprueba la tarjeta `Localizacion activa
+   esta semana` en su ficha, con nombre, KPI, porcentaje y fechas.
+10. Confirma que no aparece como activa en otro split, en una semana
+    futura, ni para alguien todavia no incorporado esa semana.
+11. Carga los KPI de la semana y abre la previsualizacion.
+12. Valida a mano un caso `70 + 21 = 91` solo con localizacion.
+13. Valida un caso combinado `70 + 14 + 21 = 105` con profesion y
+    localizacion sobre el mismo KPI, y confirma que nunca aparece
+    `109,20`.
+14. Publica la semana y comprueba la instantanea (nombre, KPI y
+    porcentaje congelados).
+15. Revisa la localizacion y ambos bonus por separado en resultados
+    individuales y en el historico general.
+16. Abre una publicacion anterior a `0.8.5` y confirma que sigue
+    funcionando sin campos de localizacion.
+17. Comprueba que una semana sin localizacion se publica con normalidad.
+18. En `Anadir participante`, alterna entre `Persona existente` y `Nueva
+    persona` y comprueba que la nota del asterisco de `Semana inicial`
+    permanece visible en ambos modos.
+19. Revisa calendario, formulario, fichas y resultados en movil (~360 px),
+    a 1366 px y en pantalla panoramica.
+
 ## Reinicio opcional y destructivo del entorno local
 
 **Solo para una base de datos local ficticia.** Este comando **borra
@@ -724,6 +791,10 @@ estan excluidos en `.gitignore`).
 - [`docs/PROFESSIONS_AND_PROFILES.md`](docs/PROFESSIONS_AND_PROFILES.md) —
   profesiones configurables por split, bonus del `+20 %`, fichas privadas,
   avatar por split y rotulo semanal del historico (`0.8.0` / MVP-2B).
+- [`docs/WEEKLY_LOCATIONS.md`](docs/WEEKLY_LOCATIONS.md) — localizaciones
+  semanales configurables, ventana temporal, composicion no encadenada
+  con la profesion y visibilidad en administracion, fichas y resultados
+  (`0.8.5` / MVP-2C).
 - [`docs/DECISIONS.md`](docs/DECISIONS.md) — decisiones tecnicas y de
   producto registradas.
 - [`CHANGELOG.md`](CHANGELOG.md) — historial de cambios.

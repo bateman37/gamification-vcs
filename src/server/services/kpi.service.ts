@@ -1,8 +1,9 @@
 import type { Prisma, PrismaClient, SplitKpiConfig } from "@prisma/client";
 import { DomainError } from "@/lib/errors";
-import { KPI_CATALOG_LIST, type KpiCode } from "@/domain/kpis/catalog";
+import { KPI_CATALOG_LIST, KPI_CATALOG, type KpiCode } from "@/domain/kpis/catalog";
 import type { UpdateKpiConfigInput } from "@/server/validation/kpi";
 import { assertSplitConfigurationIsEditable } from "@/server/services/shared/split-configuration-lock";
+import { findFutureLocationsUsingKpi } from "@/server/services/location.service";
 
 type Db = PrismaClient | Prisma.TransactionClient;
 
@@ -67,6 +68,19 @@ export async function updateKpiConfig(
     });
     if (!existing) {
       throw new DomainError("La configuracion de este KPI no existe para este split.");
+    }
+
+    // Desactivar un KPI usado por una localizacion futura la dejaria potenciando un KPI
+    // inactivo: se rechaza identificando las semanas afectadas, sin tocar la localizacion
+    // en silencio (seccion 8 del encargo, ver docs/WEEKLY_LOCATIONS.md).
+    if (existing.isActive && !input.isActive) {
+      const affected = await findFutureLocationsUsingKpi(tx, splitId, kpiCode);
+      if (affected.length > 0) {
+        const weeksText = affected.map((usage) => `semana ${usage.sequenceNumber} ("${usage.locationName}")`).join(", ");
+        throw new DomainError(
+          `No se puede desactivar "${KPI_CATALOG[kpiCode].name}": lo potencia la localizacion de ${weeksText}. Edita o elimina antes esa localizacion.`,
+        );
+      }
     }
 
     return tx.splitKpiConfig.update({
