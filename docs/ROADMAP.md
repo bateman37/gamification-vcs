@@ -392,6 +392,38 @@ satisfactorias.
   borrado de una noticia enviada, recibos individuales de lectura para el
   administrador, modo oscuro, temas por split y editor de branding.
 
+## `1.0.1` — UX y presentacion de resultados
+
+**Estado: completado.**
+
+- Barra lateral de escritorio corregida a `100dvh` (`sticky`, pie siempre
+  visible) y orden de navegacion del administrador con Noticias primero.
+- Auditoria ortografica de todo el texto visible de la aplicacion, sin
+  renombrar ninguna ruta, identificador ni clave de formulario.
+- Clarificacion de "media" en el historico general (`/resultados`): la
+  agrupacion `Semana` oculta la media redundante; `Mes`/`Año` la rotulan
+  "Media semanal" con una nota de ayuda accesible. Sin cambio de formula
+  ni de datos.
+- Rediseño de `/fichas` en tarjetas horizontales agrupadas por estado del
+  split, con la edicion de alias/avatar/profesion centralizada en
+  `/fichas/[splitParticipantId]`.
+- Nuevo submenu lateral (y version movil) en el detalle del split,
+  sustituyendo el indice de enlaces subrayados.
+- Maquetacion panoramica de "KPI del split" y nuevo guardado conjunto
+  "Guardar todos los KPI", atomico y compartiendo la misma logica que el
+  guardado individual.
+- Alineacion del formulario "Anadir participante" y traslado de los
+  textos de asterisco a una franja de ayuda accesible.
+- **"Presentar resultados"**: nuevo modo de proyeccion a pantalla completa
+  para revelar en vivo la clasificacion de la ultima semana publicada de
+  un split (individual y de facciones, semanal y general), reutilizando
+  integramente los servicios de clasificacion existentes. Puramente de
+  lectura: sin persistencia, sin noticias, sin recalculo.
+- Detalle completo en `docs/UX_AND_RESULTS_PRESENTATION_1_0_1.md`.
+- Fuera de alcance (sin cambios): modelo de datos, formulas de KPI, bonus,
+  reglas de clasificacion, creditos, mercado, avatares como snapshot
+  historico, y cualquier otra capa de juego nueva.
+
 ## Capas posteriores (fuera de alcance por ahora)
 
 **Estado: pendiente**, documentadas unicamente para no perder contexto:

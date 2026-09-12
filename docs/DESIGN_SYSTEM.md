@@ -85,27 +85,40 @@ bitmap externo.
 `src/components/AppShell.tsx` (servidor) calcula sesion, rol y noticias
 una sola vez y compone:
 
-- **Escritorio**: barra lateral fija tinta (`bg-ink`) con marca, navegacion
-  (`SidebarNav.tsx`, resalta la ruta activa con `usePathname`) y, al pie,
-  "Mi cuenta"/cerrar sesion.
+- **Escritorio**: barra lateral fija tinta (`bg-ink`), `sticky top-0` y
+  `h-dvh` (`1.0.1`: ocupa exactamente el alto del viewport en vez de
+  crecer con el contenido de la pagina), con marca, navegacion
+  (`SidebarNav.tsx`, resalta la ruta activa con `usePathname`) y, al pie
+  siempre anclado y visible, "Mi cuenta"/cerrar sesion. Solo la zona de
+  enlaces centrales admite scroll propio en alturas/zoom extremos; el
+  `<main>` es el unico scroll de la pagina.
 - **Movil/tablet**: cabecera compacta (`sticky top-0`) con marca, campana
-  y boton de menu (`MobileNav.tsx`, panel deslizante cerrable con
-  `Escape`, sin bloquear el scroll tras cerrarse).
+  y boton de menu (`MobileNav.tsx`, panel deslizante con el mismo patron
+  `h-dvh`/pie anclado, cerrable con `Escape`, sin bloquear el scroll tras
+  cerrarse).
 - **Navegacion por rol** (`src/components/nav-items.ts`, funcion pura
-  `buildNavItems`): administrador ve Personas, Splits, Resultados,
-  Noticias y Fichas (solo si su cuenta esta vinculada a una persona);
-  participante ve Noticias, Resultados y Fichas. La campana aparece para
-  cualquier usuario autenticado.
+  `buildNavItems`): administrador ve **Noticias primero** (`1.0.1`),
+  despues Personas, Splits, Resultados y Fichas (solo si su cuenta esta
+  vinculada a una persona); participante ve Noticias, Resultados y
+  Fichas. La campana aparece para cualquier usuario autenticado.
 - El acceso raiz `/` redirige a `/noticias` para cualquier usuario
-  autenticado (`src/app/page.tsx`): Noticias es el punto de entrada de la
-  `1.0.0`, sin eliminar los accesos directos existentes.
+  autenticado (`src/app/page.tsx`): Noticias es el punto de entrada desde
+  la `1.0.0`, sin eliminar los accesos directos existentes.
+- **Submenu contextual de un split** (`1.0.1`,
+  `src/app/splits/[id]/SplitDetailNav.tsx`): columna lateral compacta y
+  distinta de la barra global (fondo `surface-muted`), `sticky` bajo la
+  cabecera, icono por opcion y seccion activa marcada por color; version
+  movil con un control "Secciones del split" que despliega el mismo
+  listado. Nunca compite visualmente con la barra lateral global.
 
 ## 7. Componentes compartidos (`src/components/ui.tsx`)
 
 `Button`/`LinkButton`/`IconButton` con variantes `primary`/`secondary`/
-`ghost`/`danger` (todas con estados `hover`/`focus-visible`/`active` vía
-transición de 150 ms y `disabled` vía opacidad **más** `cursor-not-allowed`,
-nunca solo opacidad); `SubmitButton` conserva su firma anterior
+`ghost`/`danger`/`game` (`1.0.1`: tono violeta de personaje/juego, usado en
+"Configurar personaje" y "Presentar resultados"; todas con estados
+`hover`/`focus-visible`/`active` vía transición de 150 ms y `disabled` vía
+opacidad **más** `cursor-not-allowed`, nunca solo opacidad); `SubmitButton`
+conserva su firma anterior
 (usada en mas de veinte formularios) como envoltorio de `Button`.
 `Card`/`StatCard` para paneles y metricas; `PageHeader`/`SectionHeader`
 para cabeceras consistentes; `Badge` con tonos semanticos (incluye los
@@ -144,6 +157,12 @@ visualmente en movil, `1366px`, `1920px` y una vista ultrapanoramica de
 - Transiciones de like 150 ms como maximo; `@media (prefers-reduced-motion:
   reduce)` en `globals.css` anula duraciones de animacion/transicion para
   quien lo prefiera. No hay parallax, confeti ni animaciones continuas.
+- **`1.0.1`:** la unica animacion nueva (`.animate-reveal-in`, entrada de
+  cada tarjeta revelada en "Presentar resultados") es opacidad + un ligero
+  desplazamiento de ~550 ms, sujeta a la misma regla
+  `prefers-reduced-motion` de arriba (se reduce a instantanea sin omitir
+  ningun paso de la revelacion). Ver
+  `docs/UX_AND_RESULTS_PRESENTATION_1_0_1.md`.
 
 ## 11. Ejemplos de uso correcto e incorrecto
 

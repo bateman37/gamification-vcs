@@ -459,5 +459,11 @@ desde `0.9.0`, un selector analitico `Con gamificacion`/`Sin
 gamificacion` (`src/domain/gamification-view.ts`) que compara el
 rendimiento KPI real (`basePointsBeforeProfession`) frente al total
 oficial, sin recalcular ni alterar ninguna publicacion, ranking, punto por
-posicion, faccion ni credito. El resto de la lista sigue fuera de
-alcance.
+posicion, faccion ni credito. **Desde `1.0.1`**, "Presentar resultados"
+(`src/server/services/results-presentation.service.ts`, ver
+`docs/UX_AND_RESULTS_PRESENTATION_1_0_1.md`) proyecta en vivo la
+clasificacion semanal y general de la ultima semana publicada de un
+split, leyendo exclusivamente estas mismas tablas publicadas y
+reutilizando `computeSplitClassification` sin recalcular ningun ranking:
+es una lectura mas sobre este motor, no una segunda fuente de verdad. El
+resto de la lista sigue fuera de alcance.

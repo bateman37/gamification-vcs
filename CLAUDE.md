@@ -28,9 +28,13 @@ creditos, mercado, ranuras de equipo, catalogo de objetos, inventario,
 equipo, el selector con/sin gamificacion o su composicion con profesion y
 localizacion, y `docs/NEWS_CENTER.md` si vas a trabajar en noticias
 (automaticas o envio manual), la campana, la bandeja `/noticias` o
-cualquier enlace interno de una noticia, y `docs/DESIGN_SYSTEM.md` si vas
+cualquier enlace interno de una noticia, `docs/DESIGN_SYSTEM.md` si vas
 a tocar tokens de color, tipografia, el app shell, la navegacion o
-cualquier componente de `src/components/ui.tsx`.
+cualquier componente de `src/components/ui.tsx`, y
+`docs/UX_AND_RESULTS_PRESENTATION_1_0_1.md` si vas a trabajar en la barra
+lateral, el orden de navegacion, el submenu del detalle del split, el
+historico general, las fichas, el guardado (individual o conjunto) de KPI,
+el formulario de alta de participante o la presentacion de resultados.
 
 ## Estado real de las cargas semanales (no romper sin justificarlo)
 
@@ -320,6 +324,43 @@ motivo en `docs/DECISIONS.md` (detalle completo en
   `FieldError` (`src/components/ui.tsx`) mantienen su firma anterior a
   proposito (los usan mas de setenta componentes): si necesitas un
   componente nuevo, anadelo junto a los existentes en vez de romper su API.
+
+## UX y presentación de resultados (`1.0.1`, no romper sin justificarlo)
+
+Reglas asentadas que una sesión futura no debe deshacer sin registrar el
+motivo en `docs/DECISIONS.md` (detalle completo en
+`docs/UX_AND_RESULTS_PRESENTATION_1_0_1.md`):
+
+- La barra lateral de escritorio (`AppShell.tsx`) es `sticky` con `h-dvh`:
+  nunca vuelvas a dejar que crezca con el contenido de la página. Solo la
+  zona de enlaces centrales puede tener scroll propio en alturas/zoom
+  extremos; el pie ("Mi cuenta"/"Cerrar sesión") siempre visible.
+- `buildNavItems` (`src/components/nav-items.ts`) sigue siendo la única
+  fuente del orden de navegación para escritorio y móvil: Noticias es
+  siempre la primera opción del administrador.
+- El historico general (`/resultados`) no vuelve a mostrar la media por
+  KPI, la columna de media total ni "Semanas publicadas" con agrupación
+  `Semana` (siempre coincidirían con la suma/serían `1`): esa decisión
+  vive únicamente en `resolveHistoryDisplayConfig`
+  (`src/domain/history-display.ts`), nunca repartida en el componente.
+- La edición de alias, avatar y profesión vive **solo** en
+  `/fichas/[splitParticipantId]`: no la dupliques de vuelta en el listado
+  `/fichas`, que es un resumen con botones reales
+  (`groupAndOrderProfileCards`, `src/domain/profile-order.ts`, decide su
+  único orden).
+- El guardado individual y el guardado conjunto de KPI comparten
+  `applyKpiConfigUpdate` (`src/server/services/kpi.service.ts`) y
+  `parseAllKpiConfigsFromFormData` (`src/server/validation/kpi.ts`): no
+  dupliques el bloqueo de primera publicación ni las restricciones de
+  localizaciones/objetos en un tercer lugar.
+- "Presentar resultados" (`src/server/services/results-presentation.service.ts`)
+  es una lectura pura sobre `computeSplitClassification`/
+  `computeFactionClassification` y sobre la última `WeekPublication`:
+  nunca le añadas persistencia de estado, cálculo propio de ranking, ni
+  datos de un participante ajenos al DTO ya definido (nunca `fullName`,
+  `email` ni `imageData`). `buildRevealGroups`
+  (`src/domain/results-presentation-reveal.ts`) sigue siendo la única
+  función que decide el orden de revelación.
 
 ## Reglas de trabajo
 

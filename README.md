@@ -18,8 +18,9 @@ MVP-1C — Resultados, publicacion y clasificacion**, **`0.7.0` / MVP-2A —
 Facciones, clasificacion de facciones y consolidacion de UX**, **`0.8.0` /
 MVP-2B — Profesiones, bonus de KPI y fichas de participante**, **`0.8.5` /
 MVP-2C — Localizaciones semanales**, **`0.9.0` / MVP-2D — Economia,
-inventario y equipo** y **`1.0.0` / MVP-3 — Centro de noticias y
-renovacion visual** (ver `docs/ROADMAP.md`). Version actual: `1.0.0`.
+inventario y equipo**, **`1.0.0` / MVP-3 — Centro de noticias y
+renovacion visual** y **`1.0.1` — UX y presentacion de resultados** (ver
+`docs/ROADMAP.md`). Version actual: `1.0.1`.
 
 Estas entregas implementan:
 
@@ -854,6 +855,51 @@ Cierre de la primera version estable. Detalle funcional exhaustivo en
    cuenta comprobando que no queda ninguna pantalla con el estilo gris
    anterior, y que la vista funciona en movil, `1366px`, `1920px` y
    `2560px`.
+
+## UX y presentacion de resultados (`1.0.1`)
+
+Hotfix de experiencia de usuario, sin cambios de modelo de datos ni de
+formulas. Detalle funcional exhaustivo en
+[`docs/UX_AND_RESULTS_PRESENTATION_1_0_1.md`](docs/UX_AND_RESULTS_PRESENTATION_1_0_1.md).
+
+- **Barra lateral fija a `100dvh`**, con el pie ("Mi cuenta"/"Cerrar
+  sesion") siempre visible, y orden de navegacion con Noticias primero
+  para el administrador.
+- **Auditoria ortografica** de todo el texto visible (navegacion, titulos,
+  botones, mensajes, plantillas de noticias), sin renombrar ninguna ruta,
+  identificador ni clave de formulario.
+- **Historico general**: agrupacion `Semana` oculta la media redundante;
+  `Mes`/`Año` la rotulan "Media semanal" con una nota de ayuda accesible.
+- **Rediseño de `/fichas`**: tarjetas horizontales agrupadas en Splits
+  activos/Proximos/Finalizados, con botones reales y la edicion movida por
+  completo a `/fichas/[splitParticipantId]`.
+- **Submenu lateral del detalle del split**, con seccion activa y version
+  movil ("Secciones del split").
+- **Guardado conjunto "Guardar todos los KPI"**, atomico, junto al
+  guardado individual ya existente.
+- **"Presentar resultados"**: nuevo modo de proyeccion a pantalla completa
+  (solo `ADMIN`) que revela la clasificacion semanal/general individual y
+  de facciones de la ultima semana publicada de un split, con controles de
+  reproduccion y teclado. Puramente de lectura: no persiste estado, no
+  genera noticias, no recalcula ningun ranking.
+
+### Comprobar manualmente
+
+1. Abre sesion como `ADMIN` en una ventana estrecha y otra muy alta;
+   confirma que la barra lateral ocupa el alto del viewport y su pie
+   sigue visible sin scroll de la pagina completa.
+2. Revisa que Noticias es la primera opcion del menu del administrador.
+3. Recorre `/resultados > Historico general` cambiando la agrupacion entre
+   `Semana`, `Mes` y `Año` y confirma las columnas y la nota de ayuda.
+4. Abre `/fichas` con una persona con splits activos, en borrador y
+   cerrados; confirma el orden, los botones y que la edicion solo esta en
+   `/fichas/[id]`.
+5. En el detalle de un split, navega por el submenu lateral (y su version
+   movil) y confirma que resalta la seccion visible al hacer scroll.
+6. Edita varios KPI a la vez y pulsa "Guardar todos los KPI"; fuerza un
+   valor invalido en uno y confirma que no se guarda ninguno.
+7. Con una semana publicada, entra en "Presentar resultados" y recorre
+   todas las fases con los controles manuales, automaticos y de teclado.
 
 ## Reinicio opcional y destructivo del entorno local
 

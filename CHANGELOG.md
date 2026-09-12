@@ -5,6 +5,70 @@ La primera version publicada es `0.1.0`; `1.0.0` cierra la primera version
 estable del producto (nucleo funcional y las cuatro capas de juego, mas
 comunicacion y renovacion visual).
 
+## [1.0.1] - Hotfix de UX y presentacion de resultados
+
+Hotfix de experiencia de usuario sobre `1.0.0`. Detalle completo en
+`docs/UX_AND_RESULTS_PRESENTATION_1_0_1.md`. **Sin migracion de Prisma:**
+no cambia el modelo de datos, ninguna formula de KPI, ningun bonus ni
+ninguna regla de clasificacion; la media existente del historico general
+no cambia de formula, solo se oculta donde era redundante y se rotula
+mejor donde aporta informacion; "Presentar resultados" usa exclusivamente
+datos ya publicados y no introduce ninguna clasificacion nueva ni ningun
+cambio retroactivo.
+
+### Corregido
+
+- Barra lateral de escritorio: pasa de crecer con el contenido a ser
+  `sticky` con `h-dvh` (alto exacto del viewport), con el pie ("Mi
+  cuenta"/"Cerrar sesion") siempre visible; el menu movil aplica el mismo
+  patron.
+- Orden de navegacion del administrador: Noticias pasa a ser la primera
+  opcion (antes quedaba al final).
+- Auditoria ortografica de todo el texto visible (navegacion, titulos,
+  botones, columnas de tabla, mensajes de exito/error, mensajes de
+  validacion de servidor, plantillas de noticias automaticas), sin
+  renombrar ninguna ruta, identificador, enum de Prisma ni clave de
+  formulario.
+- Formulario "Anadir participante": los campos se alinean en una franja
+  horizontal de altura comun con el boton de accion en una columna
+  exterior estable (antes quedaba bajo la nota de "Semana inicial");
+  los textos de asterisco se trasladan a una franja de ayuda unica,
+  asociada por campo mediante `aria-describedby`.
+
+### Mejorado
+
+- Historico general (`/resultados`): con agrupacion `Semana` se ocultan la
+  media redundante por KPI, la columna de media total y "Semanas
+  publicadas" (siempre coincidian con la suma/eran siempre `1`); con
+  `Mes`/`Año` se mantienen, rotuladas "Media semanal"/"Media semanal total
+  KPI", con una nota de ayuda accesible sobre el divisor.
+- `/fichas`: rediseño completo en tarjetas horizontales agrupadas en
+  Splits activos/Proximos/Finalizados (orden por fecha, puro y probado),
+  con botones reales del sistema de diseño; la edicion de alias, avatar y
+  profesion se centraliza en `/fichas/[splitParticipantId]`.
+- Detalle del split: nuevo submenu lateral con seccion activa (por hash y
+  por scroll) y version movil ("Secciones del split"), sustituyendo el
+  indice de enlaces subrayados anterior.
+- Configuracion de KPI del split: maquetacion panoramica por zonas
+  estables y nuevo boton "Guardar todos los KPI" (atomico, valida los diez
+  KPI antes de persistir cualquiera, comparte la misma logica que el
+  guardado individual).
+
+### Añadido
+
+- **"Presentar resultados"**: nuevo modo de proyeccion a pantalla completa
+  (`/splits/[id]/presentacion-resultados`, solo `ADMIN`) para revelar en
+  vivo la clasificacion semanal individual, general individual, semanal de
+  facciones y general de facciones de la ultima semana publicada de un
+  split, mas un resumen final con la tabla completa. Reutiliza
+  integramente `computeSplitClassification`/`computeFactionClassification`
+  (sin reimplementar ningun ranking), agrupa la revelacion con una funcion
+  pura y probada (`buildRevealGroups`), incluye controles manuales y
+  automaticos, teclado, `aria-live` y una animacion sobria que
+  `prefers-reduced-motion` ya reduce a instantanea. Es puramente de
+  lectura: no persiste estado, no genera noticias, no modifica ninguna
+  semana.
+
 ## [1.0.0] - MVP-3 — Centro de noticias y renovacion visual
 
 ### Anadido
