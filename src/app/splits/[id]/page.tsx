@@ -26,6 +26,7 @@ import { ActivateSplitButton } from "./ActivateSplitButton";
 import { AddParticipantForm } from "./AddParticipantForm";
 import { ParticipantEditRow } from "./ParticipantEditRow";
 import { KpiConfigSection } from "./KpiConfigSection";
+import { toKpiConfigView } from "@/domain/kpis/mapping";
 import { PositionPointsSection } from "./PositionPointsSection";
 import { SplitDetailNav, type SplitDetailNavItem } from "./SplitDetailNav";
 import { SplitDetailMobileNav } from "./SplitDetailMobileNav";
@@ -276,7 +277,12 @@ export default async function SplitDetailPage({ params }: { params: { id: string
           )}
         </section>
 
-        <KpiConfigSection splitId={split.id} splitStatus={split.status} kpiConfigs={kpiConfigs} locked={hasAnyPublication} />
+        <KpiConfigSection
+          splitId={split.id}
+          splitStatus={split.status}
+          kpiConfigs={kpiConfigs.map(toKpiConfigView)}
+          locked={hasAnyPublication}
+        />
 
         <PositionPointsSection splitId={split.id} splitStatus={split.status} rules={positionPointRules} locked={hasAnyPublication} />
 

@@ -259,7 +259,7 @@ export function AddParticipantForm({
       </div>
 
       {!state.ok && state.error && <ErrorMessage>{state.error}</ErrorMessage>}
-      {state.ok && <SuccessMessage>Participante anadido correctamente.</SuccessMessage>}
+      {state.ok && <SuccessMessage>Participante añadido correctamente.</SuccessMessage>}
     </form>
   );
 }

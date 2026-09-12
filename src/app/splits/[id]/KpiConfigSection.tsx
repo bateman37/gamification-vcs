@@ -3,8 +3,7 @@
 import { useFormState, useFormStatus } from "react-dom";
 import type { SplitStatus, KpiCode } from "@prisma/client";
 import { KPI_CATALOG_LIST } from "@/domain/kpis/catalog";
-import { toKpiConfigView, type KpiConfigView } from "@/domain/kpis/mapping";
-import type { SplitKpiConfig } from "@prisma/client";
+import type { KpiConfigView } from "@/domain/kpis/mapping";
 import { updateAllKpiConfigsAction } from "@/server/actions/kpi.actions";
 import { initialActionState } from "@/server/actions/action-result";
 import { Button, ErrorMessage, SuccessMessage } from "@/components/ui";
@@ -54,11 +53,12 @@ export function KpiConfigSection({
 }: {
   splitId: string;
   splitStatus: SplitStatus;
-  kpiConfigs: SplitKpiConfig[];
+  /** Ya serializado por el Server Component padre (`toKpiConfigView`): un Client Component nunca recibe `Decimal` de Prisma. */
+  kpiConfigs: KpiConfigView[];
   /** `true` desde que el split tiene al menos una semana publicada (seccion 12 de `0.7.0` / MVP-2A). */
   locked: boolean;
 }) {
-  const configByCode = new Map<string, KpiConfigView>(kpiConfigs.map((config) => [config.kpiCode, toKpiConfigView(config)]));
+  const configByCode = new Map<string, KpiConfigView>(kpiConfigs.map((config) => [config.kpiCode, config]));
   const readOnly = splitStatus === "CLOSED" || locked;
 
   const bulkAction = updateAllKpiConfigsAction.bind(null, splitId);

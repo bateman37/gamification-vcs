@@ -48,7 +48,7 @@ function CreateAccountForm({ personId }: { personId: string }) {
         name="temporaryPassword"
         required
         minLength={8}
-        placeholder="Contrasena temporal (min. 8)"
+        placeholder="Contraseña temporal (mín. 8)"
         className="w-full rounded-control border border-border-strong px-2 py-1 text-xs"
       />
       {!state.ok && state.error && <FieldError message={state.error} />}
@@ -68,7 +68,7 @@ function ResetPasswordForm({ userId }: { userId: string }) {
   const [state, formAction] = useFormState(resetWithId, initialSimpleActionState);
 
   if (state.ok && state.saved) {
-    return <span className="text-xs text-success">Contrasena restablecida</span>;
+    return <span className="text-xs text-success">Contraseña restablecida</span>;
   }
 
   if (!open) {

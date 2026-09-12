@@ -32,7 +32,7 @@ export function ChangePasswordForm() {
 
       <div>
         <label htmlFor="currentPassword" className="block text-sm font-medium text-ink">
-          Contrasena actual
+          Contraseña actual
         </label>
         <input
           id="currentPassword"
