@@ -114,13 +114,16 @@ export default async function FichasPage() {
                       </dd>
                     </div>
                   </dl>
-                  {card.hasPublishedResults && (
-                    <p className="mt-2 text-sm">
+                  <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-sm">
+                    {card.hasPublishedResults && (
                       <Link href={`/resultados?vista=por-split&split=${card.splitId}`} className="underline hover:text-slate-900">
                         Ver mis resultados de este split
                       </Link>
-                    </p>
-                  )}
+                    )}
+                    <Link href={`/fichas/${card.splitParticipantId}`} className="underline hover:text-slate-900">
+                      Configurar personaje
+                    </Link>
+                  </p>
                   {card.activeLocation && (
                     <div className="mt-3 rounded-md border border-teal-200 bg-teal-50 p-3 text-sm text-teal-900">
                       <p className="font-semibold">Localizacion activa esta semana</p>

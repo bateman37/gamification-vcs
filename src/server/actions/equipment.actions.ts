@@ -25,12 +25,15 @@ async function requireOwnPersonId(): Promise<string> {
 
 export async function equipOwnedItemAction(
   splitParticipantId: string,
-  ownedItemId: string,
   _prevState: ActionState,
-  _formData: FormData,
+  formData: FormData,
 ): Promise<ActionState> {
   return runAction(async () => {
     const personId = await requireOwnPersonId();
+    const ownedItemId = String(formData.get("ownedItemId") ?? "");
+    if (!ownedItemId) {
+      throw new DomainError("Selecciona un objeto de tu inventario.");
+    }
     await equipOwnedItem(prisma, personId, splitParticipantId, ownedItemId);
     revalidatePath(`/fichas/${splitParticipantId}`);
   });
