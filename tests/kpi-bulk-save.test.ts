@@ -26,7 +26,7 @@ function form(values: Record<string, string>): FormData {
 }
 
 /** Construye una FormData con las diez entradas prefijadas `${kpiCode}__`, con los valores predeterminados del catalogo. */
-function buildValidBulkFormValues(overrides: Partial<Record<string, string>> = {}): Record<string, string> {
+function buildValidBulkFormValues(overrides: Record<string, string> = {}): Record<string, string> {
   const values: Record<string, string> = {};
   for (const entry of KPI_CATALOG_LIST) {
     const prefix = `${entry.code}__`;
