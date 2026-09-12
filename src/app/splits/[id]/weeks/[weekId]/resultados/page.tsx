@@ -8,7 +8,8 @@ import { requireAdminSession } from "@/lib/session";
 import { KPI_CATALOG } from "@/domain/kpis/catalog";
 import { formatCalendarDate } from "@/lib/dates";
 import { EmptyState } from "@/components/ui";
-import { WeeklyResultsTable, type ResultRow } from "./WeeklyResultsTable";
+import { WeeklyResultsTable, type ResultRow, type WeekLocationSummary } from "./WeeklyResultsTable";
+import { WeekLocationSummaryCard } from "./WeekLocationSummaryCard";
 import { FactionWeeklyPreviewTable, type FactionWeeklyPreviewRow } from "./FactionWeeklyPreviewTable";
 import { PublishWeekButton } from "./PublishWeekButton";
 import { selectFactionTopThree, rankFactions } from "@/domain/faction-ranking";
@@ -47,6 +48,8 @@ export default async function WeeklyResultsPage({ params }: { params: { id: stri
           professionBonusPoints: kpiResult.professionBonusPoints?.toNumber() ?? null,
           professionApplied: kpiResult.professionApplied,
           professionName: kpiResult.professionNameSnapshot,
+          locationBonusPoints: kpiResult.locationBonusPoints?.toNumber() ?? null,
+          locationApplied: kpiResult.locationApplied,
           kpiRank: kpiResult.kpiRank,
           rankedParticipantCount: kpiResult.rankedParticipantCount,
         })),
@@ -67,6 +70,17 @@ export default async function WeeklyResultsPage({ params }: { params: { id: stri
         ),
       }))
       .sort((a, b) => a.weeklyRank - b.weeklyRank || a.alias.localeCompare(b.alias, "es"));
+
+    // Snapshot congelado al publicar (`0.8.5` / MVP-2C): nunca se consulta una posible
+    // configuracion viva distinta de `SplitWeekLocation`.
+    const weekLocation: WeekLocationSummary | null =
+      publication.locationNameSnapshot && publication.locationKpiCodeSnapshot && publication.locationBonusPercentSnapshot
+        ? {
+            name: publication.locationNameSnapshot,
+            kpiCode: publication.locationKpiCodeSnapshot,
+            bonusPercent: publication.locationBonusPercentSnapshot,
+          }
+        : null;
 
     const activeKpis = (rows[0]?.kpiCells ?? [])
       .map((cell) => ({ code: cell.kpiCode, name: KPI_CATALOG[cell.kpiCode as keyof typeof KPI_CATALOG]?.name ?? cell.kpiName }))
@@ -116,11 +130,14 @@ export default async function WeeklyResultsPage({ params }: { params: { id: stri
           </p>
         </div>
 
+        <WeekLocationSummaryCard location={weekLocation} />
+
         <WeeklyResultsTable
           rows={rows}
           activeKpis={activeKpis}
           splitParticipantCount={splitParticipantCount}
           showProfessionColumn={publication.participantResults.some((result) => result.splitUsedProfessions)}
+          weekLocation={weekLocation}
         />
 
         <FactionWeeklyPreviewTable rows={factionRows} />
@@ -144,6 +161,7 @@ export default async function WeeklyResultsPage({ params }: { params: { id: stri
           <h1 className="mt-2 text-xl font-semibold">{split.name}</h1>
           <p className="mt-1 text-sm text-slate-600">{weekLabel}</p>
         </div>
+        <WeekLocationSummaryCard location={results.location} />
         <EmptyState>
           Esta semana todavia no esta completa: {results.completeness.loadedCount} de {results.completeness.totalActiveCount} KPI
           activos cargados. Completa todos los KPI activos antes de ver los resultados.
@@ -172,6 +190,8 @@ export default async function WeeklyResultsPage({ params }: { params: { id: stri
         professionBonusPoints: kpiResult.professionBonusPoints,
         professionApplied: kpiResult.professionApplied,
         professionName: kpiResult.professionName,
+        locationBonusPoints: kpiResult.locationBonusPoints,
+        locationApplied: kpiResult.locationApplied,
         kpiRank: kpiResult.kpiRank,
         rankedParticipantCount: kpiResult.rankedParticipantCount,
       })),
@@ -210,6 +230,8 @@ export default async function WeeklyResultsPage({ params }: { params: { id: stri
         </p>
       </div>
 
+      <WeekLocationSummaryCard location={results.location} />
+
       {results.blockingIssues.length > 0 && (
         <div className="rounded-md border border-red-300 bg-red-50 p-4 text-sm text-red-800">
           <p className="font-medium">No se puede publicar hasta resolver:</p>
@@ -226,6 +248,7 @@ export default async function WeeklyResultsPage({ params }: { params: { id: stri
         activeKpis={activeKpis}
         splitParticipantCount={splitParticipantCount}
         showProfessionColumn={results.usesProfessions}
+        weekLocation={results.location}
       />
 
       <FactionWeeklyPreviewTable rows={results.factionPreview.factions} />
