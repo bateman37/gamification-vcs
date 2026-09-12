@@ -289,7 +289,7 @@ export function PresentationView({ splitId, data }: { splitId: string; data: Spl
                     <tr>
                       <th className="px-3 py-2">Posición</th>
                       <th className="px-3 py-2">Alias</th>
-                      <th className="px-3 py-2 text-right">Puntos por posicion</th>
+                      <th className="px-3 py-2 text-right">Puntos por posición</th>
                       <th className="px-3 py-2 text-right">Puntos KPI acumulados</th>
                     </tr>
                   </thead>

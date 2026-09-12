@@ -426,7 +426,7 @@ describe("Mercado y compra", () => {
     await purchaseStoreItem(testDb, person.id, participant.id, item.id);
 
     const purchaseNews = await testDb.newsItem.findFirstOrThrow({ where: { category: "PURCHASE" } });
-    expect(purchaseNews.body).toBe("10 creditos · Saldo restante: 10 creditos.");
+    expect(purchaseNews.body).toBe("10 créditos · Saldo restante: 10 créditos.");
   });
 
   it("una compra fallida (saldo insuficiente) no crea ninguna noticia", async () => {

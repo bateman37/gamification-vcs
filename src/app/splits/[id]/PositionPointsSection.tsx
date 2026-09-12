@@ -51,7 +51,7 @@ export function PositionPointsSection({
       ) : (
         locked && (
           <p className="text-sm text-reward-ink">
-            La configuracion quedo bloqueada al publicar la primera semana del split.
+            La configuración quedó bloqueada al publicar la primera semana del split.
           </p>
         )
       )}
