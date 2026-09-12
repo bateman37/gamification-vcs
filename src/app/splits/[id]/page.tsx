@@ -38,6 +38,7 @@ import { FactionsSection } from "./FactionsSection";
 import { FactionClassificationSummarySection } from "./FactionClassificationSummarySection";
 import { ProfessionsSection } from "./ProfessionsSection";
 import { EconomySummarySection } from "./EconomySummarySection";
+import { PresentationLaunchSection } from "./PresentationLaunchSection";
 
 const STATUS_TONE: Record<string, "slate" | "green" | "gray"> = {
   DRAFT: "slate",
@@ -199,6 +200,8 @@ export default async function SplitDetailPage({ params }: { params: { id: string
             </table>
           </div>
         </section>
+
+        <PresentationLaunchSection splitId={split.id} weeks={weeks} publishedAtByWeekId={publishedAtByWeekId} />
 
         <ClassificationSummarySection splitId={split.id} classification={classification} />
 
