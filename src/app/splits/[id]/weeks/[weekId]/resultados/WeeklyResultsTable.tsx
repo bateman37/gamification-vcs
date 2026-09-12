@@ -24,6 +24,15 @@ export interface ResultKpiCell {
   /** Puntos anadidos por la localizacion semanal (`0.8.5` / MVP-2C). `null` en publicaciones anteriores a esta version. */
   locationBonusPoints: number | null;
   locationApplied: boolean;
+  /**
+   * Suma de los puntos anadidos por los objetos de equipo que potencian este
+   * KPI (`0.9.0` / MVP-2D). `null` en publicaciones anteriores a esa version;
+   * en previsualizacion refleja el equipo actual, en una semana publicada la
+   * instantanea congelada de `PublishedKpiResult` (`1.0.2`, ver
+   * docs/ECONOMY_INVENTORY_AND_EQUIPMENT.md).
+   */
+  equipmentBonusPoints: number | null;
+  equipmentApplied: boolean;
   kpiRank: number | null;
   rankedParticipantCount: number | null;
 }
@@ -73,16 +82,24 @@ export function formatLocationBreakdown(cell: ResultKpiCell, weekLocation: WeekL
   return `Bonus localización ${name}${percentLabel}: +${formatPoints(cell.locationBonusPoints)}`;
 }
 
+/** Desglose textual del bonus de objetos equipados para un KPI concreto (`0.9.0` / MVP-2D). `null` si no se aplico. */
+export function formatEquipmentBreakdown(cell: ResultKpiCell): string | null {
+  if (!cell.equipmentApplied || cell.equipmentBonusPoints === null) return null;
+  return `Bonus objetos equipados: +${formatPoints(cell.equipmentBonusPoints)}`;
+}
+
 /** Desglose completo de un KPI: base tras el maximo, cada bonus aplicado y el resultado final. */
 function formatBonusBreakdown(cell: ResultKpiCell, weekLocation: WeekLocationSummary | null): string | null {
   const professionLine = formatProfessionBreakdown(cell);
   const locationLine = formatLocationBreakdown(cell, weekLocation);
-  if ((!professionLine && !locationLine) || cell.basePointsBeforeProfession === null) return null;
+  const equipmentLine = formatEquipmentBreakdown(cell);
+  if ((!professionLine && !locationLine && !equipmentLine) || cell.basePointsBeforeProfession === null) return null;
 
   return [
     `Resultado tras máximo: ${formatPoints(cell.basePointsBeforeProfession)}`,
     professionLine,
     locationLine,
+    equipmentLine,
     `Resultado final: ${formatPoints(cell.finalPoints ?? 0)}`,
   ]
     .filter((line): line is string => line !== null)
@@ -107,13 +124,22 @@ function KpiCellView({ cell, weekLocation }: { cell: ResultKpiCell; weekLocation
   const title = `${formatPoints(percentage)} % del máximo${cell.capped ? " (limitado por el máximo)" : ""}${
     breakdown ? ` - ${breakdown}` : ""
   }`;
-  const borderClass = cell.professionApplied && cell.locationApplied
-    ? "border-2 border-dashed border-reward"
-    : cell.professionApplied
-      ? "border-2 border-dashed border-game"
-      : cell.locationApplied
-        ? "border-2 border-dashed border-info"
-        : "";
+  // Tres bonus independientes (profesion, localizacion, objetos): con dos o mas
+  // aplicados a la vez se usa el mismo tratamiento combinado ya existente
+  // (ambar/reward), nunca solo el color de uno de ellos (seccion 14 del
+  // encargo de `0.9.0` / MVP-2D, ver docs/ECONOMY_INVENTORY_AND_EQUIPMENT.md).
+  const appliedBonusCount = [cell.professionApplied, cell.locationApplied, cell.equipmentApplied].filter(Boolean).length;
+  const borderClass =
+    appliedBonusCount >= 2
+      ? "border-2 border-dashed border-reward"
+      : cell.professionApplied
+        ? "border-2 border-dashed border-game"
+        : cell.locationApplied
+          ? "border-2 border-dashed border-info"
+          : cell.equipmentApplied
+            ? "border-2 border-dashed border-reward"
+            : "";
+  const showEquipmentBadge = cell.equipmentApplied && cell.equipmentBonusPoints !== null && cell.equipmentBonusPoints > 0;
   return (
     <td className={`px-3 py-2 text-center font-medium ${COLOR_BAND_CLASSES[bandInfo.band]} ${borderClass}`} title={title}>
       {formatPoints(displayPoints)}
@@ -128,6 +154,11 @@ function KpiCellView({ cell, weekLocation }: { cell: ResultKpiCell; weekLocation
           +{weekLocation?.bonusPercent ?? ""} % localización
         </span>
       )}
+      {showEquipmentBadge && (
+        <span className="mt-1 block rounded bg-reward-soft px-1 py-0.5 text-[10px] font-semibold text-reward-ink">
+          Objetos: +{formatPoints(cell.equipmentBonusPoints ?? 0)} puntos
+        </span>
+      )}
       <span className="sr-only"> ({title})</span>
     </td>
   );
@@ -139,6 +170,7 @@ export function WeeklyResultsTable({
   splitParticipantCount,
   showProfessionColumn,
   weekLocation,
+  isPreview = false,
 }: {
   rows: ResultRow[];
   activeKpis: { code: string; name: string }[];
@@ -148,9 +180,20 @@ export function WeeklyResultsTable({
   showProfessionColumn: boolean;
   /** Localizacion de esta semana (`0.8.5` / MVP-2C), o `null` si no tiene. */
   weekLocation: WeekLocationSummary | null;
+  /**
+   * `true` en la previsualizacion de una semana todavia no publicada (el
+   * bonus de objetos refleja el equipo actual); `false` (por defecto) en una
+   * semana ya publicada, donde el bonus es la instantanea congelada de
+   * `PublishedKpiResult` (`1.0.2`). Solo cambia el texto de la leyenda.
+   */
+  isPreview?: boolean;
 }) {
   const [sortKey, setSortKey] = useState<SortKey>("position");
   const [sortDir, setSortDir] = useState<1 | -1>(1);
+
+  // Solo se explica en la leyenda cuando algun objeto equipado aplico realmente
+  // su bonus a alguna celda visible (igual de discreto que el resto de bonus).
+  const hasEquipmentBonus = rows.some((row) => row.kpiCells.some((cell) => cell.equipmentApplied));
 
   const sortedRows = useMemo(() => {
     const copy = [...rows];
@@ -279,6 +322,12 @@ export function WeeklyResultsTable({
           <span className="rounded border-2 border-dashed border-info px-2 py-0.5 text-info-ink">
             Borde y badge &quot;+{weekLocation.bonusPercent} % localización&quot; = bonus de la localización &quot;{weekLocation.name}&quot;
             aplicado (el desglose esta en la ayuda de la celda)
+          </span>
+        )}
+        {hasEquipmentBonus && (
+          <span className="rounded border-2 border-dashed border-reward px-2 py-0.5 text-reward-ink">
+            &quot;Objetos: +N puntos&quot; = puntos añadidos por los objetos equipados
+            {isPreview ? " actualmente" : " al publicar la semana"} (el desglose está en la ayuda de la celda).
           </span>
         )}
       </div>

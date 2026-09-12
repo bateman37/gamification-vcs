@@ -50,6 +50,10 @@ export default async function WeeklyResultsPage({ params }: { params: { id: stri
           professionName: kpiResult.professionNameSnapshot,
           locationBonusPoints: kpiResult.locationBonusPoints?.toNumber() ?? null,
           locationApplied: kpiResult.locationApplied,
+          // Instantanea congelada de `PublishedKpiResult` (`0.9.0` / MVP-2D): nunca se
+          // recalcula a partir del equipo actual, que puede haber cambiado desde entonces.
+          equipmentBonusPoints: kpiResult.equipmentBonusPoints?.toNumber() ?? null,
+          equipmentApplied: kpiResult.equipmentApplied,
           kpiRank: kpiResult.kpiRank,
           rankedParticipantCount: kpiResult.rankedParticipantCount,
         })),
@@ -192,6 +196,10 @@ export default async function WeeklyResultsPage({ params }: { params: { id: stri
         professionName: kpiResult.professionName,
         locationBonusPoints: kpiResult.locationBonusPoints,
         locationApplied: kpiResult.locationApplied,
+        // Previsualizacion (`0.9.0` / MVP-2D): refleja el equipo actual del participante,
+        // recalculado por `computeWeeklyResults` en cada consulta, nunca persistido aqui.
+        equipmentBonusPoints: kpiResult.equipmentBonusPoints,
+        equipmentApplied: kpiResult.equipmentApplied,
         kpiRank: kpiResult.kpiRank,
         rankedParticipantCount: kpiResult.rankedParticipantCount,
       })),
@@ -249,6 +257,7 @@ export default async function WeeklyResultsPage({ params }: { params: { id: stri
         splitParticipantCount={splitParticipantCount}
         showProfessionColumn={results.usesProfessions}
         weekLocation={results.location}
+        isPreview
       />
 
       <FactionWeeklyPreviewTable rows={results.factionPreview.factions} />

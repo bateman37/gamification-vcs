@@ -1448,3 +1448,90 @@ un layout dedicado o un overlay fijo que cubra toda la app shell"). Separar
 `AppShell` en grupos de rutas para una unica pantalla habria sido un
 cambio estructural mas amplio de lo necesario para una funcionalidad que
 ya se resuelve de forma robusta y accesible con un overlay.
+
+## Ranuras de equipo: sincronizar el estado local con un efecto, no eliminarlo (hotfix `1.0.2`)
+
+**Decision:** `EquipmentSlotsPanel.tsx` sigue manteniendo `orderedSlots`
+como estado local (necesario para el reordenamiento optimista con
+flechas), pero anade un `useEffect(() => setOrderedSlots(slots), [slots])`
+que lo resincroniza con las props del servidor en cuanto cambian. No se
+elimina el estado local ni se sustituye por una recarga completa del
+navegador: las props del servidor siguen siendo la unica fuente de
+verdad, y el estado local solo existe para la reordenacion instantanea
+antes de que `reorderEquipmentSlotsAction` confirme el cambio. De paso, el
+formulario de creacion de ranura se limpia al guardar con exito
+reutilizando el mismo patron ya usado en `PersonCreateForm.tsx`
+(`formRef`/`wasSubmitted` + `useEffect`), sin inventar uno nuevo.
+
+**Motivo:** `useState(slots)` solo toma el valor inicial de las props en
+el primer render; como cada Server Action del panel ya llama a
+`revalidatePath`, el bug era puramente de sincronizacion de estado en
+cliente (confirmado porque crear la misma ranura otra vez fallaba en
+servidor por nombre duplicado, probando que si se habia persistido). El
+encargo pide explicitamente no resolverlo con una recarga forzada del
+navegador ni con una segunda insercion.
+
+## Bonus de objetos en la tabla administrativa: mismo tratamiento de borde combinado que profesion+localizacion (hotfix `1.0.2`)
+
+**Decision:** `WeeklyResultsTable.tsx` cuenta cuantos de los tres bonus
+(`professionApplied`/`locationApplied`/`equipmentApplied`) se aplican a
+una celda. Con dos o mas aplicados a la vez se usa el borde combinado ya
+existente (`border-reward`, antes reservado a "profesion + localizacion");
+con exactamente uno aplicado, cada bonus usa su propio color (`game`
+profesion, `info` localizacion, `reward` objetos). El badge de objetos usa
+el formato exacto "Objetos: +N puntos" (con `formatPoints`, nunca "+N
+objetos" para no leerse como una cantidad de articulos), se anade al
+desglose accesible (`title`/`sr-only`) junto a los otros dos bonus, y la
+leyenda de la tabla solo menciona el badge de objetos cuando algun KPI
+visible lo aplica realmente. La tabla admite ademas una prop opcional
+`isPreview` que solo cambia el texto de la leyenda ("actualmente" en
+previsualizacion frente a "al publicar la semana" en una semana
+publicada), sin alterar ningun dato ni calculo.
+
+**Motivo:** el encargo exige que ningun bonus se oculte visualmente cuando
+otro tambien aplica, y que el tratamiento de borde combinado ya existente
+(pensado originalmente solo para profesion+localizacion) se reutilice para
+cualquier combinacion que incluya objetos, en vez de inventar un cuarto
+estilo de borde. Mantener la explicacion en la leyenda condicionada a que
+el bonus aparezca realmente en la tabla (en vez de mostrarla siempre desde
+`0.9.0`) sigue el mismo criterio ya usado por el badge de localizacion
+(`weekLocation` presente) y por el de profesion (`showProfessionColumn`).
+
+## Submenu del split: distinguir enlaces de seccion y de ruta con un discriminante explicito (hotfix `1.0.2`)
+
+**Decision:** `SplitDetailNavItem` pasa de `{ href, label, icon }` a una
+union discriminada `{ type: "section" | "route"; href; label; icon }`.
+`SplitDetailNav.tsx` solo registra en el `IntersectionObserver` y solo
+marca como activos por hash/scroll los items `type: "section"`; los items
+`type: "route"` se renderizan con `next/link` y nunca tocan el hash ni el
+resaltado. `SplitDetailMobileNav.tsx` reutiliza exactamente el mismo tipo
+y el mismo array de items (`page.tsx` sigue siendo la unica fuente),
+alternando entre `<a>` y `<Link>` segun el discriminante. "Presentar
+resultados" se anade como un item `type: "route"` (icono `Play`, ya
+disponible) justo despues de "Calendario de semanas" y antes de
+"Clasificacion general individual".
+
+**Motivo:** el encargo prohibe explicitamente tratar una ruta completa
+como si fuera un ancla (`href.slice(1)` rompe con una ruta real) y pide un
+discriminante explicito en el tipo en vez de inferir el comportamiento a
+partir de la forma del `href` (por ejemplo, "empieza por `#`"), para que
+el compilador impida anadir un item ambiguo en el futuro.
+
+## Alcance minimo de documentacion para el hotfix `1.0.2`
+
+**Decision:** este hotfix no anade una entrada nueva en
+`docs/ROADMAP.md` (que documenta entregas, no parches puntuales de tres
+bugs ya cubiertos por sus propias entregas) ni una seccion nueva de reglas
+en `CLAUDE.md` (no introduce ninguna regla de negocio nueva que deba
+protegerse de una futura sesion). Se actualizan unicamente: version en
+`package.json`/`package-lock.json`, `CHANGELOG.md`, las dos secciones ya
+existentes de `docs/ECONOMY_INVENTORY_AND_EQUIPMENT.md` y
+`docs/UX_AND_RESULTS_PRESENTATION_1_0_1.md` que describen exactamente lo
+tocado, y la mencion de version/estado actual en `README.md`.
+
+**Motivo:** el encargo es explicito en que se trata de un parche de tres
+bugs ya documentados en sus entregas originales (`0.9.0`/MVP-2D y
+`1.0.1`), sin cambios de modelo, formula ni regla de negocio nueva; anadir
+una entrega nueva en el roadmap o una seccion nueva de reglas "que no
+romper" en `CLAUDE.md` habria sido desproporcionado para tres correcciones
+puntuales sin superficie nueva de configuracion.

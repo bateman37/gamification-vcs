@@ -5,6 +5,55 @@ La primera version publicada es `0.1.0`; `1.0.0` cierra la primera version
 estable del producto (nucleo funcional y las cuatro capas de juego, mas
 comunicacion y renovacion visual).
 
+## [1.0.2] - Hotfix de ranuras de equipo, bonus de objetos y submenu de presentacion
+
+Hotfix puntual sobre `1.0.1`. **Sin migracion de Prisma:** no cambia el
+modelo de datos, ninguna formula de KPI (incluida `applyEquipmentBonuses`),
+ningun bonus, el momento en que se congela el equipo al publicar, ni
+ninguna regla de la presentacion en vivo ya existente. Los tres cambios son
+de sincronizacion de estado en cliente, transporte/presentacion de un dato
+ya calculado, y navegacion.
+
+### Corregido
+
+- **Ranuras de equipo invisibles tras crearlas** (`EquipmentSlotsPanel.tsx`,
+  `/splits/[id]/economia`): el estado local usado para el reordenamiento
+  optimista (`useState(slots)`) solo tomaba el valor inicial de las props
+  en el primer render y nunca se resincronizaba tras un `revalidatePath`
+  (crear, renombrar, eliminar o navegar). Ahora un efecto sincroniza ese
+  estado con las props del servidor en cada cambio real; una ranura ya
+  persistida pero invisible (por ejemplo, una "Arma" creada antes de este
+  hotfix) aparece automaticamente, sin ningun paso manual. El campo del
+  formulario de creacion tambien se limpia al guardar con exito, siguiendo
+  el mismo patron ya usado en "Nueva persona".
+- **Bonus de objetos ausente en la tabla administrativa de resultados
+  semanales** (`WeeklyResultsTable.tsx`, `/splits/[id]/weeks/[weekId]/resultados`):
+  el bonus de objetos (`equipmentBonusPoints`/`equipmentApplied`) ya se
+  calculaba correctamente (previsualizacion) y ya se congelaba al publicar,
+  pero el DTO de celda de esa tabla nunca lo transportaba, a diferencia del
+  bonus de profesion y de localizacion. Ahora cada celda incluye ese dato,
+  leido del calculo en vivo en una semana sin publicar y **siempre** de la
+  instantanea congelada de `PublishedKpiResult` en una semana publicada
+  (nunca recalculado a partir del equipo actual). Una celda con bonus de
+  objetos muestra el badge ambar "Objetos: +N puntos", su borde y su
+  desglose accesible se combinan correctamente con profesion y
+  localizacion en cualquier subconjunto, y la leyenda de la tabla explica
+  el nuevo badge. Una publicacion anterior a `0.9.0` sigue abriendo sin
+  error y sin mostrar ningun badge. La vista individual (`/resultados`)
+  no cambia: ya mostraba este bonus correctamente.
+- **"Presentar resultados" ausente del submenu del detalle del split**: la
+  funcionalidad de `1.0.1` existia y funcionaba, pero no tenia entrada en
+  el submenu lateral (ni en su version movil "Secciones del split"). El
+  tipo de item del submenu (`SplitDetailNavItem`) distingue ahora
+  explicitamente enlaces de seccion (ancla de la misma pagina, con
+  resaltado por `IntersectionObserver`) de enlaces de ruta real (navegan
+  con `Link`, nunca alteran el hash ni participan en el resaltado por
+  scroll). "Presentar resultados" aparece como enlace de ruta justo
+  despues de "Calendario de semanas" y antes de "Clasificación general
+  individual", en escritorio y en movil, para `ADMIN`, exista o no ya
+  alguna semana publicada; su estado vacio ("Publica una semana para
+  presentar sus resultados") no cambia.
+
 ## [1.0.1] - Hotfix de UX y presentacion de resultados
 
 Hotfix de experiencia de usuario sobre `1.0.0`. Detalle completo en
