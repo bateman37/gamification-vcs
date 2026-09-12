@@ -9,6 +9,7 @@ export function HistoryFilters({
   selectedSplitId,
   selectedGrouping,
   personId,
+  gamificationMode,
 }: {
   years: number[];
   splits: { id: string; name: string }[];
@@ -16,6 +17,7 @@ export function HistoryFilters({
   selectedSplitId: string;
   selectedGrouping: string;
   personId: string | null;
+  gamificationMode?: string;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -23,6 +25,7 @@ export function HistoryFilters({
     <form ref={formRef} method="get" className="flex flex-wrap items-end gap-4 rounded-lg border border-slate-200 bg-white p-4">
       {personId && <input type="hidden" name="persona" value={personId} />}
       <input type="hidden" name="vista" value="historico" />
+      {gamificationMode && <input type="hidden" name="gamificacion" value={gamificationMode} />}
 
       <div>
         <label htmlFor="anio" className="block text-xs font-medium text-slate-600">
