@@ -27,8 +27,8 @@ export const storeItemFormSchema = z.object({
     .optional()
     .transform((value) => (value && value.length > 0 ? value : null)),
   priceCredits: z.coerce
-    .number({ invalid_type_error: "Introduce un precio en creditos." })
-    .int("El precio debe ser un numero entero.")
+    .number({ invalid_type_error: "Introduce un precio en créditos." })
+    .int("El precio debe ser un número entero.")
     .positive("El precio debe ser mayor que cero."),
   equipmentSlotId: z.string().trim().min(1, "Selecciona una ranura."),
   kpiCode: z.enum(KPI_CODES, {

@@ -25,7 +25,7 @@ export const professionFormSchema = z
     availableN2: z.boolean(),
   })
   .refine((input) => input.kpiCodeA !== input.kpiCodeB, {
-    message: "Una profesion debe potenciar dos KPI distintos.",
+    message: "Una profesión debe potenciar dos KPI distintos.",
     path: ["kpiCodeB"],
   })
   .refine((input) => input.availableN0 || input.availableN1 || input.availableN2, {

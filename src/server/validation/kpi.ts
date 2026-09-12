@@ -20,11 +20,11 @@ const baseMaxSchema = z.preprocess(
   coerceDecimalInput,
   z
     .number({
-      required_error: "El maximo base es obligatorio.",
-      invalid_type_error: "El maximo base debe ser un numero.",
+      required_error: "El máximo base es obligatorio.",
+      invalid_type_error: "El máximo base debe ser un número.",
     })
-    .finite("El maximo base debe ser un numero finito.")
-    .positive("El maximo base debe ser mayor que cero."),
+    .finite("El máximo base debe ser un número finito.")
+    .positive("El máximo base debe ser mayor que cero."),
 );
 
 /**
@@ -34,8 +34,8 @@ const baseMaxSchema = z.preprocess(
 const multiplierSchema = z.preprocess(
   coerceDecimalInput,
   z
-    .number({ invalid_type_error: "El multiplicador debe ser un numero." })
-    .finite("El multiplicador debe ser un numero finito.")
+    .number({ invalid_type_error: "El multiplicador debe ser un número." })
+    .finite("El multiplicador debe ser un número finito.")
     .min(0, "El multiplicador debe ser mayor o igual que cero.")
     .optional(),
 );

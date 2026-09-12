@@ -16,10 +16,10 @@ export const weekLocationFormSchema = z.object({
   name: z
     .string()
     .trim()
-    .min(1, "El nombre de la localizacion es obligatorio.")
+    .min(1, "El nombre de la localización es obligatorio.")
     .max(MAX_LOCATION_NAME_LENGTH, `El nombre no puede superar los ${MAX_LOCATION_NAME_LENGTH} caracteres.`),
   kpiCode: z.enum(KPI_CODES, {
-    required_error: "Selecciona el KPI que potencia la localizacion.",
+    required_error: "Selecciona el KPI que potencia la localización.",
     invalid_type_error: "El KPI seleccionado no pertenece al catalogo.",
   }),
   bonusPercent: z.coerce
