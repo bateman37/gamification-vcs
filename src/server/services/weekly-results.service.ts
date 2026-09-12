@@ -25,6 +25,7 @@ import { rankByScoreDescending, compareNormalizedAlias } from "@/domain/ranking"
 import { buildFactionWeeklyPreview, type FactionWeeklyPreview } from "@/server/services/faction.service";
 import { collectProfessionAssignmentIssues, toApplicableProfession } from "@/server/services/profession.service";
 import { applyProfessionBonus, PROFESSION_BONUS_PERCENT } from "@/domain/profession-bonus";
+import { applyLocationBonus, isAllowedLocationBonusPercent, type ApplicableWeekLocation } from "@/domain/location-bonus";
 
 /**
  * Motor agregado de resultados semanales (ver docs/RESULTS_PUBLICATION.md).
@@ -54,8 +55,21 @@ export interface ParticipantKpiResult {
   professionApplied: boolean;
   /** Nombre de la profesion que produjo el bonus, para explicarlo en pantalla. */
   professionName: string | null;
+  /** Puntos anadidos por la localizacion semanal (`0.8.5` / MVP-2C). `0` cuando no aplica; `null` si no hay resultado numerico. */
+  locationBonusPoints: number | null;
+  /** `true` solo si el bonus de localizacion se aplico realmente a este KPI. */
+  locationApplied: boolean;
   kpiRank: number | null;
   rankedParticipantCount: number | null;
+}
+
+/** Localizacion semanal (`0.8.5` / MVP-2C, ver docs/WEEKLY_LOCATIONS.md) lista para mostrarse. */
+export interface WeekLocationView {
+  id: string;
+  name: string;
+  kpiCode: KpiCode;
+  kpiName: string;
+  bonusPercent: number;
 }
 
 /** Profesion congelable de un participante dentro del resultado semanal. */
@@ -84,6 +98,8 @@ export interface ParticipantWeeklyResult {
   profession: ParticipantProfessionSnapshot | null;
   /** Suma de los puntos anadidos por profesion en la semana (0 si no hay ninguno). */
   professionBonusTotal: number;
+  /** Suma de los puntos anadidos por la localizacion semanal en la semana (0 si no hay ninguno o no aplica). */
+  locationBonusTotal: number;
 }
 
 export interface WeeklyResultsComputation {
@@ -108,6 +124,8 @@ export interface WeeklyResultsComputation {
   factionPreview: FactionWeeklyPreview;
   /** `true` si el split tiene al menos una profesion creada (`0.8.0` / MVP-2B). */
   usesProfessions: boolean;
+  /** Localizacion configurada para esta semana (`0.8.5` / MVP-2C), o `null` si no tiene. Se muestra aunque la semana no este completa. */
+  location: WeekLocationView | null;
 }
 
 interface ResolvedKpiOutcome {
@@ -335,15 +353,28 @@ export async function computeWeeklyResults(db: PrismaClient, splitId: string, we
   const week = await getSplitWeek(db, splitId, weekId);
   if (!week) throw new DomainError("La semana indicada no pertenece a este split.");
 
-  const [kpiConfigs, summaryByWeek] = await Promise.all([
+  const [kpiConfigs, summaryByWeek, weekLocationRow] = await Promise.all([
     listKpiConfigsForSplit(db, splitId),
     getWeeklyKpiLoadSummary(db, splitId, [week]),
+    db.splitWeekLocation.findUnique({ where: { splitWeekId: week.id } }),
   ]);
   const completeness = summaryByWeek.get(week.id) ?? { loadedCount: 0, totalActiveCount: 0 };
   const isComplete = completeness.totalActiveCount > 0 && completeness.loadedCount === completeness.totalActiveCount;
 
   const activeConfigs = kpiConfigs.filter((config) => config.isActive);
   const activeCodes = KPI_CATALOG_LIST.map((entry) => entry.code).filter((code) => activeConfigs.some((config) => config.kpiCode === code));
+
+  // Se muestra aunque la semana no este completa (seccion 19 del encargo); solo se aplica al
+  // calculo mas abajo cuando ademas su KPI sigue activo en el split.
+  const locationView: WeekLocationView | null = weekLocationRow
+    ? {
+        id: weekLocationRow.id,
+        name: weekLocationRow.name,
+        kpiCode: weekLocationRow.kpiCode,
+        kpiName: KPI_CATALOG[weekLocationRow.kpiCode].name,
+        bonusPercent: weekLocationRow.bonusPercent,
+      }
+    : null;
 
   const base: WeeklyResultsComputation = {
     splitId,
@@ -363,9 +394,23 @@ export async function computeWeeklyResults(db: PrismaClient, splitId: string, we
     blockingIssues: [],
     factionPreview: { hasFactions: false, blockingIssues: [], factions: [] },
     usesProfessions: false,
+    location: locationView,
   };
 
   if (!isComplete) return base;
+
+  // La localizacion solo interviene si su KPI sigue activo en el split (seccion 12 del encargo):
+  // si se desactivo despues de configurarla, el KPI ya no aparece en `activeCodes` y este valor
+  // queda `null`, sin que haga falta ningun caso especial en el bucle de calculo.
+  const applicableLocation: ApplicableWeekLocation | null =
+    weekLocationRow && activeCodes.includes(weekLocationRow.kpiCode) && isAllowedLocationBonusPercent(weekLocationRow.bonusPercent)
+      ? {
+          id: weekLocationRow.id,
+          name: weekLocationRow.name,
+          kpiCode: weekLocationRow.kpiCode,
+          bonusPercent: weekLocationRow.bonusPercent,
+        }
+      : null;
 
   const participants = await listApplicableParticipantsWithProfessionForWeek(db, splitId, week.sequenceNumber);
   // El split "usa profesiones" en cuanto tiene al menos una creada: si no tiene ninguna, el
@@ -386,6 +431,7 @@ export async function computeWeeklyResults(db: PrismaClient, splitId: string, we
     applicableMaxPointsDecimal: Prisma.Decimal;
     hasApplicableMax: boolean;
     professionBonusTotalDecimal: Prisma.Decimal;
+    locationBonusTotalDecimal: Prisma.Decimal;
   }
 
   const working: WorkingParticipant[] = participants.map((participant) => {
@@ -393,6 +439,7 @@ export async function computeWeeklyResults(db: PrismaClient, splitId: string, we
     let applicableMaxPointsDecimal = new Prisma.Decimal(0);
     let hasApplicableMax = false;
     let professionBonusTotalDecimal = new Prisma.Decimal(0);
+    let locationBonusTotalDecimal = new Prisma.Decimal(0);
 
     // La profesion solo interviene si el split usa profesiones: un split sin profesiones nunca
     // recibe bonus, aunque alguna fila antigua tuviera `professionId` informado.
@@ -405,19 +452,31 @@ export async function computeWeeklyResults(db: PrismaClient, splitId: string, we
       if (resolved.blockingIssue) blockingIssues.push(resolved.blockingIssue);
       if (resolved.status === "VAC") vacCountsByKpi[code] = (vacCountsByKpi[code] ?? 0) + 1;
 
-      // Orden exacto del calculo (seccion 8): formula del KPI -> maximo base -> +20 % de profesion.
-      // `VAC` y `NOT_APPLICABLE` nunca llegan a `applyProfessionBonus`: no tienen puntos que bonificar.
-      const bonus =
-        resolved.status === "COMPUTED" && resolved.computation
-          ? applyProfessionBonus(resolved.computation.finalPoints, code, applicableProfession, participant.level)
-          : null;
+      // Orden exacto del calculo (secciones 8 y 10): formula del KPI -> maximo base -> puntos base
+      // finales. Profesion y localizacion se calculan de forma independiente sobre ese mismo
+      // resultado (nunca uno sobre el resultado del otro) y se suman una sola vez. `VAC` y
+      // `NOT_APPLICABLE` nunca llegan a ninguno de los dos bonus: no tienen puntos que bonificar.
+      const baseFinalPoints = resolved.status === "COMPUTED" && resolved.computation ? resolved.computation.finalPoints : null;
 
-      if (bonus) {
-        totalKpiPointsDecimal = totalKpiPointsDecimal.plus(bonus.finalPoints);
-        // `applicableMaxPoints` sigue sumando maximos base, nunca maximos inflados por profesion:
-        // por eso el porcentaje visual puede superar el 100 % (seccion 10 del encargo).
+      const professionBonus =
+        baseFinalPoints !== null ? applyProfessionBonus(baseFinalPoints, code, applicableProfession, participant.level) : null;
+      const locationBonus = baseFinalPoints !== null ? applyLocationBonus(baseFinalPoints, code, applicableLocation) : null;
+
+      let finalPointsDecimal: Prisma.Decimal | null = null;
+      let professionBonusPoints = new Prisma.Decimal(0);
+      let locationBonusPoints = new Prisma.Decimal(0);
+      if (baseFinalPoints !== null) {
+        professionBonusPoints = professionBonus?.bonusPoints ?? new Prisma.Decimal(0);
+        locationBonusPoints = locationBonus?.bonusPoints ?? new Prisma.Decimal(0);
+        finalPointsDecimal = baseFinalPoints.plus(professionBonusPoints).plus(locationBonusPoints);
+
+        totalKpiPointsDecimal = totalKpiPointsDecimal.plus(finalPointsDecimal);
+        // `applicableMaxPoints` sigue sumando maximos base, nunca maximos inflados por profesion o
+        // localizacion: por eso el porcentaje visual puede superar el 100 % (seccion 10 del encargo,
+        // hasta un 170 % con ambos bonus a la vez).
         applicableMaxPointsDecimal = applicableMaxPointsDecimal.plus(config.baseMax);
-        professionBonusTotalDecimal = professionBonusTotalDecimal.plus(bonus.bonusPoints);
+        professionBonusTotalDecimal = professionBonusTotalDecimal.plus(professionBonusPoints);
+        locationBonusTotalDecimal = locationBonusTotalDecimal.plus(locationBonusPoints);
         hasApplicableMax = true;
       }
 
@@ -426,13 +485,15 @@ export async function computeWeeklyResults(db: PrismaClient, splitId: string, we
         kpiName: KPI_CATALOG[code].name,
         status: resolved.status,
         rawPoints: resolved.computation ? resolved.computation.rawPoints.toNumber() : null,
-        finalPoints: bonus ? bonus.finalPoints.toNumber() : null,
+        finalPoints: finalPointsDecimal ? finalPointsDecimal.toNumber() : null,
         baseMax: resolved.status === "NOT_APPLICABLE" ? null : config.baseMax,
         capped: resolved.computation?.capped ?? false,
-        basePointsBeforeProfession: bonus ? bonus.basePoints.toNumber() : null,
-        professionBonusPoints: bonus ? bonus.bonusPoints.toNumber() : null,
-        professionApplied: bonus?.applied ?? false,
-        professionName: bonus?.applied ? bonus.professionName : null,
+        basePointsBeforeProfession: baseFinalPoints ? baseFinalPoints.toNumber() : null,
+        professionBonusPoints: baseFinalPoints !== null ? professionBonusPoints.toNumber() : null,
+        professionApplied: professionBonus?.applied ?? false,
+        professionName: professionBonus?.applied ? professionBonus.professionName : null,
+        locationBonusPoints: baseFinalPoints !== null ? locationBonusPoints.toNumber() : null,
+        locationApplied: locationBonus?.applied ?? false,
         kpiRank: null,
         rankedParticipantCount: null,
       };
@@ -445,6 +506,7 @@ export async function computeWeeklyResults(db: PrismaClient, splitId: string, we
       applicableMaxPointsDecimal,
       hasApplicableMax,
       professionBonusTotalDecimal,
+      locationBonusTotalDecimal,
     };
   });
 
@@ -516,6 +578,7 @@ export async function computeWeeklyResults(db: PrismaClient, splitId: string, we
             }
           : null,
       professionBonusTotal: item.professionBonusTotalDecimal.toNumber(),
+      locationBonusTotal: item.locationBonusTotalDecimal.toNumber(),
     };
   });
 

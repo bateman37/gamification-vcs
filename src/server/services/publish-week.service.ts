@@ -57,7 +57,16 @@ export async function publishWeek(
     const publication = await db.$transaction(
       async (tx) => {
         const created = await tx.weekPublication.create({
-          data: { splitWeekId: week.id, publishedByUserId: publishedByUserId ?? undefined },
+          data: {
+            splitWeekId: week.id,
+            publishedByUserId: publishedByUserId ?? undefined,
+            // Localizacion semanal congelada (`0.8.5` / MVP-2C, ver docs/WEEKLY_LOCATIONS.md):
+            // como es unica y comun a toda la semana, se guarda una sola vez aqui, no por participante.
+            locationId: results.location?.id ?? null,
+            locationNameSnapshot: results.location?.name ?? null,
+            locationKpiCodeSnapshot: results.location?.kpiCode ?? null,
+            locationBonusPercentSnapshot: results.location?.bonusPercent ?? null,
+          },
         });
 
         for (const participant of results.participants) {
@@ -110,6 +119,8 @@ export async function publishWeek(
               professionBonusPoints: kpiResult.professionBonusPoints,
               professionApplied: kpiResult.professionApplied,
               professionNameSnapshot: kpiResult.professionName,
+              locationBonusPoints: kpiResult.locationBonusPoints,
+              locationApplied: kpiResult.locationApplied,
               kpiRank: kpiResult.kpiRank,
               rankedParticipantCount: kpiResult.rankedParticipantCount,
             })),
