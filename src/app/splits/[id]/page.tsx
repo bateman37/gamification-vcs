@@ -13,6 +13,9 @@ import { toProfessionView } from "@/domain/profession-display";
 import { computeFactionClassification } from "@/server/services/faction-classification.service";
 import { listWeekLocationsForSplit } from "@/server/services/location.service";
 import { resolveWeekLocationWindow, findNextWeek } from "@/domain/location-window";
+import { getEconomySettings } from "@/server/services/economy.service";
+import { listEquipmentSlotsForSplit } from "@/server/services/equipment-slot.service";
+import { listStoreItemsForSplit } from "@/server/services/store-item.service";
 import { requireAdminSession } from "@/lib/session";
 import { TOTAL_KPI_COUNT } from "@/domain/kpis/catalog";
 import { formatCalendarDate, currentCalendarDate } from "@/lib/dates";
@@ -33,6 +36,7 @@ import { ClassificationSummarySection } from "./ClassificationSummarySection";
 import { FactionsSection } from "./FactionsSection";
 import { FactionClassificationSummarySection } from "./FactionClassificationSummarySection";
 import { ProfessionsSection } from "./ProfessionsSection";
+import { EconomySummarySection } from "./EconomySummarySection";
 
 const STATUS_TONE: Record<string, "slate" | "green" | "gray"> = {
   DRAFT: "slate",
@@ -47,16 +51,20 @@ export default async function SplitDetailPage({ params }: { params: { id: string
     notFound();
   }
 
-  const [weeks, participants, people, kpiConfigs, positionPointRules, factions, professions, weekLocations] = await Promise.all([
-    listSplitWeeks(prisma, split.id),
-    listParticipantsForSplit(prisma, split.id),
-    listAllPersons(prisma),
-    listKpiConfigsForSplit(prisma, split.id),
-    listPositionPointRules(prisma, split.id),
-    listFactionsForSplit(prisma, split.id),
-    listProfessionsForSplit(prisma, split.id),
-    listWeekLocationsForSplit(prisma, split.id),
-  ]);
+  const [weeks, participants, people, kpiConfigs, positionPointRules, factions, professions, weekLocations, economySettings, equipmentSlots, storeItems] =
+    await Promise.all([
+      listSplitWeeks(prisma, split.id),
+      listParticipantsForSplit(prisma, split.id),
+      listAllPersons(prisma),
+      listKpiConfigsForSplit(prisma, split.id),
+      listPositionPointRules(prisma, split.id),
+      listFactionsForSplit(prisma, split.id),
+      listProfessionsForSplit(prisma, split.id),
+      listWeekLocationsForSplit(prisma, split.id),
+      getEconomySettings(prisma, split.id),
+      listEquipmentSlotsForSplit(prisma, split.id),
+      listStoreItemsForSplit(prisma, split.id),
+    ]);
   const [kpiLoadSummaries, publications, classification, factionClassification] = await Promise.all([
     getWeeklyKpiLoadSummary(prisma, split.id, weeks),
     prisma.weekPublication.findMany({ where: { splitWeekId: { in: weeks.map((week) => week.id) } } }),
@@ -85,6 +93,7 @@ export default async function SplitDetailPage({ params }: { params: { id: string
     { href: "#clasificacion-general-facciones", label: "Clasificacion general facciones" },
     { href: "#facciones", label: "Facciones" },
     { href: "#profesiones", label: "Profesiones" },
+    { href: "#economia", label: "Economia y mercado" },
     { href: "#participantes", label: "Participantes" },
     ...(showAddParticipant ? [{ href: "#anadir-participante", label: "Anadir participante" }] : []),
     { href: "#kpi-configuracion", label: "KPI del split" },
@@ -200,6 +209,13 @@ export default async function SplitDetailPage({ params }: { params: { id: string
           splitStatus={split.status}
           professions={professions}
           hasAnyPublication={hasAnyPublication}
+        />
+
+        <EconomySummarySection
+          splitId={split.id}
+          marketStatus={economySettings.marketStatus}
+          slotCount={equipmentSlots.length}
+          itemCount={storeItems.length}
         />
 
         <section id="participantes" className="scroll-mt-6 space-y-3">

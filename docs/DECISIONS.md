@@ -1156,3 +1156,135 @@ realmente hacia visible o no la nota. Mostrarla siempre es la solucion mas
 simple que no oculta informacion util (el alta en un split en borrador
 tambien puede beneficiarse de saber para que sirve el campo) y elimina la
 inconsistencia observada.
+
+## Libro de movimientos como unica fuente del saldo, sin campo materializado (`0.9.0` / MVP-2D)
+
+**Decision:** `CreditLedgerEntry` es la unica fuente de verdad del saldo
+de un participante (`balance = suma de todos los movimientos`,
+`getParticipantBalance`, `src/server/services/ledger.service.ts`). No se
+anade ningun campo `balance` cacheado en `SplitParticipant` ni en ninguna
+otra tabla.
+
+**Motivo:** el encargo permite explicitamente una proyeccion materializada
+"si se necesita", pero exige que sea comprobable contra el libro y advierte
+de complejidad innecesaria para el tamano actual del equipo. Sumar el
+libro en cada lectura (acotado por participante, nunca por todo el split a
+la vez salvo en el resumen administrativo, que ya usa dos consultas para
+todo el split) evita el riesgo de que un saldo cacheado se desincronice
+del libro, sin necesidad de mantener sincronizado un segundo dato.
+
+## `creditsEarned` se congela en la fila publicada ademas de vivir en el libro (`0.9.0` / MVP-2D)
+
+**Decision:** `PublishedParticipantWeeklyResult.creditsEarned` guarda el
+mismo entero que el movimiento `WEEKLY_EARNING` vinculado, aunque el libro
+siga siendo la fuente economica.
+
+**Motivo:** el encargo lo pide explicitamente ("amplia el resultado
+publicado para guardar `creditsEarned`... aunque el movimiento del libro
+continue siendo la fuente economica"), para poder leer el credito de una
+semana sin tener que unir con `CreditLedgerEntry` en cada pantalla de
+resultados o historico, siguiendo el mismo patron ya usado por otros
+campos "snapshot" (`aliasSnapshot`, `professionNameSnapshot`...).
+
+## Conjunto de porcentajes de bonus compartido entre localizaciones y objetos (`0.9.0` / MVP-2D)
+
+**Decision:** `src/domain/bonus-percent.ts` declara la unica lista tipada
+`ALLOWED_BONUS_PERCENTS = [10, 20, 30, 40, 50]`. `LOCATION_BONUS_PERCENTS`
+(`src/domain/location-bonus.ts`) y `EQUIPMENT_BONUS_PERCENTS`
+(`src/domain/equipment-bonus.ts`) la reexportan tal cual, en vez de
+declarar cada uno su propia copia literal.
+
+**Motivo:** el encargo pide explicitamente centralizar estos valores en
+una lista tipada compartida "sin acoplar entidades ni duplicar reglas
+divergentes". Reexportar la misma constante cumple ambas cosas: una unica
+fuente de verdad para el conjunto de porcentajes, mientras que
+`applyLocationBonus` y `applyEquipmentBonuses` siguen siendo funciones de
+dominio completamente independientes (localizacion: un unico efecto por
+semana, no acumulable; objetos: varios efectos acumulables por ranura),
+cada una con su propia restriccion de base de datos.
+
+## `computeWeeklyResults` se amplia para aceptar `Prisma.TransactionClient` (`0.9.0` / MVP-2D)
+
+**Decision:** `computeWeeklyResults` (`src/server/services/weekly-results.service.ts`)
+y las funciones que consulta internamente (`getWeeklyKpiLoadSummary`,
+`loadEquippedItemsForParticipants`...) aceptan ahora
+`PrismaClient | Prisma.TransactionClient` en vez de solo `PrismaClient`.
+`publishWeek` invoca el motor agregado **dentro** de su propia transaccion
+serializable, en vez de calcular fuera y solo escribir dentro (el diseno
+anterior a `0.9.0`).
+
+**Motivo:** requisito explicito del encargo (seccion 22): el equipo de
+cada participante debe releerse en el instante exacto de publicar, dentro
+de la misma transaccion que crea la instantanea, para que una carrera
+entre equipar/desequipar y publicar nunca produzca una semana con un
+equipo "mitad viejo, mitad nuevo". Ampliar el tipo del parametro es la
+refactorizacion minima que permite reutilizar exactamente el mismo motor
+para la previsualizacion (fuera de transaccion, con `prisma`) y para la
+publicacion (dentro de ella, con `tx`), sin duplicar la logica de calculo.
+
+## Instantanea de equipo por objeto, nunca un JSON opaco (`0.9.0` / MVP-2D)
+
+**Decision:** `PublishedEquippedItem` congela una fila por objeto
+equipado al publicar (nombre, ranura, KPI y porcentaje), con referencias
+vivas opcionales (`storeItemId`/`equipmentSlotId`, `onDelete: SetNull`)
+solo como enlace de conveniencia, nunca como fuente de verdad. El
+desglose de bonus de equipo por KPI en una vista publicada se obtiene
+filtrando estas filas por `kpiCodeSnapshot`, sin guardar un JSON con todo
+el equipo en `PublishedKpiResult` ni en `PublishedParticipantWeeklyResult`.
+
+**Motivo:** el encargo prohibe explicitamente un "JSON opaco con todo el
+equipo" y pide una estructura normalizada, en linea con el resto del
+modelo de instantaneas ya existente (`PublishedKpiResult`,
+`factionNameSnapshot`...). Una fila por objeto tambien permite indices,
+restricciones de base de datos sobre el porcentaje congelado, y contar o
+listar objetos sin deserializar JSON en la capa de aplicacion.
+
+## `basePointsBeforeProfession` sigue siendo la unica base persistida para los tres bonus (`0.9.0` / MVP-2D)
+
+**Decision:** no se anade una columna nueva para "puntos antes de
+objetos": `PublishedKpiResult.basePointsBeforeProfession`, que desde
+`0.8.5` ya representaba la base anterior a profesion y a localizacion,
+sigue siendo tambien la base anterior al bonus de objetos. Es exactamente
+el mismo numero para los tres, porque los tres se calculan sobre el mismo
+`baseFinalPoints` sin encadenarse.
+
+**Motivo:** evita una migracion destructiva o una tercera columna
+redundante para representar un valor que ya es identico para las tres
+capas de bonus, siguiendo la misma decision ya tomada en `0.8.5` cuando se
+anadio la localizacion sobre el campo existente de profesion.
+
+## El selector "Con/Sin gamificacion" se deriva restando los bonus ya persistidos (`0.9.0` / MVP-2D)
+
+**Decision:** la vista "sin gamificacion" de `/resultados` no anade
+ninguna columna nueva de agregados: se calcula siempre como
+`total oficial - (bonus de profesion + bonus de localizacion + bonus de
+objetos)`, usando los mismos `professionBonusPoints`/`locationBonusPoints`/`equipmentBonusPoints`
+ya publicados que alimentan el desglose "Con gamificacion". Por celda de
+KPI se usa directamente `basePointsBeforeProfession` (con `finalPoints`
+como fallback en publicaciones anteriores a `0.8.0`, ver decision
+anterior); para sumas agregadas (semana, periodo del historico) se resta
+la suma de esos mismos tres bonus del total oficial ya publicado.
+
+**Motivo:** matematicamente ambos caminos coinciden siempre (el total
+oficial es por definicion `base + profesion + localizacion + objetos`), y
+en publicaciones anteriores a `0.8.0`/`0.8.5`/`0.9.0` esos bonus son `0`
+por definicion, asi que la resta no necesita ningun caso especial para
+datos historicos: reproduce automaticamente el mismo valor que
+`basePointsBeforeProfession` habria dado. Evita persistir un agregado
+adicional (`realBasePoints`) que solo duplicaria informacion ya calculable
+a partir de columnas existentes.
+
+## No se bloquea la desactivacion de un KPI por un objeto retirado y sin propietarios (`0.9.0` / MVP-2D)
+
+**Decision:** `findStoreItemsUsingKpi` (usado por `updateKpiConfig` para
+impedir desactivar un KPI en uso) solo considera un objeto "en uso" si
+esta `isForSale` o si algun participante ya lo posee
+(`ownedCount > 0`). Un objeto retirado de la venta (`isForSale: false`) y
+que nadie ha comprado todavia no bloquea la desactivacion del KPI que
+potencia.
+
+**Motivo:** ese objeto concreto no tiene ningun efecto vivo que proteger
+(nadie lo posee, nadie puede comprarlo): si el administrador quiere
+liberar el KPI, puede simplemente eliminar ese objeto en su lugar. Bloquear
+tambien ese caso habria sido mas estricto de lo que el encargo pide
+("a la venta, comprado o equipado") sin ningun beneficio de integridad.

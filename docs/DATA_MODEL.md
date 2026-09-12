@@ -20,7 +20,9 @@ Fuente de verdad: `prisma/schema.prisma` y las migraciones
 `prisma/migrations/20260911222334_add_professions_and_participant_profiles/migration.sql`
 (`0.8.0` / MVP-2B) y
 `prisma/migrations/20260912003932_add_weekly_locations/migration.sql`
-(`0.8.5` / MVP-2C). Este documento describe y explica ese esquema; en caso
+(`0.8.5` / MVP-2C) y
+`prisma/migrations/20260912115557_add_economy_inventory_equipment/migration.sql`
+(`0.9.0` / MVP-2D). Este documento describe y explica ese esquema; en caso
 de discrepancia, el esquema real manda.
 
 ## Diagrama entidad-relacion
@@ -65,6 +67,21 @@ erDiagram
     Person ||--o| User : "tiene cuenta"
     SplitWeek ||--o| SplitWeekLocation : "tiene localizacion"
     SplitWeekLocation ||--o{ WeekPublication : "congelada en"
+    Split ||--o| SplitEconomySettings : "configura mercado"
+    Split ||--o{ SplitEquipmentSlot : "tiene"
+    Split ||--o{ SplitStoreItem : "tiene"
+    SplitEquipmentSlot ||--o{ SplitStoreItem : "contiene"
+    SplitParticipant ||--o{ ItemPurchase : "compra"
+    SplitParticipant ||--o{ SplitParticipantItem : "posee"
+    SplitParticipant ||--o{ SplitParticipantEquippedItem : "equipa"
+    SplitParticipant ||--o{ CreditLedgerEntry : "tiene movimiento"
+    SplitStoreItem ||--o{ ItemPurchase : "origina"
+    ItemPurchase ||--o| SplitParticipantItem : "genera"
+    ItemPurchase ||--o| CreditLedgerEntry : "genera debito"
+    SplitParticipantItem ||--o| SplitParticipantEquippedItem : "esta equipado en"
+    SplitEquipmentSlot ||--o{ SplitParticipantEquippedItem : "recibe"
+    PublishedParticipantWeeklyResult ||--o| CreditLedgerEntry : "genera credito"
+    PublishedParticipantWeeklyResult ||--o{ PublishedEquippedItem : "congela equipo en"
     SplitWeek ||--o| WeekPublication : "tiene publicacion"
     User ||--o{ WeekPublication : "publica"
     WeekPublication ||--o{ PublishedParticipantWeeklyResult : "contiene"
@@ -130,6 +147,7 @@ erDiagram
         enum professionKpiCodeB "opcional, congelado al publicar"
         int professionBonusPercent "opcional; siempre 20 cuando hay profesion"
         boolean splitUsedProfessions "false en publicaciones anteriores a 0.8.0"
+        int creditsEarned "max(0, floor(totalKpiPoints)); congelado al publicar (0.9.0)"
         datetime createdAt
     }
 
@@ -149,6 +167,8 @@ erDiagram
         string professionNameSnapshot "opcional, congelado al publicar"
         decimal locationBonusPoints "opcional; puntos anadidos por la localizacion (0.8.5)"
         boolean locationApplied "si el bonus de localizacion se aplico realmente a este KPI"
+        decimal equipmentBonusPoints "opcional; puntos anadidos por objetos de equipo (0.9.0)"
+        boolean equipmentApplied "si algun objeto aplico su bonus a este KPI"
         int kpiRank "opcional, mayor o igual que 1"
         int rankedParticipantCount "opcional"
         datetime createdAt
@@ -400,6 +420,91 @@ erDiagram
         int points "no negativo"
         datetime createdAt
         datetime updatedAt
+    }
+
+    SplitEconomySettings {
+        string splitId PK "tambien FK a Split"
+        enum marketStatus "CLOSED, OPEN; siempre CLOSED al crear o migrar"
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    SplitEquipmentSlot {
+        string id PK
+        string splitId FK
+        string name
+        string nameNormalized "unico por split"
+        int displayOrder "no negativo"
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    SplitStoreItem {
+        string id PK
+        string splitId FK
+        string name
+        string nameNormalized "unico por split"
+        string description "opcional"
+        int priceCredits "entero positivo"
+        string equipmentSlotId FK "misma split"
+        enum kpiCode "catalogo cerrado; activo en el split al crear/editar"
+        int bonusPercent "10, 20, 30, 40 o 50"
+        boolean isForSale "por defecto true"
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    ItemPurchase {
+        string id PK
+        string splitParticipantId FK "onDelete Restrict"
+        string storeItemId FK "onDelete Restrict"
+        string itemNameSnapshot
+        int priceCreditsSnapshot
+        string equipmentSlotIdSnapshot
+        string equipmentSlotNameSnapshot
+        enum kpiCodeSnapshot
+        int bonusPercentSnapshot
+        datetime purchasedAt
+    }
+
+    SplitParticipantItem {
+        string id PK
+        string splitParticipantId FK "onDelete Restrict"
+        string storeItemId FK "onDelete Restrict"
+        string purchaseId FK "unico, onDelete Restrict"
+        datetime acquiredAt
+    }
+
+    SplitParticipantEquippedItem {
+        string splitParticipantId PK "compuesta con equipmentSlotId"
+        string equipmentSlotId PK "compuesta con splitParticipantId"
+        string ownedItemId FK "unico: el mismo objeto nunca se equipa dos veces"
+        datetime equippedAt
+        datetime updatedAt
+    }
+
+    CreditLedgerEntry {
+        string id PK
+        string splitParticipantId FK "onDelete Restrict"
+        enum type "WEEKLY_EARNING, PURCHASE"
+        int amount "con signo: >=0 en WEEKLY_EARNING, <0 en PURCHASE"
+        string description
+        string publishedResultId FK "opcional, unico: como mucho un WEEKLY_EARNING por resultado"
+        string purchaseId FK "opcional, unico: como mucho un PURCHASE por compra"
+        datetime createdAt
+    }
+
+    PublishedEquippedItem {
+        string id PK
+        string participantWeeklyResultId FK
+        string storeItemId FK "opcional, onDelete SetNull"
+        string itemNameSnapshot
+        string equipmentSlotId FK "opcional, onDelete SetNull"
+        string equipmentSlotNameSnapshot
+        enum kpiCodeSnapshot
+        int bonusPercentSnapshot
+        int displayOrder
+        datetime createdAt
     }
 ```
 
@@ -858,6 +963,56 @@ nunca modifica estas filas.
   publicaciones anteriores a `0.8.0` coincide con los puntos tras el
   maximo base, porque entonces no existia ningun bonus.
 
+### Economia, inventario y equipo (`0.9.0` / MVP-2D)
+
+Ver `docs/ECONOMY_INVENTORY_AND_EQUIPMENT.md` para el detalle funcional
+completo. Resumen del esquema:
+
+- **`SplitEconomySettings`**: uno-a-uno con `Split` (clave primaria =
+  `splitId`, `onDelete: Cascade`). `marketStatus` empieza siempre `CLOSED`
+  (splits nuevos y migrados).
+- **`SplitEquipmentSlot`**: ranuras de equipo de un split, sin numero ni
+  nombres codificados. `nameNormalized` unico por split
+  (`@@unique([splitId, nameNormalized])`); `displayOrder` decide el orden
+  de presentacion.
+- **`SplitStoreItem`**: catalogo de objetos del split. `equipmentSlotId`
+  con `onDelete: Restrict` (no se borra una ranura con objetos). `kpiCode`
+  y `bonusPercent` (restringido en base de datos al conjunto cerrado
+  `10/20/30/40/50`, igual que `SplitWeekLocation`) definen su efecto;
+  `isForSale` controla su disponibilidad sin afectar a quien ya lo posee.
+- **`ItemPurchase`**: compra confirmada, con instantanea inmutable de
+  nombre, precio, ranura, KPI y porcentaje tal como eran al comprar.
+  `@@unique([splitParticipantId, storeItemId])`: como mucho una compra del
+  mismo objeto por participante. `onDelete: Restrict` hacia participante y
+  objeto: una compra confirmada nunca desaparece.
+- **`SplitParticipantItem`**: inventario. Referencia a la compra de origen
+  (`purchaseId` unico) y al objeto vivo; `@@unique([splitParticipantId,
+  storeItemId])` refuerza la regla de una unidad por objeto.
+- **`SplitParticipantEquippedItem`**: equipo actual. Clave primaria
+  compuesta `(splitParticipantId, equipmentSlotId)`: como mucho un objeto
+  equipado por ranura. `ownedItemId` es ademas unico: el mismo objeto
+  poseido nunca aparece equipado en dos ranuras a la vez (garantizado
+  tambien porque el servicio siempre resuelve la ranura a partir del
+  propio objeto, nunca de un valor enviado por el cliente).
+- **`CreditLedgerEntry`**: libro de movimientos inmutable, fuente de
+  verdad del saldo (`balance = suma de los movimientos del
+  participante`). `publishedResultId` y `purchaseId` son referencias
+  opcionales y unicas: como mucho un `WEEKLY_EARNING` por resultado
+  publicado y un `PURCHASE` por compra. Restriccion de base de datos sobre
+  el signo del importe segun el tipo, y sobre que cada movimiento tenga
+  exactamente una referencia de origen coherente con su tipo.
+- **`PublishedEquippedItem`**: instantanea del equipo congelada al
+  publicar, una fila por objeto (nunca un JSON opaco). Las referencias
+  vivas (`storeItemId`, `equipmentSlotId`) son `onDelete: SetNull` y solo
+  de conveniencia: las vistas historicas usan siempre los campos
+  `*Snapshot`.
+- `PublishedParticipantWeeklyResult.creditsEarned` congela el mismo
+  entero que el movimiento `WEEKLY_EARNING` vinculado.
+  `PublishedKpiResult.equipmentBonusPoints`/`equipmentApplied` completan
+  el desglose de bonus ya existente de profesion y localizacion
+  (`basePointsBeforeProfession` sigue siendo la unica base persistida
+  para los tres).
+
 ## Decisiones sobre fechas
 
 - Todas las fechas de negocio (`Split.startDate`, `SplitWeek.startDate`,
@@ -899,13 +1054,17 @@ tenga que redescubrirlas:
 - Despublicar/reabrir una semana ya publicada, o cierre irreversible de un
   split completo (`SplitStatus.CLOSED` ya existe, pero no se activa
   automaticamente).
-- Objetos permanentes y economia de creditos. Las facciones se
-  implementaron en `0.7.0` / MVP-2A (`SplitFaction`, ver
+- Las facciones se implementaron en `0.7.0` / MVP-2A (`SplitFaction`, ver
   `docs/FACTIONS.md`), las profesiones en `0.8.0` / MVP-2B
-  (`SplitProfession`, ver `docs/PROFESSIONS_AND_PROFILES.md`) y las
+  (`SplitProfession`, ver `docs/PROFESSIONS_AND_PROFILES.md`), las
   localizaciones semanales en `0.8.5` / MVP-2C (`SplitWeekLocation`, ver
-  `docs/WEEKLY_LOCATIONS.md`); "renombre" no es una entidad propia, es
-  `positionPoints` ya existente.
+  `docs/WEEKLY_LOCATIONS.md`) y los objetos, el inventario, el equipo y la
+  economia de creditos en `0.9.0` / MVP-2D (`SplitEconomySettings`,
+  `SplitEquipmentSlot`, `SplitStoreItem`, `ItemPurchase`,
+  `SplitParticipantItem`, `SplitParticipantEquippedItem`,
+  `CreditLedgerEntry`, `PublishedEquippedItem`, ver
+  `docs/ECONOMY_INVENTORY_AND_EQUIPMENT.md`); "renombre" no es una entidad
+  propia, es `positionPoints` ya existente.
 
 Con `0.6.0` / MVP-1C, ademas de los diez origenes de datos de KPI
 (`ProductivityImport`/`ProductivityWeeklyRow`,
@@ -938,3 +1097,19 @@ vez por semana, no por participante) y su desglose por KPI en
 persistido propio: es una funcion pura (`applyLocationBonus`) aplicada de
 forma independiente sobre el mismo `baseFinalPoints` y congelada despues
 en la instantanea publicada (ver `docs/WEEKLY_LOCATIONS.md`).
+
+Con `0.9.0` / MVP-2D se anaden `SplitEconomySettings`,
+`SplitEquipmentSlot`, `SplitStoreItem`, `ItemPurchase`,
+`SplitParticipantItem`, `SplitParticipantEquippedItem`,
+`CreditLedgerEntry` y `PublishedEquippedItem`, ademas de
+`creditsEarned` en `PublishedParticipantWeeklyResult` y
+`equipmentBonusPoints`/`equipmentApplied` en `PublishedKpiResult`. El
+bonus de objetos, igual que el de profesion y localizacion, no tiene
+contador persistido aparte de su snapshot: es una funcion pura
+(`applyEquipmentBonuses`) aplicada de forma independiente sobre el mismo
+`baseFinalPoints` y congelada despues en `PublishedEquippedItem` y en el
+desglose de `PublishedKpiResult` (ver
+`docs/ECONOMY_INVENTORY_AND_EQUIPMENT.md`). La migracion incluye ademas un
+backfill idempotente de `CreditLedgerEntry`/`creditsEarned` para toda
+publicacion anterior a esta version, a partir exclusivamente de
+`totalKpiPoints` ya publicado.

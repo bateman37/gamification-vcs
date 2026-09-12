@@ -60,6 +60,9 @@ export interface PersonSplitKpiCell {
   /** Puntos anadidos por la localizacion semanal segun la instantanea (`0.8.5` / MVP-2C). `null` en publicaciones anteriores. */
   locationBonusPoints: number | null;
   locationApplied: boolean;
+  /** Puntos anadidos por objetos de equipo segun la instantanea (`0.9.0` / MVP-2D). `null` en publicaciones anteriores. */
+  equipmentBonusPoints: number | null;
+  equipmentApplied: boolean;
   kpiRank: number | null;
   /** Numerador real del ranking de este KPI (participantes con resultado COMPUTED). No usar como denominador de "x de n" (ver seccion 17 de `0.7.0` / MVP-2A). */
   rankedParticipantCount: number | null;
@@ -100,6 +103,10 @@ export interface PersonSplitWeekRow {
   location: PersonSplitWeekLocation | null;
   /** Suma del bonus de localizacion publicado en esa semana. */
   locationBonusTotal: number;
+  /** Suma del bonus de objetos de equipo publicado en esa semana (`0.9.0` / MVP-2D). */
+  equipmentBonusTotal: number;
+  /** Creditos ganados en esa semana (`max(0, floor(totalKpiPoints))`, congelado al publicar). */
+  creditsEarned: number;
 }
 
 export interface PersonSplitDetail {
@@ -108,6 +115,8 @@ export interface PersonSplitDetail {
   weeks: PersonSplitWeekRow[];
   totalPositionPoints: number;
   totalKpiPoints: number;
+  /** Suma de creditos ganados en todas las semanas publicadas de este split (`0.9.0` / MVP-2D). */
+  totalCreditsEarned: number;
   currentRank: number | null;
   rankedParticipantCount: number;
   /** Numero total de personas que participan en el split: denominador unico de todo "x de n" (seccion 17 de `0.7.0` / MVP-2A). */
@@ -147,6 +156,8 @@ export async function getPersonSplitDetail(db: PrismaClient, personId: string, s
       professionName: kpiResult.professionNameSnapshot,
       locationBonusPoints: kpiResult.locationBonusPoints?.toNumber() ?? null,
       locationApplied: kpiResult.locationApplied,
+      equipmentBonusPoints: kpiResult.equipmentBonusPoints?.toNumber() ?? null,
+      equipmentApplied: kpiResult.equipmentApplied,
       kpiRank: kpiResult.kpiRank,
       rankedParticipantCount: kpiResult.rankedParticipantCount,
     })),
@@ -181,10 +192,15 @@ export async function getPersonSplitDetail(db: PrismaClient, personId: string, s
     locationBonusTotal: row.kpiResults
       .reduce((sum, kpiResult) => sum.plus(kpiResult.locationBonusPoints ?? 0), new Prisma.Decimal(0))
       .toNumber(),
+    equipmentBonusTotal: row.kpiResults
+      .reduce((sum, kpiResult) => sum.plus(kpiResult.equipmentBonusPoints ?? 0), new Prisma.Decimal(0))
+      .toNumber(),
+    creditsEarned: row.creditsEarned,
   }));
 
   const totalPositionPoints = rows.reduce((sum, row) => sum + row.positionPoints, 0);
   const totalKpiPointsDecimal = rows.reduce((sum, row) => sum.plus(row.totalKpiPoints), new Prisma.Decimal(0));
+  const totalCreditsEarned = rows.reduce((sum, row) => sum + row.creditsEarned, 0);
 
   const classification = await computeSplitClassification(db, splitId);
   const entry = classification.entries.find((candidate) => candidate.personId === personId);
@@ -196,6 +212,7 @@ export async function getPersonSplitDetail(db: PrismaClient, personId: string, s
     weeks,
     totalPositionPoints,
     totalKpiPoints: totalKpiPointsDecimal.toNumber(),
+    totalCreditsEarned,
     currentRank: entry?.rank ?? null,
     rankedParticipantCount: classification.entries.length,
     splitParticipantCount,
@@ -230,6 +247,8 @@ export interface HistoryKpiBreakdown {
   professionBonusSum: number;
   /** Suma de los `locationBonusPoints` publicados de este KPI en el periodo (`0.8.5` / MVP-2C). Ya incluido dentro de `sum`. */
   locationBonusSum: number;
+  /** Suma de los `equipmentBonusPoints` publicados de este KPI en el periodo (`0.9.0` / MVP-2D). Ya incluido dentro de `sum`. */
+  equipmentBonusSum: number;
 }
 
 export interface HistoryGroupRow {
@@ -245,6 +264,10 @@ export interface HistoryGroupRow {
   professionBonusSum: number;
   /** Suma de los `locationBonusPoints` publicados en el periodo (`0.8.5` / MVP-2C), ya incluida en `sumKpiPoints`. */
   locationBonusSum: number;
+  /** Suma de los `equipmentBonusPoints` publicados en el periodo (`0.9.0` / MVP-2D), ya incluida en `sumKpiPoints`. */
+  equipmentBonusSum: number;
+  /** Suma de creditos ganados (congelados al publicar) en el periodo. */
+  creditsEarnedSum: number;
   /** Una entrada solo para los KPI presentes en este periodo; el resto de columnas de `availableKpis` deben mostrarse como "—" (seccion 18). */
   perKpi: HistoryKpiBreakdown[];
 }
@@ -314,6 +337,7 @@ export async function getPersonHistory(db: PrismaClient, personId: string, filte
     vacCount: number;
     professionBonusDecimal: Prisma.Decimal;
     locationBonusDecimal: Prisma.Decimal;
+    equipmentBonusDecimal: Prisma.Decimal;
   }
 
   interface WorkingGroup {
@@ -326,6 +350,8 @@ export async function getPersonHistory(db: PrismaClient, personId: string, filte
     sumKpiPointsDecimal: Prisma.Decimal;
     professionBonusDecimal: Prisma.Decimal;
     locationBonusDecimal: Prisma.Decimal;
+    equipmentBonusDecimal: Prisma.Decimal;
+    creditsEarnedSum: number;
     perKpi: Map<string, WorkingKpiGroup>;
   }
 
@@ -348,6 +374,8 @@ export async function getPersonHistory(db: PrismaClient, personId: string, filte
         sumKpiPointsDecimal: new Prisma.Decimal(0),
         professionBonusDecimal: new Prisma.Decimal(0),
         locationBonusDecimal: new Prisma.Decimal(0),
+        equipmentBonusDecimal: new Prisma.Decimal(0),
+        creditsEarnedSum: 0,
         perKpi: new Map(),
       };
       groupsByKey.set(key, group);
@@ -356,6 +384,7 @@ export async function getPersonHistory(db: PrismaClient, personId: string, filte
     group.publishedWeekCount += 1;
     group.sumPositionPointsDecimal = group.sumPositionPointsDecimal.plus(row.positionPoints);
     group.sumKpiPointsDecimal = group.sumKpiPointsDecimal.plus(row.totalKpiPoints);
+    group.creditsEarnedSum += row.creditsEarned;
 
     for (const kpiResult of row.kpiResults) {
       // No aplica queda siempre excluido de la suma/media/recuento: nunca se convierte en cero (ver docs/DECISIONS.md).
@@ -372,20 +401,24 @@ export async function getPersonHistory(db: PrismaClient, personId: string, filte
           vacCount: 0,
           professionBonusDecimal: new Prisma.Decimal(0),
           locationBonusDecimal: new Prisma.Decimal(0),
+          equipmentBonusDecimal: new Prisma.Decimal(0),
         };
         group.perKpi.set(kpiResult.kpiCode, kpiGroup);
       }
       kpiGroup.sumBaseMaxDecimal = kpiGroup.sumBaseMaxDecimal.plus(kpiResult.baseMax ?? new Prisma.Decimal(0));
       if (kpiResult.outcomeStatus === "COMPUTED") {
         kpiGroup.sumDecimal = kpiGroup.sumDecimal.plus(kpiResult.finalPoints ?? new Prisma.Decimal(0));
-        // Solo se suman los `professionBonusPoints`/`locationBonusPoints` ya publicados: nunca se
-        // recalculan con la profesion o la localizacion actual.
+        // Solo se suman los bonus ya publicados: nunca se recalculan con la profesion, la
+        // localizacion o el equipo actuales.
         const publishedProfessionBonus = kpiResult.professionBonusPoints ?? new Prisma.Decimal(0);
         kpiGroup.professionBonusDecimal = kpiGroup.professionBonusDecimal.plus(publishedProfessionBonus);
         group.professionBonusDecimal = group.professionBonusDecimal.plus(publishedProfessionBonus);
         const publishedLocationBonus = kpiResult.locationBonusPoints ?? new Prisma.Decimal(0);
         kpiGroup.locationBonusDecimal = kpiGroup.locationBonusDecimal.plus(publishedLocationBonus);
         group.locationBonusDecimal = group.locationBonusDecimal.plus(publishedLocationBonus);
+        const publishedEquipmentBonus = kpiResult.equipmentBonusPoints ?? new Prisma.Decimal(0);
+        kpiGroup.equipmentBonusDecimal = kpiGroup.equipmentBonusDecimal.plus(publishedEquipmentBonus);
+        group.equipmentBonusDecimal = group.equipmentBonusDecimal.plus(publishedEquipmentBonus);
       } else {
         // VAC (hotfix AVISO/0, ver docs/DECISIONS.md): participa en la suma y la media como un cero real.
         kpiGroup.vacCount += 1;
@@ -416,6 +449,8 @@ export async function getPersonHistory(db: PrismaClient, personId: string, filte
       averageKpiPoints: group.publishedWeekCount > 0 ? group.sumKpiPointsDecimal.div(group.publishedWeekCount).toNumber() : 0,
       professionBonusSum: group.professionBonusDecimal.toNumber(),
       locationBonusSum: group.locationBonusDecimal.toNumber(),
+      equipmentBonusSum: group.equipmentBonusDecimal.toNumber(),
+      creditsEarnedSum: group.creditsEarnedSum,
       perKpi: Array.from(group.perKpi.entries()).map(([kpiCode, kpiGroup]) => ({
         kpiCode,
         kpiName: kpiGroup.kpiName,
@@ -426,6 +461,7 @@ export async function getPersonHistory(db: PrismaClient, personId: string, filte
         percentageOfMax: kpiGroup.sumBaseMaxDecimal.greaterThan(0) ? kpiGroup.sumDecimal.div(kpiGroup.sumBaseMaxDecimal).mul(100).toNumber() : null,
         professionBonusSum: kpiGroup.professionBonusDecimal.toNumber(),
         locationBonusSum: kpiGroup.locationBonusDecimal.toNumber(),
+        equipmentBonusSum: kpiGroup.equipmentBonusDecimal.toNumber(),
       })),
     }));
 

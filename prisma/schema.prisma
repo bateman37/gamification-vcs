@@ -101,6 +101,9 @@ model Split {
   publishedResults   PublishedParticipantWeeklyResult[]
   factions           SplitFaction[]
   professions        SplitProfession[]
+  economySettings    SplitEconomySettings?
+  equipmentSlots     SplitEquipmentSlot[]
+  storeItems         SplitStoreItem[]
 }
 
 /// Semana de un split. La identidad funcional es splitId + sequenceNumber,
@@ -164,13 +167,13 @@ model SplitParticipant {
   createdAt               DateTime         @default(now())
   updatedAt               DateTime         @updatedAt
 
-  split      Split            @relation(fields: [splitId], references: [id], onDelete: Cascade)
-  person     Person           @relation(fields: [personId], references: [id])
-  startWeek  SplitWeek        @relation("ParticipantStartWeek", fields: [splitId, startWeekSequenceNumber], references: [splitId, sequenceNumber])
+  split      Split                   @relation(fields: [splitId], references: [id], onDelete: Cascade)
+  person     Person                  @relation(fields: [personId], references: [id])
+  startWeek  SplitWeek               @relation("ParticipantStartWeek", fields: [splitId, startWeekSequenceNumber], references: [splitId, sequenceNumber])
   // Restrict: no se borra fisicamente una faccion mientras tenga participantes asignados (ver docs/FACTIONS.md).
-  faction    SplitFaction?    @relation(fields: [factionId], references: [id], onDelete: Restrict)
+  faction    SplitFaction?           @relation(fields: [factionId], references: [id], onDelete: Restrict)
   // Restrict: no se borra fisicamente una profesion mientras tenga participantes asignados (ver docs/PROFESSIONS_AND_PROFILES.md).
-  profession SplitProfession? @relation(fields: [professionId], references: [id], onDelete: Restrict)
+  profession SplitProfession?        @relation(fields: [professionId], references: [id], onDelete: Restrict)
   // Cascade: el avatar no tiene sentido sin su ficha.
   avatar     SplitParticipantAvatar?
 
@@ -184,6 +187,12 @@ model SplitParticipant {
   studentEntries     StudentWeeklyEntry[]
   apprenticeEntries  ApprenticeWeeklyEntry[]
   publishedResults   PublishedParticipantWeeklyResult[]
+
+  // Economia, inventario y equipo (`0.9.0` / MVP-2D, ver docs/ECONOMY_INVENTORY_AND_EQUIPMENT.md).
+  ownedItems    SplitParticipantItem[]
+  equippedItems SplitParticipantEquippedItem[]
+  purchases     ItemPurchase[]
+  ledgerEntries CreditLedgerEntry[]
 
   // Una persona solo puede aparecer una vez en un mismo split.
   @@unique([splitId, personId])
@@ -600,11 +609,11 @@ enum PublishedKpiOutcomeStatus {
 /// `SplitStatus.CLOSED`, que cierra el split completo. No existe
 /// despublicar, reabrir ni borrar una publicacion en esta entrega.
 model WeekPublication {
-  id                String   @id @default(uuid())
+  id                           String   @id @default(uuid())
   /// Como mucho una publicacion por semana.
-  splitWeekId       String   @unique
-  publishedAt       DateTime @default(now())
-  publishedByUserId String?
+  splitWeekId                  String   @unique
+  publishedAt                  DateTime @default(now())
+  publishedByUserId            String?
   /// Localizacion semanal congelada (`0.8.5` / MVP-2C, ver
   /// docs/WEEKLY_LOCATIONS.md). Los cuatro campos son `null` cuando la
   /// semana no tenia localizacion o en publicaciones anteriores a esta
@@ -632,19 +641,19 @@ model WeekPublication {
 /// profesion, pero sin encadenarse con ella). No hay catalogo global: cada
 /// semana declara su propio nombre, KPI y porcentaje.
 model SplitWeekLocation {
-  id        String   @id @default(uuid())
+  id           String   @id @default(uuid())
   /// Como mucho una localizacion por semana: la identidad funcional siempre
   /// es `splitWeekId`, nunca un numero de semana ISO ni un texto libre.
-  splitWeekId String @unique
-  name        String
+  splitWeekId  String   @unique
+  name         String
   /// KPI potenciado. Debe estar activo en el split al crear o editar la
   /// localizacion (comprobado en servicio, no solo en el selector).
-  kpiCode     KpiCode
+  kpiCode      KpiCode
   /// Porcentaje del bonus: unicamente 10, 20, 30, 40 o 50 (restriccion de
   /// base de datos `SplitWeekLocation_bonusPercent_allowed_check`).
   bonusPercent Int
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   splitWeek    SplitWeek         @relation(fields: [splitWeekId], references: [id], onDelete: Cascade)
   publications WeekPublication[]
@@ -695,15 +704,23 @@ model PublishedParticipantWeeklyResult {
   /// en publicaciones anteriores a `0.8.0` y en splits sin profesiones: es
   /// lo que permite distinguir "sin profesiones" de "profesion desconocida".
   splitUsedProfessions   Boolean          @default(false)
+  /// Creditos ganados por esta fila publicada (`0.9.0` / MVP-2D, ver
+  /// docs/ECONOMY_INVENTORY_AND_EQUIPMENT.md): `max(0, floor(totalKpiPoints))`,
+  /// congelado en la misma transaccion que crea el movimiento `WEEKLY_EARNING`
+  /// vinculado. El libro de movimientos sigue siendo la fuente economica; este
+  /// campo es la instantanea legible sin tener que sumar el libro.
+  creditsEarned          Int              @default(0)
   createdAt              DateTime         @default(now())
 
-  publication      WeekPublication      @relation(fields: [publicationId], references: [id], onDelete: Cascade)
-  split            Split                @relation(fields: [splitId], references: [id], onDelete: Restrict)
-  splitParticipant SplitParticipant     @relation(fields: [splitParticipantId], references: [id], onDelete: Restrict)
-  person           Person               @relation(fields: [personId], references: [id], onDelete: Restrict)
-  faction          SplitFaction?        @relation(fields: [factionId], references: [id], onDelete: Restrict)
-  profession       SplitProfession?     @relation(fields: [professionId], references: [id], onDelete: Restrict)
+  publication      WeekPublication         @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  split            Split                   @relation(fields: [splitId], references: [id], onDelete: Restrict)
+  splitParticipant SplitParticipant        @relation(fields: [splitParticipantId], references: [id], onDelete: Restrict)
+  person           Person                  @relation(fields: [personId], references: [id], onDelete: Restrict)
+  faction          SplitFaction?           @relation(fields: [factionId], references: [id], onDelete: Restrict)
+  profession       SplitProfession?        @relation(fields: [professionId], references: [id], onDelete: Restrict)
   kpiResults       PublishedKpiResult[]
+  equippedItems    PublishedEquippedItem[]
+  ledgerEntry      CreditLedgerEntry?
 
   // Un solo resultado por participante y publicacion (equivale a una vez por semana, ya que la publicacion es unica por semana).
   @@unique([publicationId, splitParticipantId])
@@ -717,42 +734,260 @@ model PublishedParticipantWeeklyResult {
 /// Resultado congelado de un KPI para un participante publicado: estado
 /// funcional, puntos y ranking dentro de ese KPI tal como eran al publicar.
 model PublishedKpiResult {
-  id                        String                    @id @default(uuid())
-  participantWeeklyResultId String
-  kpiCode                   KpiCode
-  kpiNameSnapshot           String
-  outcomeStatus             PublishedKpiOutcomeStatus
-  rawPoints                 Decimal?                  @db.Decimal(14, 4)
+  id                         String                    @id @default(uuid())
+  participantWeeklyResultId  String
+  kpiCode                    KpiCode
+  kpiNameSnapshot            String
+  outcomeStatus              PublishedKpiOutcomeStatus
+  rawPoints                  Decimal?                  @db.Decimal(14, 4)
   /// Puntos definitivos, ya con el bonus de profesion incluido desde
   /// `0.8.0`. En publicaciones anteriores coincide con los puntos tras el
   /// maximo base, porque entonces no existia ningun bonus.
-  finalPoints               Decimal?                  @db.Decimal(14, 4)
-  baseMax                   Decimal?                  @db.Decimal(14, 4)
-  capped                    Boolean                   @default(false)
+  finalPoints                Decimal?                  @db.Decimal(14, 4)
+  baseMax                    Decimal?                  @db.Decimal(14, 4)
+  capped                     Boolean                   @default(false)
   /// Puntos tras aplicar el maximo base y **antes** del bonus de profesion
   /// (`0.8.0` / MVP-2B). `null` en publicaciones anteriores a esta version.
-  basePointsBeforeProfession Decimal?                 @db.Decimal(14, 4)
+  basePointsBeforeProfession Decimal?                  @db.Decimal(14, 4)
   /// Puntos anadidos por la profesion (`baseFinalPoints x 0,20`). `null` en
   /// publicaciones anteriores; `0` cuando la profesion no aplica a este KPI.
-  professionBonusPoints     Decimal?                  @db.Decimal(14, 4)
+  professionBonusPoints      Decimal?                  @db.Decimal(14, 4)
   /// `true` solo si el bonus se aplico realmente a este KPI.
-  professionApplied         Boolean                   @default(false)
+  professionApplied          Boolean                   @default(false)
   /// Nombre de la profesion que produjo el bonus, congelado para poder
   /// explicar el efecto sin consultar la definicion actual.
-  professionNameSnapshot    String?
+  professionNameSnapshot     String?
   /// Puntos anadidos por la localizacion semanal (`0.8.5` / MVP-2C, ver
   /// docs/WEEKLY_LOCATIONS.md), calculados sobre el mismo
   /// `basePointsBeforeProfession` que la profesion, nunca encadenados entre
   /// si. `null` en publicaciones anteriores; `0` cuando no aplica.
-  locationBonusPoints       Decimal?                  @db.Decimal(14, 4)
+  locationBonusPoints        Decimal?                  @db.Decimal(14, 4)
   /// `true` solo si el bonus de localizacion se aplico realmente a este KPI.
-  locationApplied           Boolean                   @default(false)
-  kpiRank                   Int?
-  rankedParticipantCount    Int?
-  createdAt                 DateTime                  @default(now())
+  locationApplied            Boolean                   @default(false)
+  /// Suma de los puntos anadidos por todos los objetos de equipo que
+  /// potencian este KPI (`0.9.0` / MVP-2D), calculados sobre el mismo
+  /// `basePointsBeforeProfession` que profesion y localizacion, nunca
+  /// encadenados entre si. `null` en publicaciones anteriores; `0` cuando
+  /// no aplica ningun objeto. El desglose por objeto vive en
+  /// `PublishedEquippedItem`, filtrado por `kpiCodeSnapshot`.
+  equipmentBonusPoints       Decimal?                  @db.Decimal(14, 4)
+  /// `true` solo si al menos un objeto equipado aplico su bonus a este KPI.
+  equipmentApplied           Boolean                   @default(false)
+  kpiRank                    Int?
+  rankedParticipantCount     Int?
+  createdAt                  DateTime                  @default(now())
 
   participantWeeklyResult PublishedParticipantWeeklyResult @relation(fields: [participantWeeklyResultId], references: [id], onDelete: Cascade)
 
   // Un solo resultado por KPI y participante publicado.
   @@unique([participantWeeklyResultId, kpiCode])
+}
+
+// ---------------------------------------------------------------------------
+// Economia, inventario y equipo (`0.9.0` / MVP-2D, ver
+// docs/ECONOMY_INVENTORY_AND_EQUIPMENT.md). Cuarta capa de juego: creditos por
+// split, mercado administrable, catalogo de objetos, inventario personal,
+// ranuras de equipo configurables y un tercer bonus (junto a profesion y
+// localizacion) sobre el mismo `baseFinalPoints`, nunca encadenado con ellos.
+// ---------------------------------------------------------------------------
+
+enum MarketStatus {
+  CLOSED
+  OPEN
+}
+
+/// Estado del mercado de un split (uno-a-uno). Todo split nuevo o ya
+/// existente antes de esta version empieza `CLOSED`: el administrador debe
+/// abrirlo explicitamente una vez preparadas ranuras y objetos (seccion 6
+/// del encargo).
+model SplitEconomySettings {
+  splitId      String       @id
+  marketStatus MarketStatus @default(CLOSED)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  split Split @relation(fields: [splitId], references: [id], onDelete: Cascade)
+}
+
+/// Ranura de equipo configurable por split (seccion 10 del encargo): nombre y
+/// cantidad los decide el administrador, sin ranuras codificadas. Cada
+/// objeto pertenece exactamente a una ranura del mismo split, y cada
+/// participante puede equipar como maximo un objeto por ranura.
+model SplitEquipmentSlot {
+  id             String   @id @default(uuid())
+  splitId        String
+  name           String
+  /// Nombre normalizado (minusculas, sin espacios exteriores), unico dentro del split.
+  nameNormalized String
+  /// Orden de presentacion, no negativo. No implica limite de ranuras mas alla del tecnico documentado.
+  displayOrder   Int
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  split                  Split                          @relation(fields: [splitId], references: [id], onDelete: Cascade)
+  storeItems             SplitStoreItem[]
+  equippedItems          SplitParticipantEquippedItem[]
+  publishedEquippedItems PublishedEquippedItem[]
+
+  @@unique([splitId, nameNormalized])
+}
+
+/// Objeto del catalogo de un split (seccion 12 del encargo), creado por el
+/// administrador. Sin catalogo global ni objetos predeterminados. Afecta
+/// exactamente a un KPI activo del split con un porcentaje del conjunto
+/// cerrado (`src/domain/bonus-percent.ts`), y pertenece a una unica ranura
+/// del mismo split.
+model SplitStoreItem {
+  id              String   @id @default(uuid())
+  splitId         String
+  name            String
+  /// Nombre normalizado (minusculas, sin espacios exteriores), unico dentro del split.
+  nameNormalized  String
+  description     String?
+  /// Precio en creditos. Entero positivo (restriccion de base de datos).
+  priceCredits    Int
+  equipmentSlotId String
+  /// KPI potenciado. Debe estar activo en el split al crear o editar el objeto (comprobado en servicio).
+  kpiCode         KpiCode
+  /// Porcentaje del bonus: unicamente 10, 20, 30, 40 o 50 (misma lista que localizaciones).
+  bonusPercent    Int
+  /// Si esta disponible para nuevas compras. Retirarlo (`false`) no afecta a quien ya lo posee.
+  isForSale       Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  split                  Split                   @relation(fields: [splitId], references: [id], onDelete: Cascade)
+  // Restrict: no se borra fisicamente una ranura mientras tenga objetos (ver docs/ECONOMY_INVENTORY_AND_EQUIPMENT.md).
+  equipmentSlot          SplitEquipmentSlot      @relation(fields: [equipmentSlotId], references: [id], onDelete: Restrict)
+  ownedItems             SplitParticipantItem[]
+  purchases              ItemPurchase[]
+  publishedEquippedItems PublishedEquippedItem[]
+
+  @@unique([splitId, nameNormalized])
+  @@index([splitId, equipmentSlotId])
+}
+
+/// Compra confirmada de un objeto (seccion 16 del encargo): instantanea
+/// inmutable de nombre, precio, ranura, KPI y bonus tal como eran en el
+/// momento de comprar, para que una edicion posterior del catalogo nunca
+/// altere el efecto de un objeto ya pagado.
+model ItemPurchase {
+  id                        String   @id @default(uuid())
+  splitParticipantId        String
+  storeItemId               String
+  itemNameSnapshot          String
+  priceCreditsSnapshot      Int
+  equipmentSlotIdSnapshot   String
+  equipmentSlotNameSnapshot String
+  kpiCodeSnapshot           KpiCode
+  bonusPercentSnapshot      Int
+  purchasedAt               DateTime @default(now())
+
+  // Restrict: una compra confirmada es permanente (seccion 17 del encargo); nunca desaparece por borrar el participante o el objeto.
+  splitParticipant SplitParticipant      @relation(fields: [splitParticipantId], references: [id], onDelete: Restrict)
+  storeItem        SplitStoreItem        @relation(fields: [storeItemId], references: [id], onDelete: Restrict)
+  ownedItem        SplitParticipantItem?
+  ledgerEntry      CreditLedgerEntry?
+
+  // Un participante compra como maximo una unidad de cada objeto (seccion 12 del encargo).
+  @@unique([splitParticipantId, storeItemId])
+  @@index([splitParticipantId])
+}
+
+/// Inventario permanente de un participante (seccion 17 del encargo): un
+/// objeto adquirido, su compra de origen y la fecha. Sin reventa, regalo,
+/// intercambio ni destruccion en esta release.
+model SplitParticipantItem {
+  id                 String   @id @default(uuid())
+  splitParticipantId String
+  storeItemId        String
+  purchaseId         String   @unique
+  acquiredAt         DateTime @default(now())
+
+  splitParticipant SplitParticipant              @relation(fields: [splitParticipantId], references: [id], onDelete: Restrict)
+  storeItem        SplitStoreItem                @relation(fields: [storeItemId], references: [id], onDelete: Restrict)
+  purchase         ItemPurchase                  @relation(fields: [purchaseId], references: [id], onDelete: Restrict)
+  equipped         SplitParticipantEquippedItem?
+
+  // Un participante posee como maximo una unidad de cada objeto.
+  @@unique([splitParticipantId, storeItemId])
+}
+
+/// Equipo actual del participante (seccion 19 del encargo): como mucho un
+/// objeto equipado por ranura. La verdad definitiva para una semana es el
+/// equipo existente en el instante en que se publica esa semana (releida
+/// dentro de la misma transaccion de `publishWeek`), nunca una fecha limite
+/// semanal ni el equipo mostrado en una previsualizacion previa.
+model SplitParticipantEquippedItem {
+  splitParticipantId String
+  equipmentSlotId    String
+  ownedItemId        String   @unique
+  equippedAt         DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  splitParticipant SplitParticipant     @relation(fields: [splitParticipantId], references: [id], onDelete: Restrict)
+  equipmentSlot    SplitEquipmentSlot   @relation(fields: [equipmentSlotId], references: [id], onDelete: Restrict)
+  ownedItem        SplitParticipantItem @relation(fields: [ownedItemId], references: [id], onDelete: Restrict)
+
+  // Como mucho un objeto equipado por ranura y participante.
+  @@id([splitParticipantId, equipmentSlotId])
+}
+
+enum CreditMovementType {
+  WEEKLY_EARNING
+  PURCHASE
+}
+
+/// Libro de movimientos inmutable de creditos (seccion 4 del encargo): unica
+/// fuente de verdad del saldo (`balance = suma de todos los movimientos`).
+/// Un `WEEKLY_EARNING` se vincula a lo sumo a un `PublishedParticipantWeeklyResult`
+/// y un `PURCHASE` a lo sumo a un `ItemPurchase`, ambos con indice unico para
+/// impedir duplicados por reintento o carrera. Los movimientos publicados no
+/// se editan ni se eliminan.
+model CreditLedgerEntry {
+  id                 String             @id @default(uuid())
+  splitParticipantId String
+  type               CreditMovementType
+  /// Importe entero con signo: `>= 0` para `WEEKLY_EARNING`, `< 0` para `PURCHASE` (restriccion de base de datos).
+  amount             Int
+  description        String
+  /// Como mucho un movimiento `WEEKLY_EARNING` por resultado semanal publicado.
+  publishedResultId  String?            @unique
+  /// Como mucho un movimiento `PURCHASE` por compra.
+  purchaseId         String?            @unique
+  createdAt          DateTime           @default(now())
+
+  // Restrict: ningun movimiento desaparece por borrar accidentalmente al participante, el resultado o la compra.
+  splitParticipant SplitParticipant                  @relation(fields: [splitParticipantId], references: [id], onDelete: Restrict)
+  publishedResult  PublishedParticipantWeeklyResult? @relation(fields: [publishedResultId], references: [id], onDelete: Restrict)
+  purchase         ItemPurchase?                     @relation(fields: [purchaseId], references: [id], onDelete: Restrict)
+
+  @@index([splitParticipantId, createdAt])
+}
+
+/// Objeto equipado congelado en una semana publicada (seccion 28 del
+/// encargo): una fila por objeto, con nombre, ranura, KPI y porcentaje tal
+/// como eran al publicar. `storeItemId`/`equipmentSlotId` se conservan como
+/// referencia viva "cuando proceda" (nunca se borran fisicamente objetos ni
+/// ranuras referenciados), pero las vistas historicas siempre explican la
+/// semana con los campos `*Snapshot`, nunca con el catalogo o las ranuras
+/// actuales.
+model PublishedEquippedItem {
+  id                        String   @id @default(uuid())
+  participantWeeklyResultId String
+  storeItemId               String?
+  itemNameSnapshot          String
+  equipmentSlotId           String?
+  equipmentSlotNameSnapshot String
+  kpiCodeSnapshot           KpiCode
+  bonusPercentSnapshot      Int
+  displayOrder              Int
+  createdAt                 DateTime @default(now())
+
+  participantWeeklyResult PublishedParticipantWeeklyResult @relation(fields: [participantWeeklyResultId], references: [id], onDelete: Cascade)
+  // SetNull defensivo, igual que la localizacion congelada en WeekPublication: el snapshot no depende del objeto/ranura vivos.
+  storeItem               SplitStoreItem?                  @relation(fields: [storeItemId], references: [id], onDelete: SetNull)
+  equipmentSlot           SplitEquipmentSlot?              @relation(fields: [equipmentSlotId], references: [id], onDelete: SetNull)
+
+  @@index([participantWeeklyResultId])
 }

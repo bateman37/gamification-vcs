@@ -3,11 +3,20 @@
 import { useRef } from "react";
 import type { PersonOption } from "@/server/services/individual-results.service";
 
-export function PersonSelector({ persons, selectedPersonId }: { persons: PersonOption[]; selectedPersonId: string | null }) {
+export function PersonSelector({
+  persons,
+  selectedPersonId,
+  gamificationMode,
+}: {
+  persons: PersonOption[];
+  selectedPersonId: string | null;
+  gamificationMode?: string;
+}) {
   const formRef = useRef<HTMLFormElement>(null);
 
   return (
     <form ref={formRef} method="get" className="rounded-lg border border-slate-200 bg-white p-4">
+      {gamificationMode && <input type="hidden" name="gamificacion" value={gamificationMode} />}
       <label htmlFor="persona" className="block text-xs font-medium text-slate-600">
         Persona
       </label>

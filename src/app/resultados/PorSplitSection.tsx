@@ -11,7 +11,12 @@ import { formatCalendarDate, formatCalendarDateEs } from "@/lib/dates";
 import { PROFESSION_BONUS_PERCENT } from "@/domain/profession-bonus";
 import { EmptyState } from "@/components/ui";
 import { colorBandForPercentage, COLOR_BAND_CLASSES, NOT_APPLICABLE_COLOR_BAND } from "@/domain/color-bands";
-import { resolveKpiResultDisplayPoints } from "@/domain/kpi-outcome-display";
+import {
+  resolveGamificationDisplayPoints,
+  resolveGamificationDisplayTotal,
+  computeGamificationImpact,
+  type GamificationMode,
+} from "@/domain/gamification-view";
 import { SplitSelector } from "./SplitSelector";
 import { LimitedClassificationTable } from "./LimitedClassificationTable";
 import { LimitedFactionClassificationTable } from "./LimitedFactionClassificationTable";
@@ -21,11 +26,13 @@ export async function PorSplitSection({
   requestedSplitId,
   isAdmin,
   factionWeek,
+  gamificationMode,
 }: {
   personId: string;
   requestedSplitId: string | null;
   isAdmin: boolean;
   factionWeek: string | null;
+  gamificationMode: GamificationMode;
 }) {
   const splits = await listSplitsWithPublishedResultsForPerson(prisma, personId);
   if (splits.length === 0) {
@@ -44,9 +51,17 @@ export async function PorSplitSection({
   // anterior a `0.8.0` (o un split sin profesiones) se sigue viendo exactamente como antes.
   const showProfessionColumn = detail.weeks.some((week) => week.splitUsedProfessions);
 
+  // Impacto agregado de la gamificacion (seccion 39 del encargo): siempre la suma de los tres bonus
+  // publicados, coincida o no con el modo activo (se muestra solo como dato secundario informativo).
+  const totalBonus = detail.weeks.reduce(
+    (sum, week) => sum + week.professionBonusTotal + week.locationBonusTotal + week.equipmentBonusTotal,
+    0,
+  );
+  const realTotalKpiPoints = resolveGamificationDisplayTotal(gamificationMode, detail.totalKpiPoints, totalBonus);
+
   return (
     <div className="space-y-6">
-      <SplitSelector splits={splits} selectedSplitId={selectedSplitId} personId={isAdmin ? personId : null} />
+      <SplitSelector splits={splits} selectedSplitId={selectedSplitId} personId={isAdmin ? personId : null} gamificationMode={gamificationMode} />
 
       <div className="rounded-lg border border-slate-200 bg-white p-4">
         <h2 className="text-base font-semibold">{detail.splitName}</h2>
@@ -56,18 +71,27 @@ export async function PorSplitSection({
             <dd className="font-semibold">
               {detail.currentRank ?? "—"} de {detail.splitParticipantCount}
             </dd>
+            <dd className="text-xs text-slate-500">Clasificacion oficial calculada con gamificacion</dd>
           </div>
           <div>
             <dt className="text-xs text-slate-500">Puntos de posicion acumulados</dt>
             <dd className="font-semibold">{formatPoints(detail.totalPositionPoints)}</dd>
+            <dd className="text-xs text-slate-500">Oficiales, no cambian con el selector</dd>
           </div>
           <div>
-            <dt className="text-xs text-slate-500">Total puntos KPI publicados</dt>
-            <dd className="font-semibold">{formatPoints(detail.totalKpiPoints)}</dd>
+            <dt className="text-xs text-slate-500">{gamificationMode === "con" ? "Total puntos KPI publicados" : "Total puntos KPI reales"}</dt>
+            <dd className="font-semibold">{formatPoints(realTotalKpiPoints)}</dd>
+            {gamificationMode === "sin" && totalBonus > 0 && (
+              <dd className="text-xs text-slate-500">Impacto de gamificacion: +{formatPoints(totalBonus)} puntos</dd>
+            )}
           </div>
           <div>
             <dt className="text-xs text-slate-500">Semanas publicadas</dt>
             <dd className="font-semibold">{detail.weeks.length}</dd>
+          </div>
+          <div>
+            <dt className="text-xs text-slate-500">Creditos ganados oficiales</dt>
+            <dd className="font-semibold">{detail.totalCreditsEarned}</dd>
           </div>
           {detail.currentFaction && (
             <div>
@@ -105,7 +129,10 @@ export async function PorSplitSection({
             </thead>
             <tbody>
               {detail.weeks.map((week) => {
-                const percentage = week.applicableMaxPoints && week.applicableMaxPoints > 0 ? (week.totalKpiPoints / week.applicableMaxPoints) * 100 : null;
+                const weekBonusTotal = week.professionBonusTotal + week.locationBonusTotal + week.equipmentBonusTotal;
+                const weekDisplayTotal = resolveGamificationDisplayTotal(gamificationMode, week.totalKpiPoints, weekBonusTotal);
+                const percentage =
+                  week.applicableMaxPoints && week.applicableMaxPoints > 0 ? (weekDisplayTotal / week.applicableMaxPoints) * 100 : null;
                 return (
                   <tr key={week.splitWeekId} className="border-b border-slate-100">
                     <td className="px-3 py-2 font-medium">
@@ -123,7 +150,7 @@ export async function PorSplitSection({
                           <>
                             <span className="font-medium text-slate-800">{week.profession.name}</span>
                             {week.profession.kpiNames && <span className="block text-xs text-slate-500">{week.profession.kpiNames}</span>}
-                            {week.professionBonusTotal > 0 && (
+                            {gamificationMode === "con" && week.professionBonusTotal > 0 && (
                               <span className="block text-xs text-indigo-700">+{formatPoints(week.professionBonusTotal)} por profesion</span>
                             )}
                           </>
@@ -140,16 +167,22 @@ export async function PorSplitSection({
                           </td>
                         );
                       }
-                      // VAC se muestra como el valor numerico 0, igual que cualquier otro cero (hotfix AVISO/0, ver docs/DECISIONS.md).
-                      const cellPoints = resolveKpiResultDisplayPoints(cell.status, cell.finalPoints) ?? 0;
+                      // "Con gamificacion" usa finalPoints (oficial); "Sin gamificacion" usa el resultado real tras
+                      // maximo y antes de cualquier bonus (seccion 37 del encargo). VAC sigue mostrandose como 0.
+                      const cellPoints = resolveGamificationDisplayPoints(gamificationMode, cell.status, cell.finalPoints, cell.basePointsBeforeProfession) ?? 0;
                       // El porcentaje usa el maximo base publicado, sin inflar por profesion: puede superar el 100 %.
                       const cellPercentage = cell.baseMax && cell.baseMax > 0 ? (cellPoints / cell.baseMax) * 100 : 0;
                       const band = colorBandForPercentage(cellPercentage);
+                      // Los badges de bonus solo se muestran "Con gamificacion": en "Sin gamificacion" el valor visible
+                      // ya no los incluye, y mostrarlos daria a entender lo contrario (seccion 40 del encargo).
+                      const showBonusBadges = gamificationMode === "con";
                       const professionApplied =
-                        cell.professionApplied && cell.basePointsBeforeProfession !== null && cell.professionBonusPoints !== null;
+                        showBonusBadges && cell.professionApplied && cell.basePointsBeforeProfession !== null && cell.professionBonusPoints !== null;
                       const locationApplied =
-                        cell.locationApplied && cell.basePointsBeforeProfession !== null && cell.locationBonusPoints !== null;
-                      const bonusApplied = professionApplied || locationApplied;
+                        showBonusBadges && cell.locationApplied && cell.basePointsBeforeProfession !== null && cell.locationBonusPoints !== null;
+                      const equipmentApplied =
+                        showBonusBadges && cell.equipmentApplied && cell.basePointsBeforeProfession !== null && cell.equipmentBonusPoints !== null;
+                      const bonusApplied = professionApplied || locationApplied || equipmentApplied;
                       const breakdownLines = bonusApplied
                         ? [
                             `Resultado tras máximo: ${formatPoints(cell.basePointsBeforeProfession!)}`,
@@ -159,6 +192,7 @@ export async function PorSplitSection({
                             locationApplied
                               ? `Bonus localización (+${week.location?.bonusPercent ?? ""} %): +${formatPoints(cell.locationBonusPoints!)}`
                               : null,
+                            equipmentApplied ? `Bonus objetos: +${formatPoints(cell.equipmentBonusPoints!)}` : null,
                             `Resultado final: ${formatPoints(cellPoints)}`,
                           ].filter((line): line is string => line !== null)
                         : [];
@@ -170,7 +204,9 @@ export async function PorSplitSection({
                             ? "border-2 border-dashed border-indigo-500"
                             : locationApplied
                               ? "border-2 border-dashed border-teal-500"
-                              : "";
+                              : equipmentApplied
+                                ? "border-2 border-dashed border-amber-500"
+                                : "";
                       return (
                         <td key={cell.kpiCode} title={breakdown} className={`px-3 py-2 text-center ${COLOR_BAND_CLASSES[band.band]} ${borderClass}`}>
                           {formatPoints(cellPoints)}
@@ -184,6 +220,11 @@ export async function PorSplitSection({
                               +{week.location?.bonusPercent ?? ""} % localizacion
                             </span>
                           )}
+                          {equipmentApplied && (
+                            <span className="mt-1 block rounded bg-amber-100 px-1 py-0.5 text-[10px] font-semibold text-amber-800">
+                              +{formatPoints(cell.equipmentBonusPoints!)} objeto
+                            </span>
+                          )}
                           {breakdown && <span className="sr-only"> ({breakdown})</span>}
                           <div className="text-xs text-slate-500">
                             {cell.kpiRank ?? "—"} de {detail.splitParticipantCount}
@@ -191,7 +232,14 @@ export async function PorSplitSection({
                         </td>
                       );
                     })}
-                    <td className="px-3 py-2 text-center font-semibold">{formatPoints(week.totalKpiPoints)}</td>
+                    <td className="px-3 py-2 text-center font-semibold">
+                      {formatPoints(weekDisplayTotal)}
+                      {gamificationMode === "sin" && weekBonusTotal > 0 && (
+                        <span className="block text-xs font-normal text-slate-500">
+                          Impacto: +{formatPoints(computeGamificationImpact(week.totalKpiPoints, weekDisplayTotal))}
+                        </span>
+                      )}
+                    </td>
                     <td className="px-3 py-2 text-center text-slate-600">{percentage === null ? "—" : `${formatPoints(percentage)} %`}</td>
                     <td className="px-3 py-2 text-center font-semibold">
                       {week.weeklyRank} de {detail.splitParticipantCount}

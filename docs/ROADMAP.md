@@ -306,14 +306,62 @@ satisfactorias.
   `Añadir participante` se muestra siempre, en los dos modos de alta.
 - Detalle completo en `docs/WEEKLY_LOCATIONS.md`.
 - Fuera de alcance: objetos, economia de creditos, misiones y cualquier
-  otra capa de juego (ver mas abajo).
+  otra capa de juego (implementados en `0.9.0` / MVP-2D, ver mas abajo).
+
+## `0.9.0` / MVP-2D — Economia, inventario y equipo
+
+**Estado: completado.**
+
+- **Economia de creditos por split** (`SplitEconomySettings` no; el saldo
+  vive en el libro `CreditLedgerEntry`, uno por `SplitParticipant`):
+  `1 credito = 1 punto KPI completo publicado`,
+  `creditsEarned = max(0, floor(totalKpiPoints))`, generados exactamente
+  una vez al publicar una semana (`publishWeek`, dentro de la misma
+  transaccion que crea la publicacion) y con backfill idempotente de todas
+  las semanas publicadas antes de esta version.
+- **Mercado administrable** (`SplitEconomySettings.marketStatus`), siempre
+  `CERRADO` al crear un split o al migrar uno existente; solo `ADMIN` lo
+  abre (exige split `ACTIVE`, al menos una ranura y un objeto valido a la
+  venta) o lo cierra, las veces que haga falta mientras el split este
+  activo. Cerrarlo bloquea nuevas compras, pero no equipar objetos ya
+  poseidos.
+- **Ranuras de equipo configurables** (`SplitEquipmentSlot`, sin numero ni
+  nombres codificados, limite tecnico de doce) y **catalogo de objetos**
+  (`SplitStoreItem`, un unico KPI activo por objeto y un bonus de
+  `10/20/30/40/50 %`, misma lista tipada que las localizaciones), ambos
+  administrados solo con el mercado cerrado; un objeto queda inmutable
+  desde su primera compra salvo retirarlo de la venta.
+- **Compra atomica, inventario permanente y equipo actual**
+  (`ItemPurchase`/`SplitParticipantItem`/`SplitParticipantEquippedItem`):
+  como maximo un objeto de cada tipo por participante, como maximo un
+  objeto equipado por ranura, sin reventa, regalo ni destruccion. El
+  equipo que cuenta para una semana es siempre el existente en el instante
+  exacto en que se publica (`publishWeek` relee el equipo dentro de su
+  propia transaccion serializable, nunca fuera de ella).
+- **Tercer bonus de resultados** (`applyEquipmentBonuses`,
+  `src/domain/equipment-bonus.ts`), independiente y no encadenado con
+  profesion ni localizacion, calculado sobre el mismo `baseFinalPoints`;
+  varios objetos sobre el mismo KPI se acumulan de forma aditiva. Snapshot
+  publicado por objeto (`PublishedEquippedItem`) y desglose agregado en
+  `PublishedKpiResult` (`equipmentBonusPoints`/`equipmentApplied`).
+- **Configuracion privada del personaje** (`/fichas/[splitParticipantId]`,
+  boton `Configurar personaje` junto a `Ver resultados`): resumen, equipo,
+  inventario, mercado e historial de movimientos y localizaciones.
+- **Vista `Con gamificacion` / `Sin gamificacion`** en `/resultados`,
+  persistida en la URL y conservada entre pestañas/filtros, que compara el
+  rendimiento KPI real (`basePointsBeforeProfession`) frente al oficial
+  publicado, sin alterar clasificaciones, puntos por posicion, facciones ni
+  creditos oficiales.
+- Detalle completo en `docs/ECONOMY_INVENTORY_AND_EQUIPMENT.md`.
+- Fuera de alcance: dinero real, transferencias entre personas o splits,
+  economia compartida por faccion, regalos, reventa, stock limitado,
+  subastas, cofres o loot, consumibles, misiones, y cualquier otra capa de
+  juego (ver mas abajo).
 
 ## Capas posteriores (fuera de alcance por ahora)
 
 **Estado: pendiente**, documentadas unicamente para no perder contexto:
 
-- Objetos permanentes y efectos acumulables.
-- Economia: creditos equivalentes a puntos KPI, compras y saldo.
 - Renombre derivado de la posicion semanal, y ajustes de juego.
 - Ficha individual en PDF y envio por correo mediante Outlook.
 - Integracion con Power BI.

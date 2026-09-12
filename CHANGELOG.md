@@ -4,6 +4,83 @@ Formato inspirado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/)
 Este proyecto usa versionado `0.x` mientras se construye el nucleo
 funcional; la primera version publicada es `0.1.0`.
 
+## [0.9.0] - MVP-2D — Economia, inventario y equipo
+
+### Anadido
+
+- **Economia de creditos por split** (`CreditLedgerEntry`, libro de
+  movimientos inmutable): `1 credito = 1 punto KPI completo publicado`
+  (`creditsEarned = max(0, floor(totalKpiPoints))`,
+  `src/domain/credits.ts`), generados exactamente una vez al publicar una
+  semana (un unico movimiento `WEEKLY_EARNING` por
+  `PublishedParticipantWeeklyResult`, protegido por indice unico). Backfill
+  idempotente para toda semana publicada antes de esta version, usando
+  exclusivamente su `totalKpiPoints` ya publicado.
+- **Mercado administrable por split** (`SplitEconomySettings`): siempre
+  `CERRADO` al crear o migrar un split; solo `ADMIN` lo abre (exige split
+  `ACTIVE`, al menos una ranura y un objeto valido a la venta, con la lista
+  completa de problemas si falta algo) o lo cierra, las veces que haga
+  falta; cerrarlo bloquea compras pero no equipar objetos ya poseidos.
+- **Ranuras de equipo configurables** (`SplitEquipmentSlot`, sin numero ni
+  nombres codificados, limite tecnico de doce) y **catalogo de objetos**
+  (`SplitStoreItem`, un unico KPI activo por objeto y un bonus del
+  conjunto cerrado `10/20/30/40/50 %`, `EQUIPMENT_BONUS_PERCENTS`,
+  reexportando la misma lista tipada que las localizaciones,
+  `src/domain/bonus-percent.ts`). Solo se administran con el mercado
+  cerrado; un objeto queda inmutable en nombre, descripcion, ranura, KPI,
+  porcentaje y precio desde su primera compra, salvo retirarlo de la
+  venta. `updateKpiConfig` rechaza desactivar un KPI usado por un objeto a
+  la venta, comprado o equipado.
+- **Compra atomica, inventario permanente y equipo actual**
+  (`ItemPurchase`/`SplitParticipantItem`/`SplitParticipantEquippedItem`):
+  transaccion serializable que vuelve a leer mercado, objeto, propiedad
+  previa y saldo; nunca acepta precio, bonus o saldo del navegador; un
+  doble clic o dos compras concurrentes no duplican el objeto ni gastan el
+  mismo saldo dos veces. Como maximo un objeto de cada tipo por
+  participante y un objeto equipado por ranura; sin reventa, regalo,
+  intercambio ni destruccion.
+- **Tercer bonus de resultados, independiente y no encadenado**
+  (`applyEquipmentBonuses`, `src/domain/equipment-bonus.ts`): calculado
+  sobre el mismo `baseFinalPoints` que profesion y localizacion; varios
+  objetos sobre el mismo KPI se acumulan de forma aditiva
+  (`70 + 20 % profesion + 30 % localizacion + 10 % objeto = 112`, nunca un
+  producto de factores).
+- **`computeWeeklyResults` acepta `Prisma.TransactionClient`**: `publishWeek`
+  lo invoca dentro de su propia transaccion serializable para releer el
+  equipo de cada participante en el instante exacto de publicar (nunca una
+  previsualizacion anterior), evitando una instantanea hibrida ante una
+  carrera con equipar/desequipar.
+- **Instantanea publicada ampliada:** `PublishedEquippedItem` congela una
+  fila por objeto equipado (nombre, ranura, KPI, porcentaje), y
+  `PublishedKpiResult` anade `equipmentBonusPoints`/`equipmentApplied`;
+  `PublishedParticipantWeeklyResult` anade `creditsEarned`. Las
+  publicaciones anteriores a esta version se siguen leyendo sin
+  `PublishedEquippedItem` y con estos campos en `null`/`false`/`0`, sin
+  recalculo retroactivo.
+- **Configuracion privada del personaje** (`/fichas/[splitParticipantId]`,
+  boton `Configurar personaje` junto a `Ver resultados` en `/fichas`,
+  resuelta siempre desde `session.user.personId`): Resumen, Equipo (con
+  selector de objetos del inventario compatibles por ranura),
+  Inventario, Mercado (con estado `Ya lo tienes`/`Saldo
+  insuficiente`/`Disponible`/`Mercado cerrado` por objeto) e Historial
+  (movimientos de creditos y localizaciones por semana).
+- **Administracion "Economia y mercado"** en `/splits/[id]`: resumen
+  compacto con enlace a `/splits/[id]/economia` (badge de estado, boton de
+  abrir/cerrar con confirmacion, ranuras, catalogo y resumen de compras y
+  creditos por participante).
+- **Selector `Con gamificacion` / `Sin gamificacion`** en `/resultados`
+  (`src/domain/gamification-view.ts`), persistido en la URL
+  (`?gamificacion=con|sin`, predeterminado `con`) y conservado al cambiar
+  de persona, split, pestaña, año, agrupacion o filtros. "Sin
+  gamificacion" usa `basePointsBeforeProfession` (con fallback a
+  `finalPoints` en publicaciones anteriores a `0.8.0`) para KPI, sumas y
+  medias; nunca altera clasificacion, puntos por posicion, facciones ni
+  creditos oficiales, que se muestran siempre etiquetados como tales, con
+  un indicador de impacto de gamificacion cuando aporta informacion.
+- **76 pruebas Vitest nuevas** cubriendo economia y backfill, mercado,
+  ranuras y objetos, compra e inventario, equipamiento, composicion de
+  bonus y publicacion/snapshots (357/357 en total).
+
 ## [0.8.5] - MVP-2C — Localizaciones semanales
 
 ### Anadido

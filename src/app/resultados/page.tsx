@@ -2,15 +2,18 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/session";
 import { listPersonsWithPublishedResults } from "@/server/services/individual-results.service";
+import { parseGamificationMode } from "@/domain/gamification-view";
 import { EmptyState } from "@/components/ui";
 import { PersonSelector } from "./PersonSelector";
 import { PorSplitSection } from "./PorSplitSection";
 import { HistoricoSection } from "./HistoricoSection";
+import { GamificationToggle } from "./GamificationToggle";
 
-function buildTabHref(vista: string, personId: string, isAdmin: boolean): string {
+function buildTabHref(vista: string, personId: string, isAdmin: boolean, gamificacion: string): string {
   const params = new URLSearchParams();
   params.set("vista", vista);
   if (isAdmin) params.set("persona", personId);
+  params.set("gamificacion", gamificacion);
   return `/resultados?${params.toString()}`;
 }
 
@@ -25,6 +28,7 @@ export default async function ResultadosPage({
     splitFiltro?: string;
     agrupacion?: string;
     semanaFaccion?: string;
+    gamificacion?: string;
   };
 }) {
   const session = await requireSession();
@@ -39,6 +43,7 @@ export default async function ResultadosPage({
 
   const persons = isAdmin ? await listPersonsWithPublishedResults(prisma) : [];
   const vista = searchParams.vista === "historico" ? "historico" : "por-split";
+  const gamificationMode = parseGamificationMode(searchParams.gamificacion);
 
   return (
     <div className="space-y-6">
@@ -47,26 +52,29 @@ export default async function ResultadosPage({
         <p className="text-sm text-slate-600">Evolucion y clasificacion a partir de las semanas publicadas.</p>
       </div>
 
-      {isAdmin && <PersonSelector persons={persons} selectedPersonId={personId} />}
+      {isAdmin && <PersonSelector persons={persons} selectedPersonId={personId} gamificationMode={gamificationMode} />}
 
       {!personId ? (
         <EmptyState>Selecciona una persona para consultar sus resultados.</EmptyState>
       ) : (
         <>
-          <nav className="flex gap-4 border-b border-slate-200 text-sm font-medium text-slate-600">
-            <Link
-              href={buildTabHref("por-split", personId, isAdmin)}
-              className={`-mb-px border-b-2 px-1 py-2 ${vista === "por-split" ? "border-slate-900 text-slate-900" : "border-transparent hover:text-slate-900"}`}
-            >
-              Por split
-            </Link>
-            <Link
-              href={buildTabHref("historico", personId, isAdmin)}
-              className={`-mb-px border-b-2 px-1 py-2 ${vista === "historico" ? "border-slate-900 text-slate-900" : "border-transparent hover:text-slate-900"}`}
-            >
-              Historico general
-            </Link>
-          </nav>
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-3">
+            <nav className="flex gap-4 text-sm font-medium text-slate-600">
+              <Link
+                href={buildTabHref("por-split", personId, isAdmin, gamificationMode)}
+                className={`-mb-px border-b-2 px-1 py-2 ${vista === "por-split" ? "border-slate-900 text-slate-900" : "border-transparent hover:text-slate-900"}`}
+              >
+                Por split
+              </Link>
+              <Link
+                href={buildTabHref("historico", personId, isAdmin, gamificationMode)}
+                className={`-mb-px border-b-2 px-1 py-2 ${vista === "historico" ? "border-slate-900 text-slate-900" : "border-transparent hover:text-slate-900"}`}
+              >
+                Historico general
+              </Link>
+            </nav>
+            <GamificationToggle mode={gamificationMode} searchParams={searchParams} />
+          </div>
 
           {vista === "por-split" ? (
             <PorSplitSection
@@ -74,9 +82,10 @@ export default async function ResultadosPage({
               requestedSplitId={searchParams.split ?? null}
               isAdmin={isAdmin}
               factionWeek={searchParams.semanaFaccion ?? null}
+              gamificationMode={gamificationMode}
             />
           ) : (
-            <HistoricoSection personId={personId} isAdmin={isAdmin} searchParams={searchParams} />
+            <HistoricoSection personId={personId} isAdmin={isAdmin} searchParams={searchParams} gamificationMode={gamificationMode} />
           )}
         </>
       )}

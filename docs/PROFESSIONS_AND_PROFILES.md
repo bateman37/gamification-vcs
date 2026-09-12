@@ -216,6 +216,15 @@ resultaria de encadenar `70 x 1,20 x 1,30`). Esta seccion no cambia por
 ello: la profesion sigue siendo exactamente el mismo `+20 %` fijo,
 calculado exactamente igual.
 
+**Composicion con objetos de equipo (`0.9.0` / MVP-2D, ver
+docs/ECONOMY_INVENTORY_AND_EQUIPMENT.md):** el mismo patron se repite con
+los objetos equipados, tercera capa de bonus, tambien calculada sobre
+`baseFinalPoints` y sumada una sola vez:
+`finalPoints = baseFinalPoints + professionBonusPoints + locationBonusPoints + equipmentBonusPoints`.
+Con profesion `20 %`, localizacion `30 %` y un objeto `10 %` sobre el
+mismo KPI de base `70`, el resultado es `112` (`70 + 14 + 21 + 7`), nunca
+un producto de factores.
+
 ### 8.1 Cuando se aplica
 
 Solo cuando se cumplen **todas** estas condiciones:
@@ -514,7 +523,9 @@ historicas especiales de Mecanico, Arreglador, Mercenario, Cientifico o
 Piloto; reduccion especial de valoraciones negativas; sustitucion de bases,
 multiplicadores o maximos del KPI; bonus directo para toda una faccion;
 profesiones multiples por participante; cambios de profesion despues de la
-primera publicacion; localizaciones; objetos; creditos o economia;
-misiones; cartas, hechizos o consumibles; generacion de fichas PDF; envio
-de correo; integracion con Power BI; y avatares generados por IA o editor
-de imagenes.
+primera publicacion; misiones; cartas, hechizos o consumibles; generacion
+de fichas PDF; envio de correo; integracion con Power BI; y avatares
+generados por IA o editor de imagenes. Las localizaciones semanales se
+implementaron en `0.8.5` / MVP-2C (ver `docs/WEEKLY_LOCATIONS.md`) y los
+objetos, el inventario, el equipo y la economia de creditos en `0.9.0` /
+MVP-2D (ver `docs/ECONOMY_INVENTORY_AND_EQUIPMENT.md`).
