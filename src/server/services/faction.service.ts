@@ -24,15 +24,21 @@ function normalizeFactionName(name: string): string {
 
 export interface FactionWithCounts extends SplitFaction {
   participantCount: number;
+  /** `sha256` de la imagen (`1.2.2`), o `null` si no tiene emblema. Nunca se selecciona el blob aqui. */
+  imageVersion: string | null;
 }
 
 export async function listFactionsForSplit(db: Db, splitId: string): Promise<FactionWithCounts[]> {
   const factions = await db.splitFaction.findMany({
     where: { splitId },
-    include: { _count: { select: { participants: true } } },
+    include: { _count: { select: { participants: true } }, image: { select: { sha256: true } } },
     orderBy: { createdAt: "asc" },
   });
-  return factions.map(({ _count, ...faction }) => ({ ...faction, participantCount: _count.participants }));
+  return factions.map(({ _count, image, ...faction }) => ({
+    ...faction,
+    participantCount: _count.participants,
+    imageVersion: image?.sha256 ?? null,
+  }));
 }
 
 export async function countFactionsForSplit(db: Db, splitId: string): Promise<number> {

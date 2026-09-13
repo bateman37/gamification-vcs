@@ -2,6 +2,7 @@
 
 import { useFormState, useFormStatus } from "react-dom";
 import type { SplitPositionPointRule, SplitStatus } from "@prisma/client";
+import { TOTAL_POSITION_COUNT } from "@/domain/position-points";
 import { updatePositionPointsAction } from "@/server/actions/position-points.actions";
 import {
   initialPositionPointsActionState,
@@ -42,7 +43,10 @@ export function PositionPointsSection({
     <section id="puntos-posicion" className="scroll-mt-20 space-y-3">
       <h2 className="text-lg font-semibold">Puntos por posición semanal</h2>
       <p className="text-sm text-text-muted">
-        Configura los puntos que recibirá cada posición (1 a 15) al calcular la clasificación semanal.
+        Configura los puntos que recibirá cada posición al calcular la clasificación semanal. El rango
+        cubre siempre, como mínimo, las quince posiciones históricas y el número actual de
+        participantes del split: las posiciones 16 en adelante nacen con 0 puntos y se amplían
+        automáticamente al añadir participantes.
       </p>
       {splitStatus === "CLOSED" ? (
         <p className="text-sm text-text-muted">
@@ -70,7 +74,12 @@ export function PositionPointsSection({
                 const errorMessage = fieldErrorMessage(state, rule.position);
                 return (
                   <tr key={rule.position} className="border-b border-border">
-                    <td className="px-3 py-2">{rule.position}</td>
+                    <td className="px-3 py-2">
+                      {rule.position}
+                      {rule.position > TOTAL_POSITION_COUNT && (
+                        <span className="ml-2 text-xs text-text-muted">(ampliada)</span>
+                      )}
+                    </td>
                     <td className="px-3 py-2">
                       {readOnly ? (
                         rule.points

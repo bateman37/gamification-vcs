@@ -281,6 +281,10 @@ model SplitFaction {
   split            Split                              @relation(fields: [splitId], references: [id], onDelete: Cascade)
   participants     SplitParticipant[]
   publishedResults PublishedParticipantWeeklyResult[]
+  /// Imagen opcional del emblema (`1.2.2`, ver docs/FACTIONS.md). Recurso
+  /// cosmetico actual: nunca se congela en un snapshot ni se persigue
+  /// historicamente.
+  image            SplitFactionImage?
 
   @@unique([splitId, nameNormalized])
 }
@@ -574,7 +578,9 @@ model StudentWeeklyEntry {
 model SplitPositionPointRule {
   id        String   @id @default(uuid())
   splitId   String
-  /// Posicion semanal (1 a 15). Restriccion de base de datos.
+  /// Posicion semanal (1 a N, dinamico desde `1.2.2`: N = maximo(15,
+  /// participantes del split, mayor posicion ya persistida). Restriccion de
+  /// base de datos: solo exige `position >= 1`.
   position  Int
   /// Puntos otorgados a esa posicion. Nunca negativo.
   points    Int
@@ -966,6 +972,29 @@ model SplitStoreItemImage {
   // Cascade: la imagen solo desaparece cuando el objeto se elimina legitimamente
   // (solo posible mientras no tenga ninguna compra, ver store-item.service.ts).
   storeItem SplitStoreItem @relation(fields: [splitStoreItemId], references: [id], onDelete: Cascade)
+}
+
+/// Emblema opcional de una faccion (`1.2.2`, ver docs/FACTIONS.md). Misma
+/// forma y mismo patron que `SplitParticipantAvatar`/`SplitStoreItemImage`:
+/// entidad uno-a-uno separada para no cargar los bytes en listados de
+/// facciones, procesada siempre en servidor a WebP.
+model SplitFactionImage {
+  /// Clave primaria y unica: como mucho una imagen por faccion.
+  splitFactionId String   @id
+  /// Bytes de la imagen ya procesada a WebP en servidor (nunca el original subido).
+  imageData      Bytes
+  /// MIME final real de `imageData` (siempre `image/webp` en esta entrega).
+  mimeType       String
+  /// Tamano en bytes de `imageData`. No negativo (restriccion de base de datos).
+  byteSize       Int
+  /// SHA-256 de `imageData`: version estable usada como `ETag` de cache y como `imageVersion` en las DTO.
+  sha256         String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Cascade: la imagen solo desaparece cuando la faccion se elimina legitimamente
+  // (solo posible sin participantes asignados ni publicaciones, ver faction.service.ts).
+  faction SplitFaction @relation(fields: [splitFactionId], references: [id], onDelete: Cascade)
 }
 
 /// Compra confirmada de un objeto (seccion 16 del encargo): instantanea

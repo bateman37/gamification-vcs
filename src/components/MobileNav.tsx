@@ -15,7 +15,16 @@ import type { NavItem } from "@/components/nav-items";
  * drawer: cerrable con teclado (`Escape`) y sin bloquear el scroll despues
  * de cerrarse.
  */
-export function MobileNav({ items, isAuthenticated }: { items: NavItem[]; isAuthenticated: boolean }) {
+export function MobileNav({
+  items,
+  isAuthenticated,
+  identityLabel = null,
+}: {
+  items: NavItem[];
+  isAuthenticated: boolean;
+  /** Identidad de sesion (`1.2.2`): nombre completo del participante o "Administrador". */
+  identityLabel?: string | null;
+}) {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -58,6 +67,7 @@ export function MobileNav({ items, isAuthenticated }: { items: NavItem[]; isAuth
             <div className="mt-auto flex shrink-0 flex-col gap-2 border-t border-white/10 pt-4 text-sm">
               {isAuthenticated ? (
                 <>
+                  {identityLabel && <span className="truncate text-sm font-medium text-white">{identityLabel}</span>}
                   <Link href="/cuenta/cambiar-contrasena" className="text-white/70 hover:text-white" onClick={() => setOpen(false)}>
                     Mi cuenta
                   </Link>

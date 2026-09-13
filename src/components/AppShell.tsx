@@ -27,7 +27,21 @@ export async function AppShell({ children }: { children: ReactNode }) {
 
   let unreadCount = 0;
   let previewItems: NewsBellPreviewItem[] = [];
+  // Identidad de sesion junto a la campana (`1.2.2`, ver CLAUDE.md): un participante ve el nombre
+  // completo real de su `Person`, un administrador ve siempre el texto fijo "Administrador"
+  // (prevalece aunque, por cualquier motivo, exista ademas una relacion con una persona). Nunca se
+  // muestra aqui alias, correo, id tecnico ni una presencia en linea real.
+  let identityLabel: string | null = null;
   if (session?.user) {
+    if (session.user.role === "ADMIN") {
+      identityLabel = "Administrador";
+    } else if (session.user.personId) {
+      const person = await prisma.person.findUnique({ where: { id: session.user.personId }, select: { fullName: true } });
+      identityLabel = person?.fullName ?? "Usuario";
+    } else {
+      identityLabel = "Usuario";
+    }
+
     const identity = { userId: session.user.id, personId: session.user.personId };
     const now = new Date();
     const [count, preview] = await Promise.all([countUnreadNews(prisma, identity), previewRecentNews(prisma, identity)]);
@@ -60,6 +74,11 @@ export async function AppShell({ children }: { children: ReactNode }) {
             <SidebarNav items={items} />
           </div>
           <div className="mt-auto flex shrink-0 flex-col gap-2 border-t border-white/10 pt-4 text-sm">
+            {identityLabel && (
+              <span className="truncate text-sm font-medium text-white" title={identityLabel}>
+                {identityLabel}
+              </span>
+            )}
             <Link href="/cuenta/cambiar-contrasena" className="text-white/70 hover:text-white">
               Mi cuenta
             </Link>
@@ -75,9 +94,17 @@ export async function AppShell({ children }: { children: ReactNode }) {
             <span className="text-sm font-semibold text-ink">Gamification VCS</span>
           </div>
           <div className="ml-auto flex items-center gap-2">
+            {isAuthenticated && identityLabel && (
+              <span
+                className="hidden max-w-[10rem] truncate text-sm font-medium text-ink sm:inline-block md:hidden"
+                title={identityLabel}
+              >
+                {identityLabel}
+              </span>
+            )}
             {isAuthenticated && <NewsBell unreadCount={unreadCount} previewItems={previewItems} />}
             {isAuthenticated ? (
-              <MobileNav items={items} isAuthenticated={isAuthenticated} />
+              <MobileNav items={items} isAuthenticated={isAuthenticated} identityLabel={identityLabel} />
             ) : (
               <Link href="/login" className="text-sm font-medium text-text-muted hover:text-ink">
                 Login

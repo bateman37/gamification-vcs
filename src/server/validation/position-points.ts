@@ -1,11 +1,12 @@
 import { DomainError } from "@/lib/errors";
-import { TOTAL_POSITION_COUNT } from "@/domain/position-points";
 
 /**
  * Parseo y validacion en servidor del formulario "Puntos por posicion
  * semanal" (ver docs/POSITION_POINTS_CONFIGURATION.md). Convencion de
- * nombres de campo en el `FormData`: `points__<posicion>`, para las quince
- * posiciones fijas `1..15`.
+ * nombres de campo en el `FormData`: `points__<posicion>`, para las
+ * posiciones `1..N`, donde `N` es el rango dinamico ya calculado en servidor
+ * (`resolveRequiredPositionCountForSplit`) y recibido como parametro: nunca
+ * un limite enviado por el cliente.
  */
 
 export interface PositionPointFieldError {
@@ -30,16 +31,16 @@ export interface PositionPointRow {
 }
 
 /**
- * Valida las quince posiciones esperadas (`1..15`, unicas y completas) y
+ * Valida las posiciones esperadas `1..totalPositions` (unicas y completas) y
  * que cada valor de puntos sea un entero no negativo. Un error en una fila
  * no impide comprobar las demas: se devuelven todos los errores detectados
  * en una sola respuesta.
  */
-export function parsePositionPointsForm(formData: FormData): PositionPointRow[] {
+export function parsePositionPointsForm(formData: FormData, totalPositions: number): PositionPointRow[] {
   const fieldErrors: PositionPointFieldError[] = [];
   const rows: PositionPointRow[] = [];
 
-  for (let position = 1; position <= TOTAL_POSITION_COUNT; position += 1) {
+  for (let position = 1; position <= totalPositions; position += 1) {
     const raw = formData.get(`points__${position}`);
     if (typeof raw !== "string" || raw.trim() === "") {
       fieldErrors.push({ position, message: `Los puntos de la posicion ${position} son obligatorios.` });

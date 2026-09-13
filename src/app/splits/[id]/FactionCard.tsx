@@ -1,9 +1,16 @@
 "use client";
 
 import { useFormState, useFormStatus } from "react-dom";
-import { updateFactionAction, deleteFactionAction } from "@/server/actions/faction.actions";
+import {
+  updateFactionAction,
+  deleteFactionAction,
+  saveFactionImageAction,
+  deleteFactionImageAction,
+} from "@/server/actions/faction.actions";
 import { initialActionState } from "@/server/actions/action-result";
-import { ErrorMessage, FieldError, SubmitButton } from "@/components/ui";
+import { ErrorMessage, FieldError, SubmitButton, SuccessMessage } from "@/components/ui";
+import { FactionImage } from "@/components/FactionImage";
+import { FACTION_IMAGE_ACCEPT_ATTRIBUTE, FACTION_IMAGE_FIELD } from "@/domain/faction-image-constraints";
 import type { FactionWithCounts } from "@/server/services/faction.service";
 
 function SaveFactionButton() {
@@ -29,6 +36,59 @@ function DeleteFactionButton({ disabled, title }: { disabled: boolean; title?: s
   );
 }
 
+function FactionImageManager({ splitId, faction }: { splitId: string; faction: FactionWithCounts }) {
+  const [saveState, saveAction] = useFormState(saveFactionImageAction.bind(null, splitId, faction.id), initialActionState);
+  const [deleteState, deleteAction] = useFormState(deleteFactionImageAction.bind(null, splitId, faction.id), initialActionState);
+
+  return (
+    <div className="space-y-2 border-t border-border pt-3">
+      <div className="flex flex-wrap items-center gap-3">
+        <FactionImage
+          splitId={splitId}
+          factionId={faction.id}
+          imageVersion={faction.imageVersion}
+          factionName={faction.name}
+          color={faction.color}
+          size="lg"
+          decorative
+        />
+        <div className="min-w-[12rem] flex-1 space-y-1">
+          <form action={saveAction} className="space-y-1">
+            <label htmlFor={`faction-${faction.id}-image`} className="block text-xs font-medium text-text-muted">
+              Emblema de la facción (opcional)
+            </label>
+            <input
+              id={`faction-${faction.id}-image`}
+              type="file"
+              name={FACTION_IMAGE_FIELD}
+              accept={FACTION_IMAGE_ACCEPT_ATTRIBUTE}
+              className="block w-full text-xs"
+            />
+            <SubmitButton pending={false} className="px-3 py-1 text-xs">
+              {faction.imageVersion ? "Cambiar imagen" : "Subir imagen"}
+            </SubmitButton>
+            <FieldError message={saveState.fieldErrors?.[FACTION_IMAGE_FIELD]} />
+          </form>
+          {faction.imageVersion && (
+            <form action={deleteAction}>
+              <button type="submit" className="text-xs font-medium text-danger-ink hover:underline">
+                Eliminar imagen
+              </button>
+            </form>
+          )}
+        </div>
+      </div>
+      <p className="text-xs text-text-muted">
+        JPEG, PNG o WebP, hasta 5 MB. Se procesa en el servidor a WebP (máximo 512 px) y no se
+        congela en snapshots históricos: cambiarla no altera clasificaciones ni noticias pasadas.
+      </p>
+      {!saveState.ok && saveState.error && <ErrorMessage>{saveState.error}</ErrorMessage>}
+      {saveState.ok && <SuccessMessage>Imagen guardada correctamente.</SuccessMessage>}
+      {!deleteState.ok && deleteState.error && <ErrorMessage>{deleteState.error}</ErrorMessage>}
+    </div>
+  );
+}
+
 export function FactionCard({
   splitId,
   faction,
@@ -51,10 +111,14 @@ export function FactionCard({
     return (
       <div className="flex items-center justify-between gap-3 rounded-card border border-border bg-surface p-4">
         <div className="flex items-center gap-3">
-          <span
-            aria-hidden
-            className="h-5 w-5 rounded-full border border-border-strong"
-            style={{ backgroundColor: faction.color }}
+          <FactionImage
+            splitId={splitId}
+            factionId={faction.id}
+            imageVersion={faction.imageVersion}
+            factionName={faction.name}
+            color={faction.color}
+            size="sm"
+            decorative
           />
           <span className="font-medium">{faction.name}</span>
         </div>
@@ -95,6 +159,8 @@ export function FactionCard({
         </div>
         <SaveFactionButton />
       </form>
+
+      <FactionImageManager splitId={splitId} faction={faction} />
 
       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3 text-sm">
         <span className="text-text-muted">

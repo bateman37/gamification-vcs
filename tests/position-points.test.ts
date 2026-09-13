@@ -55,7 +55,7 @@ describe("Puntos por posicion semanal: validacion de formulario", () => {
   it("exige las quince posiciones con puntos enteros no negativos, con todos los errores en una sola respuesta", async () => {
     const formData = positionPointsForm({ 1: "-5", 2: "no-es-un-numero", 3: "1,5" });
     try {
-      parsePositionPointsForm(formData);
+      parsePositionPointsForm(formData, TOTAL_POSITION_COUNT);
       throw new Error("Se esperaba que la validacion fallase.");
     } catch (error) {
       expect(error).toBeInstanceOf(PositionPointsValidationError);
@@ -67,7 +67,7 @@ describe("Puntos por posicion semanal: validacion de formulario", () => {
 
   it("un formulario valido produce las quince filas listas para guardar", () => {
     const formData = positionPointsForm({ 1: "20" });
-    const rows = parsePositionPointsForm(formData);
+    const rows = parsePositionPointsForm(formData, TOTAL_POSITION_COUNT);
     expect(rows).toHaveLength(15);
     expect(rows.find((row) => row.position === 1)?.points).toBe(20);
   });

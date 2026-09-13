@@ -3,7 +3,8 @@ import type { ParticipantLevel, SplitStatus } from "@prisma/client";
 export const SPLIT_STATUS_LABELS: Record<SplitStatus, string> = {
   DRAFT: "Borrador",
   ACTIVE: "Activo",
-  CLOSED: "Cerrado",
+  // `1.2.2`: reutiliza el estado terminal existente `CLOSED`, solo cambia su etiqueta visible.
+  CLOSED: "Finalizado",
 };
 
 export const PARTICIPANT_LEVEL_LABELS: Record<ParticipantLevel, string> = {

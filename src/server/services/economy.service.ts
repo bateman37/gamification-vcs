@@ -3,6 +3,8 @@ import { Prisma, type PrismaClient, type SplitEconomySettings } from "@prisma/cl
 import { DomainError } from "@/lib/errors";
 import { KPI_CATALOG } from "@/domain/kpis/catalog";
 import { isAllowedEquipmentBonusPercent } from "@/domain/equipment-bonus";
+import { MAX_PLACED_EQUIPMENT_SLOTS_PER_SPLIT } from "@/domain/equipment-visual-positions";
+import { listEconomySummaryForSplit } from "@/server/services/ledger.service";
 import { createNewsWithDeliveries, resolveActiveAdminUserIds, resolveAllParticipantsForSplit } from "@/server/services/news.service";
 import { buildNewsActionPath } from "@/domain/news-links";
 import {
@@ -158,48 +160,114 @@ export async function openMarket(db: PrismaClient, splitId: string): Promise<Spl
   );
 }
 
+/**
+ * Nucleo de "cerrar mercado", reutilizable desde una transaccion ya abierta
+ * por otra operacion (`finalizeSplit`, ver `docs/DECISIONS.md`). No repite
+ * el guardia `assertSplitAllowsMarketToggle`: quien llama ya establecio que
+ * el cierre es valido en este momento (por ejemplo, un split todavia
+ * `ACTIVE` a punto de finalizarse).
+ */
+export async function closeMarketWithinTransaction(
+  tx: Prisma.TransactionClient,
+  splitId: string,
+  split: { name: string },
+): Promise<SplitEconomySettings> {
+  const current = await getEconomySettings(tx, splitId);
+  if (current.marketStatus === "CLOSED") {
+    return tx.splitEconomySettings.upsert({ where: { splitId }, create: { splitId, marketStatus: "CLOSED" }, update: { marketStatus: "CLOSED" } });
+  }
+
+  const settings = await tx.splitEconomySettings.upsert({
+    where: { splitId },
+    create: { splitId, marketStatus: "CLOSED" },
+    update: { marketStatus: "CLOSED" },
+  });
+
+  const operationId = randomUUID();
+
+  const participants = await resolveAllParticipantsForSplit(tx, splitId);
+  if (participants.length > 0) {
+    const text = marketClosedNewsTemplateForParticipant();
+    await createNewsWithDeliveries(
+      tx,
+      { splitId, splitNameSnapshot: split.name, origin: "AUTOMATIC", category: "MARKET", title: text.title, body: text.body, eventKey: `market-closed:${operationId}` },
+      participants.map((p) => ({ personId: p.personId, actionPath: buildNewsActionPath({ kind: "MARKET", splitParticipantId: p.splitParticipantId }, "PERSON") })),
+    );
+  }
+
+  const adminUserIds = await resolveActiveAdminUserIds(tx);
+  if (adminUserIds.length > 0) {
+    const adminText = adminMarketClosedNewsTemplate({ splitName: split.name });
+    await createNewsWithDeliveries(
+      tx,
+      { splitId, splitNameSnapshot: split.name, origin: "AUTOMATIC", category: "ADMIN", title: adminText.title, body: adminText.body, eventKey: `admin-market-closed:${operationId}` },
+      adminUserIds.map((userId) => ({ userId, actionPath: buildNewsActionPath({ kind: "SPLIT_ECONOMY_ADMIN", splitId }, "USER") })),
+    );
+  }
+
+  return settings;
+}
+
 export async function closeMarket(db: PrismaClient, splitId: string): Promise<SplitEconomySettings> {
   return db.$transaction(
     async (tx) => {
       const split = await tx.split.findUnique({ where: { id: splitId } });
       if (!split) throw new DomainError("El split indicado no existe.");
       assertSplitAllowsMarketToggle(split);
-
-      const current = await getEconomySettings(tx, splitId);
-      if (current.marketStatus === "CLOSED") {
-        return tx.splitEconomySettings.upsert({ where: { splitId }, create: { splitId, marketStatus: "CLOSED" }, update: { marketStatus: "CLOSED" } });
-      }
-
-      const settings = await tx.splitEconomySettings.upsert({
-        where: { splitId },
-        create: { splitId, marketStatus: "CLOSED" },
-        update: { marketStatus: "CLOSED" },
-      });
-
-      const operationId = randomUUID();
-
-      const participants = await resolveAllParticipantsForSplit(tx, splitId);
-      if (participants.length > 0) {
-        const text = marketClosedNewsTemplateForParticipant();
-        await createNewsWithDeliveries(
-          tx,
-          { splitId, splitNameSnapshot: split.name, origin: "AUTOMATIC", category: "MARKET", title: text.title, body: text.body, eventKey: `market-closed:${operationId}` },
-          participants.map((p) => ({ personId: p.personId, actionPath: buildNewsActionPath({ kind: "MARKET", splitParticipantId: p.splitParticipantId }, "PERSON") })),
-        );
-      }
-
-      const adminUserIds = await resolveActiveAdminUserIds(tx);
-      if (adminUserIds.length > 0) {
-        const adminText = adminMarketClosedNewsTemplate({ splitName: split.name });
-        await createNewsWithDeliveries(
-          tx,
-          { splitId, splitNameSnapshot: split.name, origin: "AUTOMATIC", category: "ADMIN", title: adminText.title, body: adminText.body, eventKey: `admin-market-closed:${operationId}` },
-          adminUserIds.map((userId) => ({ userId, actionPath: buildNewsActionPath({ kind: "SPLIT_ECONOMY_ADMIN", splitId }, "USER") })),
-        );
-      }
-
-      return settings;
+      return closeMarketWithinTransaction(tx, splitId, split);
     },
     { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
   );
+}
+
+export interface EconomyDashboardSummary {
+  marketStatus: "OPEN" | "CLOSED";
+  activeSlotCount: number;
+  totalSlotPositions: number;
+  activeItemCount: number;
+  totalItemCount: number;
+  creditsSpent: number;
+  creditsAvailable: number;
+  purchaseCount: number;
+  buyerCount: number;
+  participantCount: number;
+  equippedItemCount: number;
+}
+
+/**
+ * Resumen compacto de "Economia y mercado" para el detalle del split
+ * (`1.2.2`, seccion 10 del encargo). Agregaciones acotadas (nunca una
+ * consulta por participante u objeto): reutiliza `listEconomySummaryForSplit`
+ * (ya usado por `/splits/[id]/economia`) para creditos gastados/disponibles
+ * y compradores distintos.
+ */
+export async function getEconomyDashboardSummary(db: Db, splitId: string): Promise<EconomyDashboardSummary> {
+  const [settings, slots, totalItemCount, activeItemCount, participantSummaries, purchaseCount, equippedItemCount] = await Promise.all([
+    getEconomySettings(db, splitId),
+    db.splitEquipmentSlot.findMany({ where: { splitId }, select: { isActive: true, visualPosition: true } }),
+    db.splitStoreItem.count({ where: { splitId } }),
+    db.splitStoreItem.count({ where: { splitId, isForSale: true } }),
+    listEconomySummaryForSplit(db, splitId),
+    db.itemPurchase.count({ where: { splitParticipant: { splitId } } }),
+    db.splitParticipantEquippedItem.count({ where: { splitParticipant: { splitId } } }),
+  ]);
+
+  const activeSlotCount = slots.filter((slot) => slot.isActive && slot.visualPosition !== null).length;
+  const creditsSpent = participantSummaries.reduce((sum, participant) => sum + participant.totalSpent, 0);
+  const creditsAvailable = participantSummaries.reduce((sum, participant) => sum + participant.balance, 0);
+  const buyerCount = participantSummaries.filter((participant) => participant.purchaseCount > 0).length;
+
+  return {
+    marketStatus: settings.marketStatus,
+    activeSlotCount,
+    totalSlotPositions: MAX_PLACED_EQUIPMENT_SLOTS_PER_SPLIT,
+    activeItemCount,
+    totalItemCount,
+    creditsSpent,
+    creditsAvailable,
+    purchaseCount,
+    buyerCount,
+    participantCount: participantSummaries.length,
+    equippedItemCount,
+  };
 }
