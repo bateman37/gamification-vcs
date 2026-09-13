@@ -5,6 +5,29 @@ La primera version publicada es `0.1.0`; `1.0.0` cierra la primera version
 estable del producto (nucleo funcional y las cuatro capas de juego, mas
 comunicacion y renovacion visual).
 
+## [1.2.1] - Hotfix: cuadricula de ranuras y renombre a Anillo
+
+Minihotfix de alcance minimo sobre la `1.2.0`: no rediseña el modulo ni
+cambia ninguna regla funcional.
+
+### Corregido
+
+- Corregida la cuadricula de equipo a la distribucion fija `1-3-3-3` en
+  Administracion (`AdminSlotPositionEditor`) y en Personaje
+  (`EquipmentEditor`, `/fichas/[splitParticipantId]`): `Cabeza` vuelve a ser
+  la unica ranura de la primera fila, y las nueve restantes respetan
+  siempre su fila y columna del catalogo.
+- Corregido el desplazamiento causado por la auto-colocacion de CSS Grid: la
+  `1.2.0` solo posicionaba `Cabeza` de forma explicita y dejaba que el
+  resto entrara en el flujo automatico, lo que desplazaba toda la
+  composicion una casilla y dejaba la ultima posicion vacia. Ambas pantallas
+  consumen ahora una unica fuente de verdad
+  (`EquipmentPositionBoard`, `src/components/equipment/EquipmentPositionBoard.tsx`).
+- Cambiada la denominacion base `Artefacto` por `Anillo` sin alterar su
+  identidad tecnica (`ARTIFACT` sigue siendo la clave del enum) ni los datos
+  historicos: compras, inventarios, equipos confirmados y snapshots
+  publicados no cambian.
+
 ## [1.2.0] - Equipo visual, inventario RPG e imagenes de objetos
 
 Rediseña y amplia la experiencia de inventario y equipo que existe desde la

@@ -51,6 +51,28 @@ describe("Catalogo cerrado de posiciones visuales", () => {
     expect(equipmentVisualPositionBaseName("LEFT_HAND")).toBe("Mano izquierda");
     expect(equipmentVisualPositionBaseName("RELIC")).toBe("Reliquia");
   });
+
+  it("cuadricula 1-3-3-3 (hotfix 1.2.1): Cabeza sola en fila 1, columna 2, y nueve celdas 3-3-3 sin solapes", () => {
+    const head = EQUIPMENT_VISUAL_POSITIONS.find((p) => p.position === "HEAD")!;
+    expect(head.row).toBe(1);
+    expect(head.column).toBe(2);
+
+    const rest = EQUIPMENT_VISUAL_POSITIONS.filter((p) => p.position !== "HEAD");
+    expect(rest).toHaveLength(9);
+    for (const row of [2, 3, 4] as const) {
+      const columnsInRow = rest.filter((p) => p.row === row).map((p) => p.column);
+      expect(columnsInRow.sort()).toEqual([1, 2, 3]);
+    }
+
+    const cells = EQUIPMENT_VISUAL_POSITIONS.map((p) => `${p.row}:${p.column}`);
+    expect(new Set(cells).size).toBe(cells.length);
+  });
+
+  it("la etiqueta base de ARTIFACT es Anillo, y el orden logico termina Anillo, Pies, Reliquia", () => {
+    expect(equipmentVisualPositionBaseName("ARTIFACT")).toBe("Anillo");
+    const lastThree = [...EQUIPMENT_VISUAL_POSITIONS].sort((a, b) => a.order - b.order).slice(-3);
+    expect(lastThree.map((p) => p.baseName)).toEqual(["Anillo", "Pies", "Reliquia"]);
+  });
 });
 
 describe("Borrador de equipo", () => {

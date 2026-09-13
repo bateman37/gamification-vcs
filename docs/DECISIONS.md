@@ -1804,3 +1804,43 @@ creado en ella nacería inutilizable y confundiria al administrador. Una
 ranura pendiente de ubicar, en cambio, es plenamente funcional para el
 jugador (solo le falta un sitio en el tablero), y bloquear sus objetos
 habria roto la compatibilidad que esta misma entrega promete.
+
+## Cuadricula del tablero de equipo explicita, nunca por auto-colocacion de CSS Grid (`1.2.1`)
+
+**Decision:** la `1.2.0` solo aplicaba una posicion explicita (`col-start-2`)
+a `Cabeza`; las nueve celdas restantes entraban en el flujo automatico de
+CSS Grid, que rellena huecos en orden de lectura y no respeta la
+composicion `1-3-3-3` del catalogo. El hotfix `1.2.1` introduce
+`EquipmentPositionBoard` (`src/components/equipment/EquipmentPositionBoard.tsx`)
+como unica fuente compartida entre Administracion y `/fichas/[splitParticipantId]`:
+cada una de las diez posiciones recibe su `col-start-*`/`row-start-*` de
+forma explicita a partir de la fila y columna ya definidas en
+`EQUIPMENT_VISUAL_POSITIONS` (que no cambian; ya eran correctas). Por debajo
+del punto de ruptura `sm` en `/fichas`, no se fuerza ninguna celda: las diez
+posiciones siguen el orden logico del catalogo en una rejilla de dos
+columnas, igual que en `1.2.0`.
+
+**Motivo:** dos arrays de coordenadas independientes (uno por pantalla)
+podrian divergir con el tiempo; un componente unico que consume siempre el
+mismo catalogo hace que Administracion y Personaje sean, por construccion,
+la misma composicion.
+
+## Renombre `Artefacto` -> `Anillo`: solo el nombre base, nunca la clave tecnica (`1.2.1`)
+
+**Decision:** `EQUIPMENT_VISUAL_POSITIONS` cambia el `baseName` de
+`ARTIFACT` de `Artefacto` a `Anillo`. La clave del enum `ARTIFACT` no
+cambia (evita una migracion destructiva del tipo `EquipmentVisualPosition`
+y de todas sus relaciones). La migracion de datos
+`20260913140000_rename_artifact_position_to_anillo` renombra unicamente las
+ranuras `ARTIFACT` que todavia tienen el nombre por defecto anterior
+(`artefacto` normalizado); cualquier ranura ya renombrada por el
+administrador se conserva tal cual, y una fila que colisionaria con una
+ranura `Anillo` ya existente en el mismo split se omite sin inventar
+sufijos ni borrar datos, respetando `@@unique([splitId, nameNormalized])`.
+`equipmentSlotNameSnapshot` de compras y semanas publicadas anteriores no se
+toca.
+
+**Motivo:** el encargo pide el cambio de denominacion visible sin romper la
+identidad tecnica ni los datos historicos; renombrar el enum habria forzado
+una migracion mucho mas amplia (tipo, indices, y todo el codigo que
+distingue por clave) para un cambio que es puramente de texto.

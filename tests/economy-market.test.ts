@@ -150,8 +150,8 @@ describe("Economia separada por split", () => {
   it("el mismo nombre de objeto o ranura puede repetirse en splits distintos", async () => {
     const { split: splitA } = await buildActiveSplitWithSlotAndItem();
     const { split: splitB } = await buildActiveSplitWithSlotAndItem();
-    // Ambos ya se llaman "Artefacto"/"Cristal de datos" por el helper: si no lanzara, confirma que no hay conflicto entre splits.
-    expect(await testDb.splitEquipmentSlot.count({ where: { splitId: splitA.id, name: "Artefacto" } })).toBe(1);
-    expect(await testDb.splitEquipmentSlot.count({ where: { splitId: splitB.id, name: "Artefacto" } })).toBe(1);
+    // Ambos ya se llaman "Anillo"/"Cristal de datos" por el helper: si no lanzara, confirma que no hay conflicto entre splits.
+    expect(await testDb.splitEquipmentSlot.count({ where: { splitId: splitA.id, name: "Anillo" } })).toBe(1);
+    expect(await testDb.splitEquipmentSlot.count({ where: { splitId: splitB.id, name: "Anillo" } })).toBe(1);
   });
 });

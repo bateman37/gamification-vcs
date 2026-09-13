@@ -499,7 +499,7 @@ para objetos; PDF, correo, Teams o Power BI; motor generico de plugins o
 reglas.
 
 
-## 22. Equipo visual, inventario RPG e imagenes de objetos (`1.2.0`)
+## 22. Equipo visual, inventario RPG e imagenes de objetos (`1.2.0`, cuadricula y nombre corregidos en `1.2.1`)
 
 La `1.2.0` rediseña y amplia esta misma capa. **No crea una segunda
 economia**: evoluciona el modelo, los servicios y las pantallas ya descritos
@@ -533,7 +533,7 @@ cambia solo el texto visible; ubicar una ranura cambia solo donde se dibuja.
 | `HANDS` | Manos | 3 | 1 |
 | `LEGS` | Piernas | 3 | 2 |
 | `CAPE` | Capa | 3 | 3 |
-| `ARTIFACT` | Artefacto | 4 | 1 |
+| `ARTIFACT` | Anillo | 4 | 1 |
 | `FEET` | Pies | 4 | 2 |
 | `RELIC` | Reliquia | 4 | 3 |
 
@@ -541,6 +541,17 @@ Las claves son persistentes y no traducibles; los nombres base son solo el
 valor inicial visible al activar una posicion. `Mano izquierda` se dibuja en
 la columna izquierda de la **pantalla**: la interfaz prioriza la comprension
 del usuario, no la anatomia del personaje.
+
+**Hotfix `1.2.1`:** la denominacion base de `ARTIFACT` cambia de
+`Artefacto` a `Anillo` (solo el nombre visible; la clave tecnica `ARTIFACT`
+y todas sus relaciones no cambian). Ademas, Administracion y `/fichas` ya
+no dependen del flujo automatico de CSS Grid para colocar las nueve
+posiciones distintas de `Cabeza`: cada celda usa la fila y columna de esta
+tabla de forma explicita (`EquipmentPositionBoard`,
+`src/components/equipment/EquipmentPositionBoard.tsx`), la unica fuente de
+verdad de la cuadricula que consumen ambas pantallas. La `1.2.0` solo
+posicionaba `Cabeza` de forma explicita y dejaba que el resto entrara en el
+flujo automatico, lo que desplazaba toda la composicion una casilla.
 
 Restricciones: como mucho una ranura por posicion y split
 (`@@unique([splitId, visualPosition])`, comprobada tambien en servicio); una
@@ -568,6 +579,16 @@ estrictamente aditiva y no destructiva:
 Validada sobre una base vacia y sobre una base compatible con `1.1.1` con
 ranuras, objeto comprado, objeto equipado, semana publicada y movimientos de
 creditos reales.
+
+`20260913140000_rename_artifact_position_to_anillo` (hotfix `1.2.1`) es una
+migracion de datos exclusivamente: renombra `name`/`nameNormalized` de
+`Artefacto` a `Anillo` solo en las ranuras `ARTIFACT` que todavia conservan
+ese nombre por defecto (nunca una ya renombrada por el administrador). Si un
+split ya tiene otra ranura llamada `Anillo`, esa fila concreta se omite (sin
+inventar sufijos ni borrar datos) para no romper
+`@@unique([splitId, nameNormalized])`; el tablero sigue mostrando la
+etiqueta canonica `Anillo` para la posicion aunque la fila conserve su
+nombre anterior en ese caso.
 
 Una ranura historica activa sin posicion **no desaparece** de la
 experiencia hasta que el administrador la ubique:

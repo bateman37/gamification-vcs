@@ -13,6 +13,7 @@ import {
 import { initialActionState } from "@/server/actions/action-result";
 import { Alert, Badge, ErrorMessage, FieldError, SubmitButton } from "@/components/ui";
 import { EquipmentSilhouette } from "@/components/equipment/EquipmentSilhouette";
+import { EquipmentPositionBoard } from "@/components/equipment/EquipmentPositionBoard";
 import { EQUIPMENT_VISUAL_POSITIONS } from "@/domain/equipment-visual-positions";
 
 /**
@@ -304,18 +305,7 @@ export function AdminSlotPositionEditor({
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center" aria-hidden="true">
           <EquipmentSilhouette className="h-full max-h-[26rem] opacity-[0.06]" />
         </div>
-        <div className="relative grid grid-cols-3 gap-2">
-          <div className="col-start-2">{cell("HEAD")}</div>
-          {cell("LEFT_HAND")}
-          {cell("TORSO")}
-          {cell("RIGHT_HAND")}
-          {cell("HANDS")}
-          {cell("LEGS")}
-          {cell("CAPE")}
-          {cell("ARTIFACT")}
-          {cell("FEET")}
-          {cell("RELIC")}
-        </div>
+        <EquipmentPositionBoard responsive={false} className="relative" renderCell={cell} />
       </div>
 
       {unplacedSlots.length > 0 && (
