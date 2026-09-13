@@ -12,10 +12,17 @@ import { isManualNewsDestination } from "@/domain/news-links";
 describe("Navegacion por rol", () => {
   it("un administrador ve Noticias primero, despues Personas, Splits y Resultados, y Fichas solo si esta vinculado (`1.0.1`)", () => {
     const withoutPerson = buildNavItems({ isAuthenticated: true, isAdmin: true, hasPersonId: false });
-    expect(withoutPerson.map((item) => item.href)).toEqual(["/noticias", "/personas", "/splits", "/resultados"]);
+    expect(withoutPerson.map((item) => item.href)).toEqual(["/noticias", "/personas", "/splits", "/resultados", "/analitica"]);
 
     const withPerson = buildNavItems({ isAuthenticated: true, isAdmin: true, hasPersonId: true });
-    expect(withPerson.map((item) => item.href)).toEqual(["/noticias", "/personas", "/splits", "/resultados", "/fichas"]);
+    expect(withPerson.map((item) => item.href)).toEqual([
+      "/noticias",
+      "/personas",
+      "/splits",
+      "/resultados",
+      "/analitica",
+      "/fichas",
+    ]);
   });
 
   it("desktop (`SidebarNav`) y movil (`MobileNav`) comparten la misma lista de `buildNavItems`, sin un segundo orden independiente", () => {
