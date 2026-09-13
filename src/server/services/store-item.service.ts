@@ -1,8 +1,9 @@
-import type { Prisma, PrismaClient, SplitStoreItem } from "@prisma/client";
+import type { EquipmentVisualPosition, Prisma, PrismaClient, SplitStoreItem } from "@prisma/client";
 import { DomainError } from "@/lib/errors";
 import type { KpiCode } from "@/domain/kpis/catalog";
 import type { StoreItemFormInput } from "@/server/validation/store-item";
 import { getEconomySettings } from "@/server/services/economy.service";
+import { saveStoreItemImage, type ProcessedStoreItemImage } from "@/server/services/store-item-image.service";
 
 /**
  * Catalogo de objetos de un split (`0.9.0` / MVP-2D, ver
@@ -35,19 +36,33 @@ async function assertItemsAreEditable(db: Db, splitId: string): Promise<void> {
 
 export interface StoreItemWithUsage extends SplitStoreItem {
   equipmentSlotName: string;
+  /** Posicion visual de su ranura, o `null` si la ranura todavia esta pendiente de ubicar. */
+  equipmentSlotVisualPosition: EquipmentVisualPosition | null;
+  /** Una ranura inactiva impide equipar el objeto (y venderlo), pero nunca lo elimina de un inventario. */
+  equipmentSlotIsActive: boolean;
   ownedCount: number;
+  /** `sha256` de la imagen del objeto, o `null` si no tiene. Los bytes nunca viajan en un listado (`1.2.0`). */
+  imageVersion: string | null;
 }
 
 export async function listStoreItemsForSplit(db: Db, splitId: string): Promise<StoreItemWithUsage[]> {
   const items = await db.splitStoreItem.findMany({
     where: { splitId },
-    include: { equipmentSlot: { select: { name: true } }, _count: { select: { ownedItems: true } } },
+    include: {
+      equipmentSlot: { select: { name: true, visualPosition: true, isActive: true } },
+      _count: { select: { ownedItems: true } },
+      // Solo el `sha256`: los bytes de la imagen se piden aparte, al servirla (`1.2.0`, seccion 16).
+      image: { select: { sha256: true } },
+    },
     orderBy: { createdAt: "asc" },
   });
-  return items.map(({ equipmentSlot, _count, ...item }) => ({
+  return items.map(({ equipmentSlot, _count, image, ...item }) => ({
     ...item,
     equipmentSlotName: equipmentSlot.name,
+    equipmentSlotVisualPosition: equipmentSlot.visualPosition,
+    equipmentSlotIsActive: equipmentSlot.isActive,
     ownedCount: _count.ownedItems,
+    imageVersion: image?.sha256 ?? null,
   }));
 }
 
@@ -66,19 +81,41 @@ async function resolveSlotAndKpiOrThrow(
   if (!slot || slot.splitId !== splitId) {
     throw new DomainError("La ranura seleccionada no pertenece a este split.", "equipmentSlotId");
   }
+  // `1.2.0`: una ranura desactivada no admite equipo nuevo, asi que tampoco objetos nuevos.
+  // Las ranuras historicas pendientes de ubicar si los admiten (compatibilidad): lo que no
+  // pueden es venderlos con el mercado abierto (ver `collectMarketOpenIssues`).
+  if (!slot.isActive) {
+    throw new DomainError(
+      `La ranura "${slot.name}" esta desactivada: reactivala antes de asociarle objetos.`,
+      "equipmentSlotId",
+    );
+  }
   const kpiConfig = await db.splitKpiConfig.findUnique({ where: { splitId_kpiCode: { splitId, kpiCode } } });
   if (!kpiConfig || !kpiConfig.isActive) {
     throw new DomainError('El KPI seleccionado no esta activo en este split. Activalo antes en "KPI del split".', "kpiCode");
   }
 }
 
-export async function createStoreItem(db: PrismaClient, splitId: string, input: StoreItemFormInput): Promise<SplitStoreItem> {
+/**
+ * Crea un objeto del catalogo. Si el administrador ha subido una imagen, esta
+ * llega ya procesada y validada (`processStoreItemImage`, fuera de la
+ * transaccion) y se persiste dentro de la misma transaccion que el objeto:
+ * una imagen invalida nunca deja un objeto creado a medias (`1.2.0`,
+ * seccion 7.3 del encargo).
+ */
+export async function createStoreItem(
+  db: PrismaClient,
+  splitId: string,
+  input: StoreItemFormInput,
+  image?: ProcessedStoreItemImage | null,
+): Promise<SplitStoreItem> {
   return db.$transaction(async (tx) => {
     await assertItemsAreEditable(tx, splitId);
     await resolveSlotAndKpiOrThrow(tx, splitId, input.equipmentSlotId, input.kpiCode);
 
+    let created: SplitStoreItem;
     try {
-      return await tx.splitStoreItem.create({
+      created = await tx.splitStoreItem.create({
         data: {
           splitId,
           name: input.name.trim(),
@@ -97,6 +134,11 @@ export async function createStoreItem(db: PrismaClient, splitId: string, input: 
       }
       throw error;
     }
+
+    if (image) {
+      await saveStoreItemImage(tx, splitId, created.id, image);
+    }
+    return created;
   });
 }
 

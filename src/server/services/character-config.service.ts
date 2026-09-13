@@ -8,6 +8,7 @@ import { getEconomySettings } from "@/server/services/economy.service";
 import { getParticipantBalance, listLedgerEntriesForParticipant, type LedgerEntryView } from "@/server/services/ledger.service";
 import { listOwnedItemsForParticipant, type OwnedItemView } from "@/server/services/inventory.service";
 import { listEquipmentForParticipant, type EquippedSlotView } from "@/server/services/equipment.service";
+import { computeLoadoutRevision } from "@/domain/equipment-loadout";
 import { listStoreItemsForSale } from "@/server/services/store-item.service";
 import { listWeekLocationsForSplit } from "@/server/services/location.service";
 
@@ -29,6 +30,8 @@ export interface StoreCatalogEntryView {
   kpiCode: KpiCode;
   kpiName: string;
   bonusPercent: number;
+  /** `sha256` de la imagen del objeto, o `null`. Nunca los bytes (`1.2.0`). */
+  imageVersion: string | null;
   status: "YA_LO_TIENES" | "SALDO_INSUFICIENTE" | "DISPONIBLE" | "MERCADO_CERRADO";
 }
 
@@ -57,10 +60,23 @@ export interface CharacterConfigView {
   totalOfficialKpiPoints: number;
   totalPositionPoints: number;
   publishedWeekCount: number;
-  activeLocation: { name: string; kpiName: string; bonusLabel: string; startDate: Date; endDate: Date } | null;
+  activeLocation: {
+    name: string;
+    kpiCode: KpiCode;
+    kpiName: string;
+    bonusPercent: number;
+    bonusLabel: string;
+    startDate: Date;
+    endDate: Date;
+  } | null;
   balance: number;
   marketStatus: MarketStatus;
   equipment: EquippedSlotView[];
+  /**
+   * Revision estable del equipo confirmado (`1.2.0`). El editor la devuelve al
+   * confirmar para que dos pestañas no se sobrescriban en silencio.
+   */
+  equipmentRevision: string;
   inventory: OwnedItemView[];
   storeCatalog: StoreCatalogEntryView[];
   ledger: LedgerEntryView[];
@@ -137,6 +153,7 @@ export async function getCharacterConfig(
       kpiCode: item.kpiCode,
       kpiName: KPI_CATALOG[item.kpiCode].name,
       bonusPercent: item.bonusPercent,
+      imageVersion: item.imageVersion,
       status,
     };
   });
@@ -183,7 +200,9 @@ export async function getCharacterConfig(
       if (live && isApplicable) {
         activeLocation = {
           name: live.name,
+          kpiCode: live.kpiCode,
           kpiName: KPI_CATALOG[live.kpiCode].name,
+          bonusPercent: live.bonusPercent,
           bonusLabel: locationBonusLabel(live.bonusPercent),
           startDate: currentWeek.startDate,
           endDate: currentWeek.endDate,
@@ -215,6 +234,12 @@ export async function getCharacterConfig(
     balance,
     marketStatus: economySettings.marketStatus,
     equipment,
+    // Se deriva del mismo `equipment` ya leido: ninguna consulta adicional.
+    equipmentRevision: computeLoadoutRevision(
+      equipment
+        .filter((slot) => slot.equippedItem !== null)
+        .map((slot) => ({ equipmentSlotId: slot.equipmentSlotId, ownedItemId: slot.equippedItem!.ownedItemId })),
+    ),
     inventory,
     storeCatalog,
     ledger,

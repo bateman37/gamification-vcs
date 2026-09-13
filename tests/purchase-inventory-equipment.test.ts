@@ -7,12 +7,12 @@ import { addParticipant } from "@/server/services/participant.service";
 import { updateKpiConfig } from "@/server/services/kpi.service";
 import { saveStabilityEntries } from "@/server/services/stability-entry.service";
 import { publishWeek } from "@/server/services/publish-week.service";
-import { createEquipmentSlot } from "@/server/services/equipment-slot.service";
 import { createStoreItem } from "@/server/services/store-item.service";
 import { openMarket, closeMarket } from "@/server/services/economy.service";
 import { purchaseStoreItem } from "@/server/services/purchase.service";
 import { listOwnedItemsForParticipant } from "@/server/services/inventory.service";
-import { equipOwnedItem, listEquipmentForParticipant, unequipSlot } from "@/server/services/equipment.service";
+import { listEquipmentForParticipant } from "@/server/services/equipment.service";
+import { createSlot, equipItem, unequipSlotItem } from "./helpers/equipment";
 import { getParticipantBalance } from "@/server/services/ledger.service";
 import { DomainError } from "@/lib/errors";
 
@@ -39,7 +39,7 @@ async function buildParticipantWithCredits(credits = 100) {
   await markAllPresent(testDb, split.id, week.id);
   await publishWeek(testDb, split.id, week.id, null);
 
-  const slot = await createEquipmentSlot(testDb, split.id, { name: "Artefacto" });
+  const slot = await createSlot(split.id, "ARTIFACT");
   const item = await createStoreItem(testDb, split.id, {
     name: "Cristal de datos",
     description: null,
@@ -145,16 +145,16 @@ describe("Inventario", () => {
 
 describe("Equipamiento", () => {
   it("solo puede equiparse un objeto que el participante posee", async () => {
-    const { person, participant } = await buildParticipantWithCredits(100);
+    const { person, participant, slot } = await buildParticipantWithCredits(100);
     const fakeOwnedItemId = "00000000-0000-0000-0000-000000000000";
-    await expect(equipOwnedItem(testDb, person.id, participant.id, fakeOwnedItemId)).rejects.toBeInstanceOf(DomainError);
+    await expect(equipItem(person.id, participant.id, slot.id, fakeOwnedItemId)).rejects.toBeInstanceOf(DomainError);
   });
 
   it("equipar coloca el objeto siempre en su propia ranura", async () => {
     const { split, person, participant, slot, item } = await buildParticipantWithCredits(100);
     await purchaseStoreItem(testDb, person.id, participant.id, item.id);
     const owned = await testDb.splitParticipantItem.findFirstOrThrow({ where: { splitParticipantId: participant.id } });
-    await equipOwnedItem(testDb, person.id, participant.id, owned.id);
+    await equipItem(person.id, participant.id, slot.id, owned.id);
 
     const equipment = await listEquipmentForParticipant(testDb, participant.id, split.id);
     const slotView = equipment.find((row) => row.equipmentSlotId === slot.id)!;
@@ -180,8 +180,8 @@ describe("Equipamiento", () => {
     const ownedFirst = await testDb.splitParticipantItem.findFirstOrThrow({ where: { splitParticipantId: participant.id, storeItemId: item.id } });
     const ownedSecond = await testDb.splitParticipantItem.findFirstOrThrow({ where: { splitParticipantId: participant.id, storeItemId: secondItem.id } });
 
-    await equipOwnedItem(testDb, person.id, participant.id, ownedFirst.id);
-    await equipOwnedItem(testDb, person.id, participant.id, ownedSecond.id);
+    await equipItem(person.id, participant.id, slot.id, ownedFirst.id);
+    await equipItem(person.id, participant.id, slot.id, ownedSecond.id);
 
     expect(await testDb.splitParticipantEquippedItem.count({ where: { splitParticipantId: participant.id, equipmentSlotId: slot.id } })).toBe(1);
     const equipment = await listEquipmentForParticipant(testDb, participant.id, split.id);
@@ -192,31 +192,31 @@ describe("Equipamiento", () => {
     const { split, person, participant, slot, item } = await buildParticipantWithCredits(100);
     await purchaseStoreItem(testDb, person.id, participant.id, item.id);
     const owned = await testDb.splitParticipantItem.findFirstOrThrow({ where: { splitParticipantId: participant.id } });
-    await equipOwnedItem(testDb, person.id, participant.id, owned.id);
+    await equipItem(person.id, participant.id, slot.id, owned.id);
 
-    await unequipSlot(testDb, person.id, participant.id, slot.id);
+    await unequipSlotItem(person.id, participant.id, slot.id);
     const equipment = await listEquipmentForParticipant(testDb, participant.id, split.id);
     expect(equipment.find((row) => row.equipmentSlotId === slot.id)!.equippedItem).toBeNull();
     // Repetirlo no falla.
-    await expect(unequipSlot(testDb, person.id, participant.id, slot.id)).resolves.not.toThrow();
+    await expect(unequipSlotItem(person.id, participant.id, slot.id)).resolves.not.toThrow();
   });
 
   it("el mercado cerrado sigue permitiendo equipar objetos ya comprados", async () => {
-    const { split, person, participant, item } = await buildParticipantWithCredits(100);
+    const { split, person, participant, slot, item } = await buildParticipantWithCredits(100);
     await purchaseStoreItem(testDb, person.id, participant.id, item.id);
     await closeMarket(testDb, split.id);
     const owned = await testDb.splitParticipantItem.findFirstOrThrow({ where: { splitParticipantId: participant.id } });
-    await expect(equipOwnedItem(testDb, person.id, participant.id, owned.id)).resolves.not.toThrow();
+    await expect(equipItem(person.id, participant.id, slot.id, owned.id)).resolves.not.toThrow();
   });
 
   it("un split cerrado bloquea equipar y desequipar", async () => {
     const { split, person, participant, slot, item } = await buildParticipantWithCredits(100);
     await purchaseStoreItem(testDb, person.id, participant.id, item.id);
     const owned = await testDb.splitParticipantItem.findFirstOrThrow({ where: { splitParticipantId: participant.id } });
-    await equipOwnedItem(testDb, person.id, participant.id, owned.id);
+    await equipItem(person.id, participant.id, slot.id, owned.id);
     await testDb.split.update({ where: { id: split.id }, data: { status: "CLOSED" } });
 
-    await expect(equipOwnedItem(testDb, person.id, participant.id, owned.id)).rejects.toBeInstanceOf(DomainError);
-    await expect(unequipSlot(testDb, person.id, participant.id, slot.id)).rejects.toBeInstanceOf(DomainError);
+    await expect(equipItem(person.id, participant.id, slot.id, owned.id)).rejects.toBeInstanceOf(DomainError);
+    await expect(unequipSlotItem(person.id, participant.id, slot.id)).rejects.toBeInstanceOf(DomainError);
   });
 });

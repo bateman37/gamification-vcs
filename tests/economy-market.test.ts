@@ -5,7 +5,7 @@ import { createSplitWithWeeks, activateSplit } from "@/server/services/split.ser
 import { addParticipant } from "@/server/services/participant.service";
 import { updateKpiConfig } from "@/server/services/kpi.service";
 import { closeMarket, collectMarketOpenIssues, getEconomySettings, isMarketOpen, openMarket } from "@/server/services/economy.service";
-import { createEquipmentSlot } from "@/server/services/equipment-slot.service";
+import { createSlot } from "./helpers/equipment";
 import { createStoreItem } from "@/server/services/store-item.service";
 import { DomainError } from "@/lib/errors";
 
@@ -29,7 +29,7 @@ async function buildActiveSplitWithSlotAndItem() {
   await addParticipant(testDb, split.id, { personId: person.id, alias: "Eco", level: "N2", startWeekSequenceNumber: 1 });
   await updateKpiConfig(testDb, split.id, "STABILITY_GUARDIAN", { isActive: true, baseMax: 70, multiplierN2: 1, parameters: { pointsPerResult: 30 } });
   await activateSplit(testDb, split.id);
-  const slot = await createEquipmentSlot(testDb, split.id, { name: "Artefacto" });
+  const slot = await createSlot(split.id, "ARTIFACT");
   const item = await createStoreItem(testDb, split.id, {
     name: "Cristal de datos",
     description: null,
@@ -63,7 +63,7 @@ describe("Estado inicial del mercado", () => {
 describe("Requisitos para abrir el mercado", () => {
   it("no abre en un split DRAFT", async () => {
     const split = await createDraftSplit();
-    await createEquipmentSlot(testDb, split.id, { name: "Artefacto" });
+    await createSlot(split.id, "ARTIFACT");
     await expect(openMarket(testDb, split.id)).rejects.toBeInstanceOf(DomainError);
   });
 
@@ -91,7 +91,7 @@ describe("Requisitos para abrir el mercado", () => {
     await addParticipant(testDb, split.id, { personId: person.id, alias: "SinObjetos", level: "N2", startWeekSequenceNumber: 1 });
     await updateKpiConfig(testDb, split.id, "STABILITY_GUARDIAN", { isActive: true, baseMax: 70, multiplierN2: 1, parameters: { pointsPerResult: 30 } });
     await activateSplit(testDb, split.id);
-    await createEquipmentSlot(testDb, split.id, { name: "Artefacto" });
+    await createSlot(split.id, "ARTIFACT");
 
     const issues = await collectMarketOpenIssues(testDb, split.id);
     expect(issues.some((issue) => issue.includes("objeto"))).toBe(true);
