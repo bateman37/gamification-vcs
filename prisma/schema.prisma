@@ -851,20 +851,49 @@ model SplitEconomySettings {
   split Split @relation(fields: [splitId], references: [id], onDelete: Cascade)
 }
 
+/// Catalogo cerrado de posiciones visuales del tablero de equipo (`1.2.0`,
+/// ver docs/ECONOMY_INVENTORY_AND_EQUIPMENT.md, seccion "Equipo visual").
+/// Las claves son estables y no traducibles: el nombre visible de la ranura
+/// lo decide el administrador y puede cambiar sin afectar a la posicion ni a
+/// la identidad tecnica (`SplitEquipmentSlot.id`).
+enum EquipmentVisualPosition {
+  HEAD
+  LEFT_HAND
+  TORSO
+  RIGHT_HAND
+  HANDS
+  LEGS
+  CAPE
+  ARTIFACT
+  FEET
+  RELIC
+}
+
 /// Ranura de equipo configurable por split (seccion 10 del encargo): nombre y
 /// cantidad los decide el administrador, sin ranuras codificadas. Cada
 /// objeto pertenece exactamente a una ranura del mismo split, y cada
 /// participante puede equipar como maximo un objeto por ranura.
+///
+/// `1.2.0`: cada ranura puede ocupar como mucho una posicion visual del
+/// catalogo cerrado, y como mucho una ranura por posicion y split. Las
+/// ranuras creadas antes de `1.2.0` conservan su `id`, nombre, orden y
+/// relaciones con `visualPosition = null` (compatibilidad) hasta que el
+/// administrador las ubique: nunca se deduce una posicion a partir del
+/// nombre libre.
 model SplitEquipmentSlot {
-  id             String   @id @default(uuid())
+  id             String                   @id @default(uuid())
   splitId        String
   name           String
   /// Nombre normalizado (minusculas, sin espacios exteriores), unico dentro del split.
   nameNormalized String
-  /// Orden de presentacion, no negativo. No implica limite de ranuras mas alla del tecnico documentado.
+  /// Orden de presentacion, no negativo. Solo se usa para las ranuras historicas sin posicion visual: las ubicadas se ordenan por el orden fijo del catalogo.
   displayOrder   Int
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  /// Posicion visual del catalogo cerrado. `null` = ranura historica todavia sin ubicar.
+  visualPosition EquipmentVisualPosition?
+  /// Una ranura inactiva no admite equipo nuevo ni objetos a la venta, pero conserva objetos, compras y publicaciones.
+  isActive       Boolean                  @default(true)
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
 
   split                  Split                          @relation(fields: [splitId], references: [id], onDelete: Cascade)
   storeItems             SplitStoreItem[]
@@ -872,6 +901,9 @@ model SplitEquipmentSlot {
   publishedEquippedItems PublishedEquippedItem[]
 
   @@unique([splitId, nameNormalized])
+  // Como mucho una ranura por posicion visual dentro de un split. En PostgreSQL varios `NULL`
+  // no colisionan entre si, asi que las ranuras historicas sin ubicar conviven sin problema.
+  @@unique([splitId, visualPosition])
 }
 
 /// Objeto del catalogo de un split (seccion 12 del encargo), creado por el
@@ -904,9 +936,36 @@ model SplitStoreItem {
   ownedItems             SplitParticipantItem[]
   purchases              ItemPurchase[]
   publishedEquippedItems PublishedEquippedItem[]
+  image                  SplitStoreItemImage?
 
   @@unique([splitId, nameNormalized])
   @@index([splitId, equipmentSlotId])
+}
+
+/// Imagen opcional de un objeto del catalogo (`1.2.0`). Entidad separada
+/// uno-a-uno, con el mismo patron que `SplitParticipantAvatar`: los bytes
+/// nunca se seleccionan en un listado (mercado, inventario, equipo,
+/// administracion) sino solo al servir la imagen. La imagen es puramente
+/// cosmetica: no forma parte de la formula del objeto ni de la auditoria
+/// numerica, y por eso es la unica propiedad que un administrador puede
+/// cambiar despues de la primera compra (con el mercado cerrado).
+model SplitStoreItemImage {
+  /// Clave primaria y unica: como mucho una imagen por objeto.
+  splitStoreItemId String   @id
+  /// Bytes de la imagen ya procesada a WebP en servidor (nunca el original subido).
+  imageData        Bytes
+  /// MIME final real de `imageData` (siempre `image/webp` en esta entrega).
+  mimeType         String
+  /// Tamano en bytes de `imageData`. No negativo (restriccion de base de datos).
+  byteSize         Int
+  /// SHA-256 de `imageData`: version estable usada como `ETag` de cache y como `imageVersion` en las DTO.
+  sha256           String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // Cascade: la imagen solo desaparece cuando el objeto se elimina legitimamente
+  // (solo posible mientras no tenga ninguna compra, ver store-item.service.ts).
+  storeItem SplitStoreItem @relation(fields: [splitStoreItemId], references: [id], onDelete: Cascade)
 }
 
 /// Compra confirmada de un objeto (seccion 16 del encargo): instantanea
