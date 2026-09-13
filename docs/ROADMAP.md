@@ -482,6 +482,43 @@ satisfactorias.
   nunca se reinterpretan (cobertura de asistencia legada, sin backfill).
 - Detalle completo en `docs/WEEKLY_ATTENDANCE_AND_HOURS.md`.
 
+## `1.2.0` — Equipo visual, inventario RPG e imagenes de objetos
+
+**Estado: implementado, pendiente de validacion funcional manual del
+usuario.**
+
+Rediseña y amplia la experiencia de inventario y equipo existente desde la
+`0.9.0`, sin crear una segunda economia y sin cambiar ninguna formula,
+porcentaje, credito, clasificacion ni semana publicada.
+
+- Catalogo tecnico cerrado de diez posiciones visuales (`HEAD`,
+  `LEFT_HAND`, `TORSO`, `RIGHT_HAND`, `HANDS`, `LEGS`, `CAPE`, `ARTIFACT`,
+  `FEET`, `RELIC`), con su rejilla fija y su nombre base en castellano.
+- Separacion explicita de tres conceptos en una ranura: identidad tecnica
+  (`id`), posicion visual y nombre visible. Renombrar o ubicar nunca rompe
+  objetos, compras, inventario, equipo ni publicaciones.
+- Editor visual administrativo en `/splits/[id]/economia`: activar,
+  ubicar, renombrar, desactivar y eliminar posiciones, con contadores de
+  uso y bloqueos explicados (nunca se desequipa a nadie automaticamente).
+- Migracion aditiva y no destructiva de las ranuras existentes, con mapeo
+  automatico solo por coincidencia exacta con un nombre base del catalogo,
+  y compatibilidad completa de las ranuras historicas sin ubicar
+  ("Ranuras pendientes de ubicar" en administracion, "Otras ranuras" en la
+  ficha).
+- Imagen opcional por objeto (`SplitStoreItemImage`), procesada en
+  servidor con `sharp` a WebP y servida por una ruta autenticada con
+  `ETag`. Es la unica excepcion cosmetica a la inmutabilidad de un objeto
+  ya comprado.
+- Tablero visual con silueta neutra, inventario unico por participante y
+  split, borrador local, arrastrar y soltar con alternativa completa por
+  clic, teclado y tactil, y un unico boton "Confirmar equipo" que sustituye
+  el conjunto de forma atomica, con control de concurrencia por revision.
+- Panel lateral "Bonificadores activos" que agrupa por KPI los porcentajes
+  de profesion, localizacion y objetos y muestra el total potencial como
+  suma aritmetica, nunca encadenada.
+- Detalle completo en `docs/ECONOMY_INVENTORY_AND_EQUIPMENT.md`
+  (seccion 22) y `docs/DESIGN_SYSTEM.md` (seccion 12).
+
 ## Capas posteriores (fuera de alcance por ahora)
 
 **Estado: pendiente**, documentadas unicamente para no perder contexto:

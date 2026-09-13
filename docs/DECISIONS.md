@@ -1681,3 +1681,126 @@ sustituirse por un dato real. `1.1.1` aporta exactamente ese dato real
 habria dejado dos respuestas distintas y potencialmente contradictorias a
 la misma pregunta ("¿quien no trabajo esta semana?") dentro del mismo
 modulo.
+
+## Posicion visual, nombre de ranura e identidad tecnica como tres conceptos distintos (`1.2.0`)
+
+**Decision:** `SplitEquipmentSlot` mantiene su `id` como **unica** identidad
+relacional (objetos, compras, inventario, equipo y snapshots publicados
+apuntan siempre a el), gana una `visualPosition` del catalogo cerrado de diez
+claves que decide solo donde se dibuja, y conserva `name` como texto visible
+libremente renombrable. Renombrar no mueve la ranura; ubicarla no reasigna ni
+un solo objeto; ninguna de las dos operaciones toca un snapshot historico.
+
+**Motivo:** el encargo pide que el administrador pueda convertir `Cabeza` en
+`Casco` o `Mano izquierda` en `Arma` sin romper nada, y que las ranuras
+historicas con nombres libres puedan ubicarse mas adelante. Si el nombre o la
+posicion fueran la clave de relacion, cada renombrado o reubicacion obligaria
+a reescribir objetos y compras ya pagadas. Separar los tres conceptos hace
+que ambas operaciones sean puramente cosmeticas por construccion.
+
+## Mapeo automatico de ranuras historicas solo por coincidencia exacta (`1.2.0`)
+
+**Decision:** la migracion
+`20260913120000_add_equipment_visual_positions_and_item_images` rellena
+`visualPosition` unicamente cuando el `nameNormalized` de la ranura coincide
+**exactamente** con un nombre base del catalogo (`cabeza`, `torso`,
+`artefacto`...) y esa posicion sigue libre en ese split. Cualquier otro caso
+queda con `visualPosition = null` y se ubica a mano desde administracion.
+
+**Motivo:** no existe ninguna equivalencia fiable entre un nombre libre y una
+parte del cuerpo: `Arma` podria ser mano izquierda o derecha, `Escudo`
+cualquiera de las dos, y `Anillo` no tiene posicion propia en el catalogo.
+Adivinar habria movido objetos ya comprados a una posicion equivocada sin que
+nadie lo pidiera. Es preferible una lista visible de pendientes, que el
+administrador resuelve en segundos, a un dato inventado.
+
+## Sin ranuras arbitrarias nuevas, y `MAX_EQUIPMENT_SLOTS_PER_SPLIT` pasa de 12 a 10 (`1.2.0`)
+
+**Decision:** desde `1.2.0` la unica via de creacion de una ranura es activar
+una de las diez posiciones (`activateVisualPosition`); desaparecen la
+creacion con nombre libre y el reordenamiento manual. El tope funcional pasa
+a ser el tamaño del catalogo (`10`), pero **solo** sobre ranuras ubicadas:
+una base historica con mas ranuras sin ubicar sigue funcionando, no falla, no
+se trunca y no pierde datos.
+
+**Motivo:** con un tablero de posiciones fijas, una ranura sin posicion no se
+puede dibujar; permitir seguir creandolas garantizaria producir de forma
+indefinida "pendientes de ubicar". El orden tampoco es ya una decision del
+administrador: lo fija el catalogo, asi que el reordenamiento manual perdio
+su sentido (`displayOrder` se conserva exactamente para ordenar las
+historicas sin ubicar). Bajar el tope sin tocar las filas existentes respeta
+la regla de no destruir datos.
+
+## La imagen es la unica excepcion cosmetica a la inmutabilidad de un objeto comprado (`1.2.0`)
+
+**Decision:** nombre, descripcion, precio, ranura, KPI y porcentaje de un
+`SplitStoreItem` siguen siendo inmutables tras la primera compra (regla de
+`0.9.0`). Su imagen, en cambio, puede añadirse, reemplazarse o eliminarse
+aunque el objeto tenga propietarios, siempre con el mercado cerrado, el split
+no cerrado y sesion de administrador.
+
+**Motivo:** la imagen no participa en ninguna formula, ningun precio ni
+ninguna auditoria numerica, y los snapshots publicados (nombre, ranura, KPI,
+porcentaje) siguen siendo la verdad historica de lo que se compro. Prohibir
+corregir una ilustracion fea o equivocada no protegeria a nadie de nada. Se
+documenta expresamente para que no se confunda con una edicion del efecto
+comprado.
+
+## Arrastrar y soltar con Pointer Events, sin dependencia nueva (`1.2.0`)
+
+**Decision:** el editor de equipo implementa el camino accesible (seleccionar
+objeto, `Equipar aquí`, `Quitar`, `Restablecer cambios`) con botones HTML
+reales como camino **principal**, y superpone el arrastre sobre esos mismos
+botones usando **Pointer Events**. No se ha añadido ninguna libreria de drag
+and drop al `package.json`.
+
+**Motivo:** el encargo descarta expresamente usar solo la API HTML5 de drag
+and drop porque no ofrece una experiencia suficiente en tactil ni con
+teclado, y permite añadir una dependencia pequeña justificandola. Pointer
+Events cubre mouse, tactil y lapiz con la API nativa del navegador, y la
+paridad por clic/teclado —que es un requisito duro, no una alternativa
+secundaria— ya se resuelve con HTML estandar. Añadir una libreria habria
+aumentado la superficie mantenida sin resolver ningun caso que quedara
+pendiente. Si en el futuro se necesitan gestos mas ricos (reordenar por
+arrastre, multi-seleccion), esta decision puede revisarse.
+
+## La posicion visual no se congela en `PublishedEquippedItem` (`1.2.0`)
+
+**Decision:** el snapshot publicado de un objeto equipado conserva los mismos
+campos que en `0.9.0` (objeto, nombre, ranura, nombre de ranura, KPI,
+porcentaje y orden). La posicion visual **no** se añade.
+
+**Motivo:** el encargo la marca como opcional ("puedes congelarla si la
+necesitas para una futura visualizacion historica") y ninguna vista actual la
+usa para explicar una semana publicada. Persistir un dato que nadie lee
+obligaria a mantenerlo sincronizado y a decidir que hacer con las
+publicaciones anteriores, que no lo tienen. Su ausencia no rompe ninguna
+vista, y puede añadirse el dia que exista una pantalla historica que lo
+necesite.
+
+## La revision del equipo es una firma del conjunto, no un `updatedAt` (`1.2.0`)
+
+**Decision:** `computeLoadoutRevision` produce una cadena determinista a
+partir de las parejas `ranura:objeto` ordenadas. `saveEquipmentLoadout`
+compara esa revision y rechaza la confirmacion si no coincide, sin mezclar
+estados automaticamente.
+
+**Motivo:** con una marca de tiempo, dos confirmaciones que dejan exactamente
+el mismo equipo producirian revisiones distintas y harian fallar
+confirmaciones inofensivas; ademas obligaria a leer y propagar un campo mas.
+Una firma del contenido responde exactamente a la pregunta que importa
+("¿sigue siendo este el equipo que yo vi?") y hace que un cambio que no
+cambia nada no sea un conflicto.
+
+## Un objeto nuevo no puede asociarse a una ranura desactivada (`1.2.0`)
+
+**Decision:** `resolveSlotAndKpiOrThrow` (`store-item.service.ts`) rechaza
+crear o editar un objeto apuntando a una ranura con `isActive = false`. Las
+ranuras historicas pendientes de ubicar, en cambio, si admiten objetos: lo
+que no pueden es venderlos con el mercado abierto.
+
+**Motivo:** una ranura desactivada no admite equipo nuevo, asi que un objeto
+creado en ella nacería inutilizable y confundiria al administrador. Una
+ranura pendiente de ubicar, en cambio, es plenamente funcional para el
+jugador (solo le falta un sitio en el tablero), y bloquear sus objetos
+habria roto la compatibilidad que esta misma entrega promete.

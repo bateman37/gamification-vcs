@@ -175,3 +175,54 @@ visualmente en movil, `1366px`, `1920px` y una vista ultrapanoramica de
 - Correcto: `<Button variant="secondary">Cancelar</Button>` junto a
   `<Button variant="primary">Guardar</Button>`. Incorrecto: dos botones
   `primary` compitiendo por la misma atención en el mismo formulario.
+
+
+## 12. Tablero de equipo: "Prisma competitivo atenuado" (`1.2.0`)
+
+El tablero visual de equipo (`/fichas/[splitParticipantId]` y el editor
+administrativo de `/splits/[id]/economia`) toma del genero RPG **solo la
+estructura**: una silueta con las ranuras distribuidas a su alrededor. No es
+una licencia para cambiar el branding.
+
+- Usa exclusivamente los tokens ya existentes: `canvas`/`surface` para
+  pagina y bloques, `ink`/`text-muted` para estructura y texto, `primary`
+  para seleccion y accion principal, `game` para profesion, `info` para
+  localizacion y destino valido de arrastre, `reward` para creditos,
+  `success`/`danger` solo para sus estados. **No se ha añadido ningun token
+  ni ningun hexadecimal nuevo.**
+- Tablero claro; silueta en `ink` con opacidad muy baja (`~0.06-0.07`);
+  ranuras vacias neutras; borde azul solo para seleccion y cambio sin
+  confirmar; turquesa solo durante un destino valido; coral solo para
+  destino invalido o error; ambar reservado a creditos y recompensa. El
+  color del contenido lo aportan las imagenes de los objetos; el marco
+  permanece sobrio.
+- Prohibido en esta pantalla: arcoiris por ranura, neones, resplandores,
+  degradados decorativos dominantes, piedra, pergamino, fuego, runas, metal
+  medieval, fondos espaciales o futuristas, marcos dorados de rareza,
+  texturas pesadas y copiar la interfaz identificable de un videojuego
+  concreto. Debe sentirse como una aplicacion profesional gamificada.
+
+**Silueta** (`src/components/equipment/EquipmentSilhouette.tsx`): SVG
+generico, geometrico, sin rostro, sin genero marcado, sin raza, edad,
+uniforme ni tematica; `aria-hidden` y `focusable="false"` porque no contiene
+informacion funcional; independiente del avatar del jugador; incapaz de
+ocultar etiquetas, estados o controles (se oculta en movil cuando resta
+espacio). El tablero **nunca** es una imagen rasterizada: ranuras,
+miniaturas, textos, badges y controles son HTML accesible.
+
+**Miniatura de objeto** (`src/components/equipment/StoreItemImage.tsx`): un
+unico componente consistente para administracion, mercado, inventario, equipo
+y desglose lateral. Sin imagen muestra un icono neutro **local** asociado a
+la posicion visual de la ranura (formas geometricas simples, nunca
+ilustraciones tematicas, nunca imagenes remotas ni placeholders de terceros).
+Cuando el nombre del objeto ya esta inmediatamente al lado, la miniatura es
+redundante y usa `alt=""` para no repetirlo. Las tablas densas de resultados
+siguen **sin** miniaturas.
+
+**Accesibilidad y movimiento:** ningun estado depende solo del color (todos
+llevan badge o texto); todo lo que se hace arrastrando se puede hacer con
+clic y teclado sobre botones HTML reales; los cambios se anuncian en una
+region `aria-live` discreta; objetivos tactiles de al menos 44 px; sin
+animaciones continuas, confeti ni rebotes (solo las transiciones de 150 ms ya
+existentes, sujetas a `prefers-reduced-motion`). En movil la composicion se
+apila en dos columnas y la pagina nunca tiene scroll horizontal.

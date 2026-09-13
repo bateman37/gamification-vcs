@@ -5,6 +5,128 @@ La primera version publicada es `0.1.0`; `1.0.0` cierra la primera version
 estable del producto (nucleo funcional y las cuatro capas de juego, mas
 comunicacion y renovacion visual).
 
+## [1.2.0] - Equipo visual, inventario RPG e imagenes de objetos
+
+Rediseña y amplia la experiencia de inventario y equipo que existe desde la
+`0.9.0`. No es una segunda economia ni un sistema paralelo: evoluciona el
+modelo, los servicios y las pantallas actuales conservando todas sus reglas
+de negocio. No cambia ninguna formula, ningun porcentaje, ningun credito,
+ninguna clasificacion ni ninguna semana ya publicada.
+
+### Anadido
+
+- **Catalogo cerrado de diez posiciones visuales**
+  (`EquipmentVisualPosition`, `src/domain/equipment-visual-positions.ts`):
+  `HEAD`, `LEFT_HAND`, `TORSO`, `RIGHT_HAND`, `HANDS`, `LEGS`, `CAPE`,
+  `ARTIFACT`, `FEET`, `RELIC`, con su rejilla fija y su nombre base en
+  castellano. Las claves son estables y no traducibles.
+- **Tres conceptos separados a proposito en una ranura**: identidad tecnica
+  (`SplitEquipmentSlot.id`, lo unico que relaciona objetos, compras,
+  inventario, equipo y snapshots), posicion visual (donde se dibuja) y
+  nombre visible (renombrable sin mover nada). Como mucho una ranura por
+  posicion y split (`@@unique([splitId, visualPosition])`).
+- **Editor visual administrativo de ranuras** en `/splits/[id]/economia`:
+  las diez posiciones en la misma composicion que ve el jugador, con
+  estado `Activa`/`Inactiva`, contadores de objetos, propietarios y
+  equipos, y acciones de activar, ubicar, renombrar, desactivar y
+  eliminar.
+- **Estado activo/inactivo por ranura** (`isActive`): desactivar es un
+  cambio de estado, nunca un borrado. Solo se permite si nadie tiene un
+  objeto equipado en ella y ningun objeto suyo sigue a la venta; el error
+  indica cuantos y que participantes la bloquean. Nunca se desequipa,
+  reasigna ni retira nada en silencio.
+- **Imagen opcional por objeto** (`SplitStoreItemImage`, entidad separada
+  uno-a-uno con el mismo patron que `SplitParticipantAvatar`): procesada en
+  servidor con `sharp` (JPEG/PNG/WebP, 5 MB, orientacion EXIF corregida,
+  metadatos eliminados, sin ampliar, maximo 512 px, salida WebP) y servida
+  por una ruta autenticada con `ETag` de SHA-256 y
+  `X-Content-Type-Options: nosniff`. Los listados solo llevan
+  `imageVersion`; los bytes nunca viajan en un payload de pagina.
+- **Tablero visual de equipo en `/fichas/[splitParticipantId]`**: silueta
+  humana neutra en SVG decorativo (`aria-hidden`, sin rostro, genero, raza
+  ni tematica), ranuras alrededor como HTML accesible, inventario unico por
+  participante y split, y panel lateral **"Bonificadores activos"**.
+- **Borrador y confirmacion unica**: arrastrar, seleccionar, sustituir o
+  quitar no persiste nada; solo **"Confirmar equipo"** guarda el conjunto
+  completo. `saveEquipmentLoadout` lo sustituye de forma atomica dentro de
+  una transaccion serializable, revalidando en servidor todas las reglas y
+  comprobando una **revision estable** para no sobrescribir el equipo
+  cambiado en otra pestaña.
+- **Paridad de interaccion**: el camino accesible (seleccionar objeto,
+  `Equipar aquí`, `Quitar`, `Restablecer cambios`) son botones HTML reales
+  y es el camino principal, con anuncios en una region `aria-live`
+  discreta. El arrastre se implementa **sobre esos mismos botones** con
+  Pointer Events (no con la API HTML5 de drag and drop, que no funciona
+  bien en tactil ni con teclado), sin añadir ninguna dependencia nueva.
+- **Panel de bonificadores** (`src/domain/equipment-bonus-summary.ts`,
+  funcion pura): agrupa por KPI los porcentajes de profesion (`+20 %`),
+  localizacion activa y objetos del borrador, y muestra el **total
+  potencial** como suma aritmetica. `20 % + 50 % + 40 % + 40 % = +150 %`,
+  nunca un producto de factores. Marca `Vista previa sin confirmar` y las
+  diferencias por KPI mientras el borrador difiere del equipo confirmado.
+- **Migracion aditiva y no destructiva**
+  (`20260913120000_add_equipment_visual_positions_and_item_images`): nuevo
+  enum, `visualPosition` nullable e `isActive` en `SplitEquipmentSlot`,
+  indice unico por posicion y split, y tabla `SplitStoreItemImage`. Las
+  ranuras existentes conservan `id`, nombre, orden y relaciones, quedan
+  activas y solo reciben posicion cuando su nombre normalizado coincide
+  **exactamente** con un nombre base del catalogo y esa posicion sigue
+  libre: nunca se deduce que "Arma", "Escudo" o "Anillo" sean una parte del
+  cuerpo concreta.
+- **Compatibilidad de ranuras historicas**: una ranura sin ubicar no
+  desaparece de la experiencia. Aparece en administracion bajo "Ranuras
+  pendientes de ubicar" (aviso, no error), en la ficha bajo "Otras
+  ranuras", conserva sus objetos y su equipo, y su bonus se sigue
+  calculando con normalidad.
+- Documentacion completa en `docs/ECONOMY_INVENTORY_AND_EQUIPMENT.md`
+  (seccion 22) y `docs/DESIGN_SYSTEM.md` (seccion 12), con checklist manual
+  pendiente en la PR.
+
+### Cambiado
+
+- Ya **no se crean ranuras arbitrarias**: la unica via de creacion es
+  activar una de las diez posiciones (`activateVisualPosition`), con el
+  nombre base como valor inicial. Si ese nombre choca con una ranura
+  historica no se inventa ningun sufijo en silencio: se explica el
+  conflicto y se ofrece asociar la ranura existente.
+- `MAX_EQUIPMENT_SLOTS_PER_SPLIT` pasa de `12` a las diez posiciones del
+  catalogo, como tope **funcional de ranuras ubicadas**. Una base historica
+  con mas ranuras sin ubicar sigue funcionando sin fallar, truncarse ni
+  perder datos.
+- Se elimina el reordenamiento manual de ranuras: las ubicadas se ordenan
+  por el orden fijo del catalogo y las historicas pendientes despues, por
+  su `displayOrder` (que se conserva exactamente por eso).
+- `collectMarketOpenIssues` exige ademas al menos una ranura activa y
+  ubicada, y que ningun objeto `A la venta` cuelgue de una ranura inactiva
+  o pendiente de ubicar. Una ranura pendiente con objetos solo poseidos no
+  bloquea el mercado por si sola.
+- Un objeto nuevo no puede asociarse a una ranura desactivada.
+- **La imagen es la unica excepcion cosmetica** a la inmutabilidad de un
+  objeto ya comprado: puede añadirse, reemplazarse o eliminarse aunque
+  tenga propietarios, siempre con el mercado cerrado, el split no cerrado y
+  sesion de administrador. No altera compras, snapshots ni resultados
+  publicados; nombre, descripcion, precio, ranura, KPI y porcentaje siguen
+  congelados.
+- Las secciones separadas `Equipo` e `Inventario` de la ficha pasan a ser
+  un unico bloque `Equipo e inventario` con el editor visual. Se conservan
+  alias, avatar, profesion, resumen, mercado e historial.
+- Las miniaturas de objeto aparecen en administracion, mercado, inventario,
+  equipo y desglose lateral. Las tablas densas de resultados siguen sin
+  miniaturas: el desglose publicado prioriza nombre, KPI, porcentaje y
+  puntos.
+
+### Sin cambios (verificado)
+
+- Las tres capas de bonus (profesion, localizacion, equipo) siguen siendo
+  independientes y no encadenadas sobre el mismo `baseFinalPoints`.
+- `publishWeek` sigue releyendo el equipo confirmado **dentro** de su propia
+  transaccion serializable, y sigue congelando una fila
+  `PublishedEquippedItem` por objeto equipado. La posicion visual es
+  presentacion y no se congela.
+- Creditos, clasificacion semanal y general, facciones, presentacion de
+  resultados, analitica avanzada, puntos por hora, asistencia y noticias
+  automaticas no cambian. Esta entrega no recalcula ni republica nada.
+
 ## [1.1.1] - Asistencia semanal por horas y puntos por hora
 
 Sustituye la heuristica de "posibles ausencias" de `1.1.0` (umbral de KPI
