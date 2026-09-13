@@ -60,10 +60,13 @@ export function TeamEvolutionTab({
     }));
   } else {
     const kpiCode = filters.selectedKpi;
-    const points = kpiCode ? snapshot.kpiTrend[kpiCode] ?? [] : snapshot.trend;
+    // Puntos por hora solo tiene serie propia para el indice total (razon de sumas, G2): la
+    // seleccion de un KPI concreto sigue mostrando su `%` del maximo base.
+    const usesPph = filters.measure === "pph" && !kpiCode;
+    const points = usesPph ? snapshot.pphTrend : kpiCode ? snapshot.kpiTrend[kpiCode] ?? [] : snapshot.trend;
     chartData = points.map((p) => ({ label: p.periodLabel, valor: p.teamIndex }));
-    const kpiName = kpiCode ? KPI_CATALOG_LIST.find((k) => k.code === kpiCode)?.name ?? kpiCode : "Índice del equipo";
-    series = [{ key: "valor", name: `${kpiName} (%)`, color: "#2563EB" }];
+    const kpiName = kpiCode ? KPI_CATALOG_LIST.find((k) => k.code === kpiCode)?.name ?? kpiCode : usesPph ? "Puntos por hora del equipo" : "Índice del equipo";
+    series = [{ key: "valor", name: usesPph ? kpiName : `${kpiName} (%)`, color: "#2563EB" }];
   }
 
   return (

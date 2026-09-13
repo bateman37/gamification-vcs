@@ -1,4 +1,4 @@
-# Analítica avanzada (`1.1.0`, exclusiva de administración)
+# Analítica avanzada (`1.1.0`, exclusiva de administración; medida y asistencia actualizadas en `1.1.1`)
 
 ## 1. Propósito y diferencia respecto a Resultados
 
@@ -30,10 +30,9 @@ los splits con al menos una publicación), `nivel` (N0/N1/N2), `inicio`/`fin`
 calendario hasta la última semana publicada disponible), `agrupacion`
 (`semana`/`mes`/`año`, independiente del intervalo), `gamificacion`
 (`con`/`sin`, reutilizando el mismo parámetro y semántica de `/resultados`),
-`exclusion` (`on`/`off`) + `umbral` (política de posibles ausencias, parte
-F), `comparacion` (`semana_anterior`/`media_periodo`) y `semana` (semana
-analizada). "Restablecer filtros" limpia toda la URL, incluidas las
-excepciones manuales de exclusión.
+`medida` (`% del máximo`/`Puntos KPI`/`Puntos por hora`, `1.1.1`, ver
+sección 7), `comparacion` (`semana_anterior`/`media_periodo`) y `semana`
+(semana analizada). "Restablecer filtros" limpia toda la URL.
 
 Los controles son formularios GET nativos y enlaces de servidor (mismo
 patrón que `GamificationToggle` de `/resultados`): no se ha añadido ningún
@@ -104,33 +103,51 @@ nunca se copia el total bonificado como rendimiento real. No es un dato
 operativo bruto (tickets, llamadas, horas): `rawPoints` tampoco se usa como
 sustituto de esta base.
 
-## 7. Política de ceros múltiples (parte F)
+## 7. Asistencia objetiva, selector de medida y puntos por hora (`1.1.1`)
 
-Con el control "Excluir posibles ausencias" activado (por defecto), una
-observación persona-split-semana con al menos `umbral` (2 por defecto,
-configurable entre 2 y 10 en el propio panel de filtros) KPI aplicables en
-`COMPUTED` con base exactamente `0` o en `VAC` queda excluida de **todas**
-las estadísticas de rendimiento, en ambos modos
-(`countApplicableZeroLikeKpis` + `resolveObservationExclusion`). No es una
-ausencia confirmada: es una convención analítica ajustable, sin calendario
-de vacaciones/bajas real detrás.
+`1.1.1` sustituye por completo la política de exclusión de posibles
+ausencias de `1.1.0` (umbral configurable de 2 a 10 KPI en
+`COMPUTED=0`/`VAC`, revisión manual por fila con "Ver exclusiones",
+constante `DEFAULT_ZERO_THRESHOLD`, campos `excludeZeroObservations`,
+`zeroThreshold`, `manualOverrides` y el componente `ExclusionsPanel.tsx`,
+todos eliminados) por una regla objetiva: la asistencia semanal de cada
+observación viene ya congelada en la publicación
+(`attendanceStatus`/`totalHours`, ver `docs/WEEKLY_ATTENDANCE_AND_HOURS.md`),
+determinada exclusivamente por las horas totales trabajadas esa semana.
 
-- `NOT_APPLICABLE`, valores negativos y ceros no aplicables nunca cuentan
-  como "cero" para el umbral.
-- Con el umbral no alcanzado, un cero `COMPUTED` sigue siendo válido; una
-  celda `VAC` individual se excluye solo de la media de su propio KPI
-  (`vac_uncounted`).
-- Con la política desactivada, los `VAC` cuentan como cero analítico (nunca
-  `NOT_APPLICABLE`).
-- **"Ver exclusiones"** (pestaña Análisis por persona) lista cada
-  observación excluida, avisa si contiene algún valor positivo (posible
-  falso positivo) y permite `Incluir en esta consulta`/`Excluir de esta
-  consulta`/`Volver a automático` por fila (parámetros de la consulta
-  actual, `ov_<participantWeeklyResultId>` en la URL; nunca cambian la
-  instantánea publicada ni se guardan como ausencia laboral).
-- Esta política nunca toca `Resultados`, posiciones, facciones, créditos ni
-  estados de carga: es exclusiva de este módulo
-  (`src/domain/analytics/exclusions.ts`).
+- Una observación **`ABSENT`** se excluye de **todas** las estadísticas de
+  rendimiento del periodo, en cualquier medida y modo, sin ningún ajuste
+  manual: es un hecho objetivo, no una heurística revisable.
+- Una publicación **anterior a `1.1.1`** no tiene este dato
+  (`attendanceStatus: null`). En el dominio de analítica se modela como un
+  tercer estado, `UNKNOWN_LEGACY` (solo en memoria, nunca persistido):
+  también se excluye de las estadísticas de rendimiento, pero nunca se
+  reinterpreta como presente ni como ausente.
+- Ya no existe ninguna excepción manual por fila ni parámetro de URL de
+  exclusión: al ser un dato objetivo congelado en la publicación, no hay
+  nada que un administrador deba revisar o corregir caso a caso.
+
+### Selector de medida
+
+Los bloques 1-4 incorporan un selector de medida
+(`AnalyticsMeasure`, parámetro de URL `medida`):
+
+- **`% del máximo`** (`percentage`, predeterminado): el cálculo "sin
+  gamificación" ya existente (sección 6).
+- **`Puntos KPI`** (`points`): puntos brutos, sin dividir por el máximo.
+- **`Puntos por hora`** (`pph`): puntos KPI entre horas totales
+  trabajadas, calculado con las mismas funciones puras usadas en
+  `Resultados` (`src/domain/points-per-hour.ts`):
+  - una semana individual usa el PPH de esa semana;
+  - un periodo usa **razón de sumas** (`suma(puntos) / suma(horas)`),
+    nunca la media de los PPH semanales, para que una semana de 8 horas no
+    pese igual que una de 40;
+  - varios splits simultáneos de la misma persona y semana se consolidan
+    con las mismas horas si coinciden entre splits (puntos = media simple
+    equivalente), o se marcan como incidencia sin elegir un valor
+    arbitrario si las horas difieren.
+- Este módulo no incluye (por ahora) un desglose de puntos por hora por
+  KPI individual, solo un índice de equipo agregado.
 
 ## 8. Consolidación de personas en splits simultáneos (parte D5)
 
@@ -175,9 +192,9 @@ El rendimiento y los bonus usan siempre semanas publicadas. El subbloque
 económico de "Impacto de la gamificación" usa **fecha de operación**
 (`createdAt`/`purchasedAt`) de `CreditLedgerEntry`/`ItemPurchase`, con los
 mismos splits y el mismo intervalo de fechas, pero **ignora** el filtro de
-nivel y la política de exclusión de posibles ausencias (no hay nivel
-congelado en una compra, y un filtro analítico nunca revoca créditos
-reales). El texto junto al panel económico lo explica siempre. Créditos
+nivel y la asistencia semanal (no hay nivel congelado en una compra, y una
+ausencia analítica nunca revoca créditos ya emitidos). El texto junto al
+panel económico lo explica siempre. Créditos
 emitidos/gastados nunca se recalculan a partir de puntos agregados: se leen
 directamente del libro de movimientos ya persistido.
 
@@ -230,9 +247,12 @@ existentes y verifican el motor de lectura sobre esas instantáneas.
 5. **Modo con/sin gamificación**: el bloque de impacto de la gamificación
    sigue mostrando base y bonificado a la vez, cuadrando con
    profesión+localización+objetos publicados.
-6. **Posibles ausencias**: una observación con 2+ ceros/ausencias aparece
-   en "Ver exclusiones", puede incluirse/excluirse manualmente y nunca
-   altera `Resultados` ni créditos oficiales.
+6. **Asistencia y medida (`1.1.1`)**: una semana con al menos una ausencia
+   real la excluye de las estadísticas de rendimiento en cualquier medida,
+   sin ningún ajuste manual; el selector `% del máximo | Puntos KPI |
+   Puntos por hora` cambia la cifra mostrada sin alterar `Resultados` ni
+   créditos oficiales; una publicación anterior a `1.1.1` se sigue
+   mostrando sin errores (cobertura de asistencia desconocida).
 7. **Comparaciones**: "Semana anterior" y "Media del período" muestran la
    semana/referencia correctas y "Sin referencia" cuando falta, sin
    inventar variaciones.

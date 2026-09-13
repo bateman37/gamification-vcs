@@ -10,6 +10,7 @@ import { confirmEscalationImport } from "@/server/services/escalation-import.ser
 import { saveWriterEntries } from "@/server/services/writer-entry.service";
 import { computeWeeklyResults } from "@/server/services/weekly-results.service";
 import { KPI_CATALOG_LIST } from "@/domain/kpis/catalog";
+import { markAllPresent } from "./helpers/attendance";
 
 async function createDraftSplit(numberOfWeeks = 1) {
   return createSplitWithWeeks(testDb, {
@@ -98,6 +99,7 @@ describe("computeWeeklyResults: agregado completo con VAC, negativos, ranking y 
         [`proposedArticles__${p4!.id}`]: "0",
       }),
     );
+    await markAllPresent(testDb, split.id, week.id);
 
     const results = await computeWeeklyResults(testDb, split.id, week.id);
     expect(results.isComplete).toBe(true);
@@ -174,6 +176,7 @@ describe("computeWeeklyResults: agregado completo con VAC, negativos, ranking y 
     await confirmProductivityImport(testDb, split.id, week.id, { buffer, originalFilename: "productividad.xlsx" });
 
     await testDb.splitPositionPointRule.delete({ where: { splitId_position: { splitId: split.id, position: 1 } } });
+    await markAllPresent(testDb, split.id, week.id);
 
     const results = await computeWeeklyResults(testDb, split.id, week.id);
     expect(results.isComplete).toBe(true);
@@ -210,6 +213,7 @@ describe("computeWeeklyResults: Domador de Escaladas, actualizaciones en cero y 
       ["Persona Sin Productividad", 1],
     ]);
     await confirmEscalationImport(testDb, split.id, week.id, { buffer: escalationBuffer, originalFilename: "escalados.xlsx" });
+    await markAllPresent(testDb, split.id, week.id);
 
     const results = await computeWeeklyResults(testDb, split.id, week.id);
     expect(results.isComplete).toBe(true);

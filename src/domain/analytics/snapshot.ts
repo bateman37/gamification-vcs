@@ -17,6 +17,7 @@ import {
 } from "./comparison";
 import { periodKeyFor } from "./dates";
 import { bucketForPercentage, buildDistribution, type DistributionBucket } from "./distribution";
+import { computeTeamPointsPerHour } from "./pph";
 import type { ResolvedObservation } from "./observation";
 import type { AnalyticsLevel, TemporalGrouping } from "./types";
 
@@ -82,6 +83,8 @@ export interface KpiPerformanceRow {
   kpiName: string;
   teamAveragePoints: number | null;
   teamAveragePercentage: number | null;
+  /** Puntos por hora del equipo para este KPI (razon de sumas, G2). */
+  teamPointsPerHour: number | null;
   medianPercentage: number | null;
   minPercentage: number | null;
   maxPercentage: number | null;
@@ -111,6 +114,7 @@ function buildKpiPerformanceRow(
   const percentCells = weightedCells(periodResolved, (o) => cellOf(o)?.q ?? null);
   const pointsResult = computeHierarchicalAverage(pointsCells);
   const percentResult = computeHierarchicalAverage(percentCells);
+  const pphResult = computeTeamPointsPerHour(periodResolved, (o) => cellOf(o)?.x ?? null);
   const sortedPercentages = [...percentResult.personPeriodValues.values()].sort((a, b) => a - b);
   const stats = computeDispersionStats(sortedPercentages);
 
@@ -161,6 +165,7 @@ function buildKpiPerformanceRow(
     kpiName,
     teamAveragePoints: pointsResult.teamAverage,
     teamAveragePercentage: percentResult.teamAverage,
+    teamPointsPerHour: pphResult.teamPointsPerHour,
     byLevel,
     medianPercentage: stats.median,
     minPercentage: stats.min,
@@ -241,6 +246,46 @@ function buildTrend(
   return points.sort((a, b) => a.sortDate.getTime() - b.sortDate.getTime());
 }
 
+/**
+ * Serie de Puntos por hora del equipo, por periodo (G2/G4): dentro de cada
+ * bucket (semana/mes/año), razon de sumas por persona y despues media
+ * simple entre personas, nunca promedio de porcentajes ya agregados.
+ */
+function buildPphTrend(
+  resolved: readonly ResolvedObservation[],
+  grouping: TemporalGrouping,
+  periodStart: Date,
+  periodEnd: Date,
+  pointsOf: (o: ResolvedObservation) => number | null,
+): TeamEvolutionPoint[] {
+  const byPeriod = new Map<string, { label: string; sortDate: Date; observations: ResolvedObservation[] }>();
+
+  for (const weekStart of enumerateCalendarWeeks(periodStart, periodEnd)) {
+    const period = periodKeyFor(grouping, weekStart, "");
+    if (!byPeriod.has(period.key)) byPeriod.set(period.key, { label: period.label, sortDate: period.sortDate, observations: [] });
+  }
+
+  for (const observation of resolved) {
+    const period = periodKeyFor(grouping, observation.weekStartDate, "");
+    const bucket = byPeriod.get(period.key) ?? { label: period.label, sortDate: period.sortDate, observations: [] };
+    bucket.observations.push(observation);
+    byPeriod.set(period.key, bucket);
+  }
+
+  const points: TeamEvolutionPoint[] = [];
+  for (const [periodKey, bucket] of byPeriod) {
+    const result = computeTeamPointsPerHour(bucket.observations, pointsOf);
+    points.push({
+      periodKey,
+      periodLabel: bucket.label,
+      sortDate: bucket.sortDate,
+      teamIndex: result.teamPointsPerHour,
+      analyzablePersonCount: result.analyzablePersonCount,
+    });
+  }
+  return points.sort((a, b) => a.sortDate.getTime() - b.sortDate.getTime());
+}
+
 export interface PersonSummaryRow {
   personId: string;
   personFullName: string;
@@ -249,6 +294,8 @@ export interface PersonSummaryRow {
   excludedWeekCount: number;
   averageWeeklyPoints: number | null;
   teamIndex: number | null;
+  /** Puntos KPI por hora del periodo para esta persona (razon de sumas, G2). */
+  pointsPerHour: number | null;
   currentValue: number | null;
   referenceValue: number | null;
   diffPp: number | null;
@@ -268,6 +315,10 @@ function buildPersonRows(
     if (list) list.push(observation);
     else byPerson.set(observation.personId, [observation]);
   }
+  const pphByPerson = computeTeamPointsPerHour(
+    periodResolved.filter((o) => !o.excluded),
+    (o) => o.totals.totalPointsValid,
+  ).personPointsPerHour;
 
   const rows: PersonSummaryRow[] = [];
   for (const [personId, observations] of byPerson) {
@@ -321,6 +372,7 @@ function buildPersonRows(
       excludedWeekCount: observations.length - included.length,
       averageWeeklyPoints: pointsResult.teamAverage,
       teamIndex: indexResult.teamAverage,
+      pointsPerHour: pphByPerson.get(personId) ?? null,
       currentValue,
       referenceValue,
       diffPp: currentValue !== null && referenceValue !== null ? ppDifference(currentValue, referenceValue) : null,
@@ -329,38 +381,6 @@ function buildPersonRows(
     });
   }
   return rows.sort((a, b) => a.personFullName.localeCompare(b.personFullName, "es"));
-}
-
-export interface ExclusionRow {
-  participantWeeklyResultId: string;
-  personId: string;
-  personFullName: string;
-  splitId: string;
-  splitName: string;
-  weekStartDate: Date;
-  levelSnapshot: AnalyticsLevel;
-  zeroLikeCount: number;
-  applicableKpiCount: number;
-  hasPositiveValue: boolean;
-  decision: string;
-}
-
-function buildExclusionRows(observations: readonly ResolvedObservation[]): ExclusionRow[] {
-  return observations
-    .filter((o) => o.excluded)
-    .map((o) => ({
-      participantWeeklyResultId: o.participantWeeklyResultId,
-      personId: o.personId,
-      personFullName: o.personFullName,
-      splitId: o.splitId,
-      splitName: o.splitName,
-      weekStartDate: o.weekStartDate,
-      levelSnapshot: o.levelSnapshot,
-      zeroLikeCount: o.zeroLikeCount,
-      applicableKpiCount: o.cells.filter((c) => c.status !== "NOT_APPLICABLE").length,
-      hasPositiveValue: o.hasPositiveValueAmongExcluded,
-      decision: o.exclusionDecision,
-    }));
 }
 
 export interface AnalyticsSnapshot {
@@ -372,13 +392,21 @@ export interface AnalyticsSnapshot {
     personsAnalyzable: number;
     observationsOriginal: number;
     observationsConsolidated: number;
-    excludedCount: number;
-    excludedWithPositiveValue: number;
+    /** Observaciones ausentes (`attendanceStatus = ABSENT`), fuera de rendimiento. */
+    absentCount: number;
+    /** Observaciones de publicaciones anteriores a `1.1.1`, sin `attendanceStatus`: cobertura legacy desconocida, tambien fuera de rendimiento. */
+    unknownLegacyCount: number;
+    /** `100 * presentes / (presentes + ausentes)`, solo entre observaciones con asistencia conocida. `null` sin ninguna. */
+    attendancePercentage: number | null;
+    /** Suma de horas totales de las observaciones presentes del periodo. */
+    totalHoursAnalyzed: number;
   };
   overview: {
     averageWeeklyPoints: number | null;
     teamIndex: number | null;
     teamIndexMedian: number | null;
+    /** Puntos KPI por hora del equipo (razon de sumas, G2/G4). */
+    teamPointsPerHour: number | null;
     current: number | null;
     reference: number | null;
     diffPp: number | null;
@@ -389,6 +417,8 @@ export interface AnalyticsSnapshot {
     topDecliningPersons: { personId: string; personFullName: string; diffPp: number }[];
   };
   trend: TeamEvolutionPoint[];
+  /** Serie temporal de Puntos por hora del equipo (razon de sumas por periodo, G2/G4). */
+  pphTrend: TeamEvolutionPoint[];
   perLevelTrend: Record<AnalyticsLevel, TeamEvolutionPoint[]>;
   /** Serie temporal del `%` medio del equipo, por KPI (bloque 3: selección de KPI concretos). */
   kpiTrend: Record<string, TeamEvolutionPoint[]>;
@@ -397,10 +427,11 @@ export interface AnalyticsSnapshot {
   kpiPerformance: KpiPerformanceRow[];
   distribution: {
     totalIndex: { stats: DispersionStats; buckets: Record<DistributionBucket, number> };
+    /** Dispersion de Puntos por hora personales del periodo (razon de sumas). Sin intervalos de porcentaje: la escala de PPH no es un `%` del maximo. */
+    totalPointsPerHour: { stats: DispersionStats };
     perKpi: Record<string, { stats: DispersionStats; buckets: Record<DistributionBucket, number> }>;
   };
   personRows: PersonSummaryRow[];
-  exclusions: ExclusionRow[];
 }
 
 export interface KpiCatalogRef {
@@ -430,6 +461,7 @@ export function buildAnalyticsSnapshot(
   const kpiPerformance = kpiCatalog.map((kpi) => buildKpiPerformanceRow(includedPeriod, lookbackResolved, kpi.code, kpi.name, analyzedWeekTime, comparisonMode));
 
   const trend = buildTrend(includedPeriod, grouping, periodStart, periodEnd, (o) => o.totals.indexNormalized);
+  const pphTrend = buildPphTrend(includedPeriod, grouping, periodStart, periodEnd, (o) => o.totals.totalPointsValid);
   const perLevelTrend = {
     N0: buildTrend(
       includedPeriod.filter((o) => o.levelSnapshot === "N0"),
@@ -475,6 +507,9 @@ export function buildAnalyticsSnapshot(
   const indexResult = computeHierarchicalAverage(weightedCells(includedPeriod, (o) => o.totals.indexNormalized));
   const sortedIndexValues = [...indexResult.personPeriodValues.values()].sort((a, b) => a - b);
   const totalIndexStats = computeDispersionStats(sortedIndexValues);
+  const teamPphResult = computeTeamPointsPerHour(includedPeriod, (o) => o.totals.totalPointsValid);
+  const sortedPphValues = [...teamPphResult.personPointsPerHour.values()].sort((a, b) => a - b);
+  const totalPphStats = computeDispersionStats(sortedPphValues);
 
   let current: number | null = null;
   let reference: number | null = null;
@@ -527,6 +562,10 @@ export function buildAnalyticsSnapshot(
   const personsWithResults = new Set(periodResolved.map((o) => o.personId)).size;
   const personsAnalyzable = new Set(includedPeriod.map((o) => o.personId)).size;
   const observationsConsolidated = new Set(periodResolved.map((o) => `${o.personId}__${formatCalendarDate(o.weekStartDate)}`)).size;
+  const absentCount = periodResolved.filter((o) => o.attendance === "ABSENT").length;
+  const unknownLegacyCount = periodResolved.filter((o) => o.attendance === "UNKNOWN_LEGACY").length;
+  const knownAttendanceCount = periodResolved.length - unknownLegacyCount;
+  const totalHoursAnalyzed = includedPeriod.reduce((sum, o) => sum + (o.hours ?? 0), 0);
 
   return {
     analyzedWeekStart,
@@ -537,13 +576,16 @@ export function buildAnalyticsSnapshot(
       personsAnalyzable,
       observationsOriginal: periodResolved.length,
       observationsConsolidated,
-      excludedCount: periodResolved.filter((o) => o.excluded).length,
-      excludedWithPositiveValue: periodResolved.filter((o) => o.excluded && o.hasPositiveValueAmongExcluded).length,
+      absentCount,
+      unknownLegacyCount,
+      attendancePercentage: knownAttendanceCount > 0 ? (100 * (knownAttendanceCount - absentCount)) / knownAttendanceCount : null,
+      totalHoursAnalyzed,
     },
     overview: {
       averageWeeklyPoints: pointsResult.teamAverage,
       teamIndex: indexResult.teamAverage,
       teamIndexMedian: totalIndexStats.median,
+      teamPointsPerHour: teamPphResult.teamPointsPerHour,
       current,
       reference,
       diffPp: current !== null && reference !== null ? ppDifference(current, reference) : null,
@@ -554,16 +596,17 @@ export function buildAnalyticsSnapshot(
       topDecliningPersons,
     },
     trend,
+    pphTrend,
     perLevelTrend,
     kpiTrend,
     personTrend,
     kpiPerformance,
     distribution: {
       totalIndex: { stats: totalIndexStats, buckets: buildDistribution(sortedIndexValues) },
+      totalPointsPerHour: { stats: totalPphStats },
       perKpi: perKpiDistribution,
     },
     personRows,
-    exclusions: buildExclusionRows(periodResolved),
   };
 }
 

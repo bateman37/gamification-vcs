@@ -5,7 +5,7 @@ import { formatDateEs, formatDateIso } from "./format";
 import { buildAnalyticsHref, type ParsedAnalyticsFilters, type RawSearchParams } from "@/app/analitica/filters";
 import { HiddenPassthroughFields } from "./HiddenPassthroughFields";
 
-const OWNED_FORM_KEYS = ["splits", "nivel", "inicio", "fin", "agrupacion", "umbral"];
+const OWNED_FORM_KEYS = ["splits", "nivel", "inicio", "fin", "agrupacion"];
 const SEMANA_FORM_KEYS = ["semana"];
 
 function ToggleLink({
@@ -43,7 +43,6 @@ export function AnalyticsFiltersPanel({
   startDate,
   endDate,
   periodWeekStartDates,
-  defaultZeroThreshold,
 }: {
   searchParams: RawSearchParams;
   splitOptions: AnalyticsSplitOption[];
@@ -52,7 +51,6 @@ export function AnalyticsFiltersPanel({
   startDate: Date;
   endDate: Date;
   periodWeekStartDates: Date[];
-  defaultZeroThreshold: number;
 }) {
   const selectedSplitSet = new Set(effectiveSplitIds);
 
@@ -119,21 +117,6 @@ export function AnalyticsFiltersPanel({
             </select>
           </div>
 
-          <div className="flex flex-col gap-1">
-            <label htmlFor="analitica-umbral" className="text-xs font-medium text-text-muted">
-              Umbral de ceros/ausencias
-            </label>
-            <input
-              id="analitica-umbral"
-              type="number"
-              name="umbral"
-              min={2}
-              max={10}
-              defaultValue={filters.zeroThreshold || defaultZeroThreshold}
-              className="w-20 rounded-control border border-border-strong bg-surface px-2 py-1 text-sm"
-            />
-          </div>
-
           <button type="submit" className="rounded-control bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover">
             Aplicar filtros
           </button>
@@ -153,13 +136,16 @@ export function AnalyticsFiltersPanel({
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-xs font-medium text-text-muted">Posibles ausencias:</span>
+            <span className="text-xs font-medium text-text-muted">Medida:</span>
             <div className="inline-flex gap-1 rounded-card border border-border-strong bg-surface p-1">
-              <ToggleLink href={buildAnalyticsHref(searchParams, { exclusion: "on" })} active={filters.exclusionEnabled}>
-                Excluir (umbral {filters.zeroThreshold})
+              <ToggleLink href={buildAnalyticsHref(searchParams, { medida: "porcentaje" })} active={filters.measure === "percentage"}>
+                % del máximo
               </ToggleLink>
-              <ToggleLink href={buildAnalyticsHref(searchParams, { exclusion: "off" })} active={!filters.exclusionEnabled}>
-                Incluir todo
+              <ToggleLink href={buildAnalyticsHref(searchParams, { medida: "puntos" })} active={filters.measure === "points"}>
+                Puntos KPI
+              </ToggleLink>
+              <ToggleLink href={buildAnalyticsHref(searchParams, { medida: "pph" })} active={filters.measure === "pph"}>
+                Puntos por hora
               </ToggleLink>
             </div>
           </div>

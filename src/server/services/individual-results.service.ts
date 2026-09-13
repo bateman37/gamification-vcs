@@ -3,6 +3,8 @@ import { computeSplitClassification } from "@/server/services/classification.ser
 import { countParticipantsForSplit } from "@/server/services/participant.service";
 import { KPI_CATALOG, KPI_CATALOG_LIST } from "@/domain/kpis/catalog";
 import { formatCalendarDateEs } from "@/lib/dates";
+import type { WeeklyAttendanceStatus } from "@/domain/attendance";
+import { computeWeeklyPointsPerHour, computePeriodPointsPerHour } from "@/domain/points-per-hour";
 
 /**
  * Vista individual de resultados (seccion 7 de docs/RESULTS_PUBLICATION.md):
@@ -47,7 +49,7 @@ export async function listSplitsWithPublishedResultsForPerson(db: PrismaClient, 
 export interface PersonSplitKpiCell {
   kpiCode: string;
   kpiName: string;
-  status: "COMPUTED" | "VAC" | "NOT_APPLICABLE";
+  status: "COMPUTED" | "VAC" | "NOT_APPLICABLE" | "ABSENT";
   /** Puntos definitivos publicados (incluyen el bonus de profesion desde `0.8.0`). */
   finalPoints: number | null;
   baseMax: number | null;
@@ -90,9 +92,17 @@ export interface PersonSplitWeekRow {
   kpiCells: PersonSplitKpiCell[];
   totalKpiPoints: number;
   applicableMaxPoints: number | null;
-  weeklyRank: number;
+  /** `null` para una ausencia esa semana, o cuando nadie estuvo presente (`1.1.1`). */
+  weeklyRank: number | null;
+  /** Presentes esa semana: denominador de "x de n" (`1.1.1`, sustituye el total del split). */
   rankedParticipantCount: number;
   positionPoints: number;
+  /** Asistencia semanal congelada (`1.1.1`, ver docs/WEEKLY_ATTENDANCE_AND_HOURS.md). `null` en publicaciones anteriores a esta version: se trata como presente, sin reinterpretar historicamente. */
+  attendanceStatus: WeeklyAttendanceStatus | null;
+  totalHours: number | null;
+  productiveHours: number | null;
+  /** Puntos KPI por hora de esta semana. `null` si no es calculable (ausencia o sin horas). */
+  pointsPerHour: number | null;
   /** `true` si el split usaba profesiones al publicar esa semana. */
   splitUsedProfessions: boolean;
   /** Profesion congelada de esa semana, o `null` (split sin profesiones o publicacion anterior a `0.8.0`). */
@@ -123,6 +133,11 @@ export interface PersonSplitDetail {
   splitParticipantCount: number;
   /** Faccion actual de la persona en este split (`0.7.0` / MVP-2A). `null` si el split no usa facciones. */
   currentFaction: { id: string; name: string; color: string } | null;
+  /** Semanas publicadas con asistencia presente/ausente (`1.1.1`). Publicaciones sin `attendanceStatus` (anteriores a esta version) cuentan como presentes. */
+  presentWeekCount: number;
+  absentWeekCount: number;
+  /** Puntos KPI por hora del split completo: razon de sumas (G2, ver docs/WEEKLY_ATTENDANCE_AND_HOURS.md), solo semanas presentes. `null` si no es calculable. */
+  pointsPerHour: number | null;
 }
 
 export async function getPersonSplitDetail(db: PrismaClient, personId: string, splitId: string): Promise<PersonSplitDetail | null> {
@@ -166,6 +181,13 @@ export async function getPersonSplitDetail(db: PrismaClient, personId: string, s
     weeklyRank: row.weeklyRank,
     rankedParticipantCount: row.rankedParticipantCount,
     positionPoints: row.positionPoints,
+    attendanceStatus: row.attendanceStatus,
+    totalHours: row.totalHoursSnapshot?.toNumber() ?? null,
+    productiveHours: row.productiveHoursSnapshot?.toNumber() ?? null,
+    pointsPerHour:
+      row.attendanceStatus === "ABSENT" || row.totalHoursSnapshot === null
+        ? null
+        : computeWeeklyPointsPerHour(row.totalKpiPoints, row.totalHoursSnapshot),
     splitUsedProfessions: row.splitUsedProfessions,
     // Siempre desde la instantanea: una semana historica nunca se explica con la profesion actual.
     profession: row.professionNameSnapshot
@@ -201,6 +223,14 @@ export async function getPersonSplitDetail(db: PrismaClient, personId: string, s
   const totalPositionPoints = rows.reduce((sum, row) => sum + row.positionPoints, 0);
   const totalKpiPointsDecimal = rows.reduce((sum, row) => sum.plus(row.totalKpiPoints), new Prisma.Decimal(0));
   const totalCreditsEarned = rows.reduce((sum, row) => sum + row.creditsEarned, 0);
+  // `null` (publicaciones anteriores a `1.1.1`) se trata como presente: no se reinterpreta ausencia historicamente.
+  const absentWeekCount = rows.filter((row) => row.attendanceStatus === "ABSENT").length;
+  const presentWeekCount = rows.length - absentWeekCount;
+  const pointsPerHour = computePeriodPointsPerHour(
+    rows
+      .filter((row) => row.attendanceStatus !== "ABSENT" && row.totalHoursSnapshot !== null)
+      .map((row) => ({ points: row.totalKpiPoints.toNumber(), hours: row.totalHoursSnapshot!.toNumber() })),
+  );
 
   const classification = await computeSplitClassification(db, splitId);
   const entry = classification.entries.find((candidate) => candidate.personId === personId);
@@ -212,6 +242,9 @@ export async function getPersonSplitDetail(db: PrismaClient, personId: string, s
     weeks,
     totalPositionPoints,
     totalKpiPoints: totalKpiPointsDecimal.toNumber(),
+    presentWeekCount,
+    absentWeekCount,
+    pointsPerHour,
     totalCreditsEarned,
     currentRank: entry?.rank ?? null,
     rankedParticipantCount: classification.entries.length,
@@ -268,6 +301,11 @@ export interface HistoryGroupRow {
   equipmentBonusSum: number;
   /** Suma de creditos ganados (congelados al publicar) en el periodo. */
   creditsEarnedSum: number;
+  /** Semanas presentes/ausentes del periodo (`1.1.1`). Publicaciones sin `attendanceStatus` cuentan como presentes. */
+  presentWeekCount: number;
+  absentWeekCount: number;
+  /** Puntos KPI por hora del periodo: razon de sumas (G2), solo semanas presentes con horas validas. `null` si no es calculable. */
+  pointsPerHour: number | null;
   /** Una entrada solo para los KPI presentes en este periodo; el resto de columnas de `availableKpis` deben mostrarse como "—" (seccion 18). */
   perKpi: HistoryKpiBreakdown[];
 }
@@ -346,6 +384,10 @@ export async function getPersonHistory(db: PrismaClient, personId: string, filte
     sortDate: Date;
     splitNames: Set<string>;
     publishedWeekCount: number;
+    presentWeekCount: number;
+    absentWeekCount: number;
+    /** Puntos y horas de las semanas presentes con horas validas, para Puntos por hora (razon de sumas, G2). */
+    pphEntries: { points: number; hours: number }[];
     sumPositionPointsDecimal: Prisma.Decimal;
     sumKpiPointsDecimal: Prisma.Decimal;
     professionBonusDecimal: Prisma.Decimal;
@@ -370,6 +412,9 @@ export async function getPersonHistory(db: PrismaClient, personId: string, filte
         sortDate,
         splitNames: new Set<string>(),
         publishedWeekCount: 0,
+        presentWeekCount: 0,
+        absentWeekCount: 0,
+        pphEntries: [],
         sumPositionPointsDecimal: new Prisma.Decimal(0),
         sumKpiPointsDecimal: new Prisma.Decimal(0),
         professionBonusDecimal: new Prisma.Decimal(0),
@@ -385,10 +430,21 @@ export async function getPersonHistory(db: PrismaClient, personId: string, filte
     group.sumPositionPointsDecimal = group.sumPositionPointsDecimal.plus(row.positionPoints);
     group.sumKpiPointsDecimal = group.sumKpiPointsDecimal.plus(row.totalKpiPoints);
     group.creditsEarnedSum += row.creditsEarned;
+    // `null` (publicaciones anteriores a `1.1.1`) se trata como presente: no se reinterpreta
+    // ausencia historicamente (ver docs/WEEKLY_ATTENDANCE_AND_HOURS.md).
+    if (row.attendanceStatus === "ABSENT") {
+      group.absentWeekCount += 1;
+    } else {
+      group.presentWeekCount += 1;
+      if (row.totalHoursSnapshot !== null) {
+        group.pphEntries.push({ points: row.totalKpiPoints.toNumber(), hours: row.totalHoursSnapshot.toNumber() });
+      }
+    }
 
     for (const kpiResult of row.kpiResults) {
-      // No aplica queda siempre excluido de la suma/media/recuento: nunca se convierte en cero (ver docs/DECISIONS.md).
-      if (kpiResult.outcomeStatus === "NOT_APPLICABLE") continue;
+      // No aplica y ausencia quedan siempre excluidos de la suma/media/recuento: nunca se
+      // convierten en cero (ver docs/DECISIONS.md y docs/WEEKLY_ATTENDANCE_AND_HOURS.md).
+      if (kpiResult.outcomeStatus === "NOT_APPLICABLE" || kpiResult.outcomeStatus === "ABSENT") continue;
       kpiNameByCode.set(kpiResult.kpiCode, kpiResult.kpiNameSnapshot);
 
       let kpiGroup = group.perKpi.get(kpiResult.kpiCode);
@@ -451,6 +507,9 @@ export async function getPersonHistory(db: PrismaClient, personId: string, filte
       locationBonusSum: group.locationBonusDecimal.toNumber(),
       equipmentBonusSum: group.equipmentBonusDecimal.toNumber(),
       creditsEarnedSum: group.creditsEarnedSum,
+      presentWeekCount: group.presentWeekCount,
+      absentWeekCount: group.absentWeekCount,
+      pointsPerHour: computePeriodPointsPerHour(group.pphEntries),
       perKpi: Array.from(group.perKpi.entries()).map(([kpiCode, kpiGroup]) => ({
         kpiCode,
         kpiName: kpiGroup.kpiName,

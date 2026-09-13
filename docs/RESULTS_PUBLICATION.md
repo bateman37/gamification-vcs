@@ -43,7 +43,7 @@ tabla parcial.
 ### 2.1 Estados funcionales
 
 Para la vista agregada y la instantanea publicada, cada resultado de KPI
-por participante se normaliza a uno de tres estados:
+por participante se normaliza a uno de cuatro estados:
 
 - **`COMPUTED`**: existe resultado numerico, incluido un cero real;
 - **`VAC`**: vacaciones/sin fila en un origen ya confirmado (Excel o
@@ -51,6 +51,11 @@ por participante se normaliza a uno de tres estados:
   de Cronomagia laboral;
 - **`NOT_APPLICABLE`**: el KPI no aplica a ese nivel (multiplicador
   vacio).
+- **`ABSENT`** (`1.1.1`, ver `docs/WEEKLY_ATTENDANCE_AND_HOURS.md`): la
+  persona estuvo ausente esa semana (horas totales `= 0`). Se aplica a
+  cada KPI aplicable a su nivel, ignorando cualquier dato operativo
+  cargado esa semana; distinto de `VAC` (dato ausente de una persona
+  presente) y de `NOT_APPLICABLE` (KPI ajeno al nivel).
 
 Un `no_data` procedente de una carga de Excel ya confirmada se presenta
 como `VAC` (comportamiento ya existente desde `MVP-1C.2`). Dos casos
@@ -175,6 +180,20 @@ Ranking de competicion (equivalente a `RANK.EQ` descendente de Excel:
 - todos los participantes aplicables de la semana entran en el ranking,
   aunque tengan KPI en `VAC`/`NOT_APPLICABLE`.
 
+> **Desde `1.1.1`** (ver `docs/WEEKLY_ATTENDANCE_AND_HOURS.md`): el
+> ranking semanal deja de incluir a **todos** los participantes
+> aplicables y pasa a construirse **solo entre presentes** (asistencia
+> determinada exclusivamente por las horas totales de la semana). Una
+> persona ausente nunca ocupa ni consume un ordinal (`weeklyRank: null`).
+> En su lugar recibe los `positionPoints` de la ultima posicion
+> efectivamente ocupada por una persona presente esa semana
+> (`positionPointsRuleRank`); si nadie estuvo presente, todas las
+> ausencias reciben `positionPointsRuleRank: null` y `positionPoints: 0`.
+> El denominador de "x de n" **en las vistas semanales** pasa por tanto a
+> ser el numero de presentes, no el total de aplicables (ver la decision
+> registrada en `docs/DECISIONS.md`: las vistas generales/acumuladas no
+> cambian).
+
 `positionPoints` se lee siempre de `SplitPositionPointRule` del split (los
 valores `15, 11, 8, 5, 3, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1` nunca estan
 escritos en el codigo del motor). Si una posicion producida por el ranking
@@ -207,6 +226,12 @@ se presenta, con dos funciones compartidas (ver `docs/DECISIONS.md`):
   (`src/domain/kpi-outcome-display.ts`), y participa en sumas, medias y
   rankings exactamente como cualquier otro cero. `NOT_APPLICABLE` se
   mantiene siempre diferenciado (`No aplica`) en ambas presentaciones.
+- **`ABSENT`** (`1.1.1`) tambien se muestra como `0` en la celda, pero la
+  **fila completa** del participante debe estar siempre presidida por el
+  texto unico `Ausencia · Sin datos semanales` (`ABSENCE_LABEL`,
+  `src/domain/attendance.ts`), nunca por `VAC`/`AVISO` ni por una
+  posicion numerica ficticia: esa distincion vive en la presentacion de
+  la fila/posicion, no en el valor numerico de la celda.
 
 ## 3. Mapa de color por porcentaje del maximo
 
@@ -419,14 +444,19 @@ sin conceder ninguna ventaja de negocio.
   la respuesta del servidor no contiene esos campos (no se ocultan solo
   con CSS).
 
-**Denominador unico de "x de n" (`0.7.0` / MVP-2A, ver `docs/DECISIONS.md`):**
-toda posicion mostrada en resultados (general, semanal, por KPI, vista
-administrativa de una semana publicada y subvista `Por split`) usa como
-denominador el numero total de participantes del split
-(`countParticipantsForSplit`), no el numero de resultados aplicables de un
-KPI concreto. `rankedParticipantCount` se conserva sin cambios como
-numerador interno de cada ranking; no se usa como denominador en ninguna
-pantalla.
+**Denominador unico de "x de n" (`0.7.0` / MVP-2A, ver `docs/DECISIONS.md`;
+parcialmente superado en el ambito semanal por `1.1.1`):** toda posicion
+mostrada en las vistas **generales/acumuladas** (clasificacion general,
+por KPI acumulada, vista administrativa historica y subvista `Por
+split`) sigue usando como denominador el numero total de participantes
+del split (`countParticipantsForSplit`). Desde `1.1.1`, las vistas **de
+una semana concreta** (previsualizacion, publicacion, resultados
+semanales) usan en cambio el numero de participantes **presentes** esa
+semana (`presentParticipantCount`/`rankedParticipantCount` congelado):
+una ausencia nunca ocupa ni consume un ordinal, asi que contarla en el
+denominador semanal implicaria que compitio cuando no lo hizo. Ver la
+decision registrada en `docs/DECISIONS.md` para el detalle y el motivo de
+por que el ambito general no cambia.
 
 ## 8. Integridad y seguridad
 

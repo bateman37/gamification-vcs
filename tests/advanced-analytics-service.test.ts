@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { addCalendarDays, currentCalendarDate } from "@/lib/dates";
 import { resetDatabase, testDb } from "./helpers/db";
+import { markAllPresent } from "./helpers/attendance";
 import { createPerson } from "@/server/services/person.service";
 import { activateSplit, createSplitWithWeeks, listSplitWeeks } from "@/server/services/split.service";
 import { addParticipant } from "@/server/services/participant.service";
@@ -37,6 +38,7 @@ async function buildPublishedSplit(name: string, startDate: string) {
 
   for (const week of weeks) {
     await saveStabilityEntries(testDb, split.id, week.id, form({ [`resultValue__${participantN2.id}`]: "1" }));
+    await markAllPresent(testDb, split.id, week.id);
     await publishWeek(testDb, split.id, week.id, null);
   }
 

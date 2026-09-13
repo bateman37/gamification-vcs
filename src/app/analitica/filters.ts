@@ -1,14 +1,13 @@
 import { parseCalendarDate } from "@/lib/dates";
-import { DEFAULT_ZERO_THRESHOLD } from "@/domain/analytics";
-import type { AnalyticsLevel, GamificationDisplayMode, TemporalGrouping } from "@/domain/analytics";
+import type { AnalyticsLevel, AnalyticsMeasure, GamificationDisplayMode, TemporalGrouping } from "@/domain/analytics";
 import type { ComparisonMode } from "@/domain/analytics";
 import { parseGamificationMode } from "@/domain/gamification-view";
 import { KPI_CATALOG_LIST } from "@/domain/kpis/catalog";
 
 /**
- * Parseo de filtros de `/analitica` desde `searchParams` (parte D3/H1 del
- * encargo). Valida IDs, enumeraciones, fechas y limites en servidor: un
- * `searchParams` manipulado a mano nunca debe producir un estado invalido
+ * Parseo de filtros de `/analitica` desde `searchParams` (parte D3/H1/H2 del
+ * encargo `1.1.1`). Valida IDs, enumeraciones, fechas y limites en servidor:
+ * un `searchParams` manipulado a mano nunca debe producir un estado invalido
  * silencioso, solo se ignora y se aplica el valor predeterminado.
  */
 
@@ -48,11 +47,9 @@ export interface ParsedAnalyticsFilters {
   endDate: Date | null;
   grouping: TemporalGrouping;
   mode: GamificationDisplayMode;
-  exclusionEnabled: boolean;
-  zeroThreshold: number;
+  measure: AnalyticsMeasure;
   comparisonMode: ComparisonMode;
   analyzedWeek: Date | null;
-  manualOverrides: Map<string, "include" | "exclude">;
   selectedKpi: string | null;
   selectedPersonIds: string[];
 }
@@ -72,21 +69,8 @@ export function parseAnalyticsSearchParams(searchParams: RawSearchParams): Parse
   const comparisonRaw = Array.isArray(searchParams.comparacion) ? searchParams.comparacion[0] : searchParams.comparacion;
   const comparisonMode: ComparisonMode = comparisonRaw === "media_periodo" ? "media_periodo" : "semana_anterior";
 
-  const exclusionRaw = Array.isArray(searchParams.exclusion) ? searchParams.exclusion[0] : searchParams.exclusion;
-  const exclusionEnabled = exclusionRaw !== "off";
-
-  const thresholdRaw = Array.isArray(searchParams.umbral) ? searchParams.umbral[0] : searchParams.umbral;
-  const parsedThreshold = thresholdRaw ? Number.parseInt(thresholdRaw, 10) : NaN;
-  const zeroThreshold = Number.isFinite(parsedThreshold) && parsedThreshold >= 2 && parsedThreshold <= 10 ? parsedThreshold : DEFAULT_ZERO_THRESHOLD;
-
-  const manualOverrides = new Map<string, "include" | "exclude">();
-  for (const [key, value] of Object.entries(searchParams)) {
-    if (!key.startsWith("ov_")) continue;
-    const raw = Array.isArray(value) ? value[0] : value;
-    if (raw === "include" || raw === "exclude") {
-      manualOverrides.set(key.slice(3), raw);
-    }
-  }
+  const measureRaw = Array.isArray(searchParams.medida) ? searchParams.medida[0] : searchParams.medida;
+  const measure: AnalyticsMeasure = measureRaw === "puntos" ? "points" : measureRaw === "pph" ? "pph" : "percentage";
 
   const kpiRaw = Array.isArray(searchParams.kpi) ? searchParams.kpi[0] : searchParams.kpi;
   const selectedKpi = kpiRaw && VALID_KPI_CODES.has(kpiRaw) ? kpiRaw : null;
@@ -99,11 +83,9 @@ export function parseAnalyticsSearchParams(searchParams: RawSearchParams): Parse
     endDate: parseDate(searchParams.fin),
     grouping,
     mode: parseGamificationMode(Array.isArray(searchParams.gamificacion) ? searchParams.gamificacion[0] : searchParams.gamificacion),
-    exclusionEnabled,
-    zeroThreshold,
+    measure,
     comparisonMode,
     analyzedWeek: parseDate(searchParams.semana),
-    manualOverrides,
     selectedKpi,
     selectedPersonIds: toArray(searchParams.personas).slice(0, 5),
   };

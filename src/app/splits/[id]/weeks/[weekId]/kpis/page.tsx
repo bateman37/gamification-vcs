@@ -47,13 +47,17 @@ export default async function WeeklyKpisPage({
   const week = await getSplitWeek(prisma, params.id, params.weekId);
   if (!week) notFound();
 
-  const [loadSummaryByWeek, publication, { location, window: locationWindow }] = await Promise.all([
+  const [loadSummaryByWeek, publication, { location, window: locationWindow }, hoursCoverage] = await Promise.all([
     getWeeklyKpiLoadSummary(prisma, split.id, [week]),
     prisma.weekPublication.findUnique({ where: { splitWeekId: week.id } }),
     getWeekLocation(prisma, split.id, week.id),
+    // Cobertura de horas semanales (`1.1.1`): siempre se comprueba, independiente de si Cronomagia
+    // esta activa como KPI (ver docs/WEEKLY_ATTENDANCE_AND_HOURS.md).
+    getChronomancyLoadStatus(prisma, split.id, week.id, week.sequenceNumber),
   ]);
   const loadSummary = loadSummaryByWeek.get(week.id) ?? { loadedCount: 0, totalActiveCount: 0 };
-  const isWeekComplete = loadSummary.totalActiveCount > 0 && loadSummary.loadedCount === loadSummary.totalActiveCount;
+  const hoursSaved = hoursCoverage.status === "LOADED";
+  const isWeekComplete = loadSummary.totalActiveCount > 0 && loadSummary.loadedCount === loadSummary.totalActiveCount && hoursSaved;
   const resultsHref = `/splits/${split.id}/weeks/${week.id}/resultados`;
 
   const kpiConfigs = await listKpiConfigsForSplit(prisma, split.id);
@@ -77,9 +81,6 @@ export default async function WeeklyKpisPage({
   }
   if (activeCodes.has("STABILITY_GUARDIAN")) {
     coverageByOrigin.STABILITY_GUARDIAN = await getStabilityLoadStatus(prisma, split.id, week.id, week.sequenceNumber);
-  }
-  if (activeCodes.has("WORK_CHRONOMANCY")) {
-    coverageByOrigin.WORK_CHRONOMANCY = await getChronomancyLoadStatus(prisma, split.id, week.id, week.sequenceNumber);
   }
   if (activeCodes.has("STAR_WRITER")) {
     coverageByOrigin.STAR_WRITER = await getWriterLoadStatus(prisma, split.id, week.id, week.sequenceNumber);
@@ -154,6 +155,43 @@ export default async function WeeklyKpisPage({
                 Ver
               </Link>
             )}
+          </div>
+        </div>
+      </section>
+
+      <section className="rounded-card border border-border bg-surface p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-base font-semibold">Horas semanales y Cronomagia laboral</h2>
+            <p className="text-sm text-text-muted">
+              {hoursCoverage.chronomancyActive ? "Dato de asistencia obligatorio · KPI activo" : "Dato de asistencia obligatorio · KPI inactivo"}
+            </p>
+            <p className="mt-1 text-xs text-text-muted">
+              Horas guardadas: {hoursCoverage.savedCount}/{hoursCoverage.totalApplicableCount}
+            </p>
+          </div>
+          <div className="flex items-center gap-4">
+            <StatusIndicator status={hoursCoverage.status} vacCount={0} />
+            <div className="flex gap-2">
+              {split.status === "ACTIVE" && !publication ? (
+                <Link
+                  href={`/splits/${split.id}/weeks/${week.id}/kpis/cronomagia/introducir`}
+                  className="rounded-control bg-ink px-3 py-1.5 text-sm font-medium text-white hover:bg-ink/90"
+                >
+                  Introducir datos
+                </Link>
+              ) : (
+                <button type="button" disabled className="rounded-control bg-surface-muted px-3 py-1.5 text-sm font-medium text-text-muted">
+                  Introducir datos
+                </button>
+              )}
+              <Link
+                href={`/splits/${split.id}/weeks/${week.id}/kpis/cronomagia/comprobar`}
+                className="rounded-control border border-border-strong px-3 py-1.5 text-sm font-medium text-ink hover:bg-surface-muted"
+              >
+                Comprobar
+              </Link>
+            </div>
           </div>
         </div>
       </section>
@@ -239,9 +277,14 @@ export default async function WeeklyKpisPage({
       {activeCatalogEntries.length > 0 && (
         <section className="rounded-card border border-border bg-surface p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-sm font-medium text-ink">
-              KPI cargados: {loadSummary.loadedCount}/{loadSummary.totalActiveCount}
-            </p>
+            <div>
+              <p className="text-sm font-medium text-ink">
+                KPI cargados: {loadSummary.loadedCount}/{loadSummary.totalActiveCount}
+              </p>
+              <p className="text-sm text-text-muted">
+                Horas semanales: {hoursCoverage.savedCount}/{hoursCoverage.totalApplicableCount}
+              </p>
+            </div>
             {publication ? (
               <div className="flex items-center gap-2">
                 <span className="rounded-full bg-success-soft px-2 py-0.5 text-xs font-medium text-success">Semana publicada</span>
@@ -262,7 +305,9 @@ export default async function WeeklyKpisPage({
                   Ver resultados de la semana
                 </button>
                 <p className="mt-1 text-xs text-text-muted">
-                  Completa los {loadSummary.totalActiveCount} KPI activos para poder ver los resultados.
+                  {!hoursSaved
+                    ? "Guarda las horas semanales de todos los participantes aplicables para poder ver los resultados."
+                    : `Completa los ${loadSummary.totalActiveCount} KPI activos para poder ver los resultados.`}
                 </p>
               </div>
             )}

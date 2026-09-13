@@ -7,7 +7,9 @@ import { updateKpiConfig } from "@/server/services/kpi.service";
 import { saveStabilityEntries } from "@/server/services/stability-entry.service";
 import { saveWriterEntries } from "@/server/services/writer-entry.service";
 import { publishWeek } from "@/server/services/publish-week.service";
+import { saveChronomancyEntries } from "@/server/services/chronomancy-entry.service";
 import { DomainError } from "@/lib/errors";
+import { markAllPresent } from "./helpers/attendance";
 
 async function createDraftSplit(numberOfWeeks = 2) {
   return createSplitWithWeeks(testDb, {
@@ -34,6 +36,7 @@ async function buildReadySplit() {
   await activateSplit(testDb, split.id);
   const week = (await listSplitWeeks(testDb, split.id))[0]!;
   await saveStabilityEntries(testDb, split.id, week.id, form({ [`resultValue__${participant.id}`]: "1" }));
+  await markAllPresent(testDb, split.id, week.id);
   return { split, person, participant, week };
 }
 
@@ -51,6 +54,22 @@ describe("publishWeek: precondiciones", () => {
     });
     await activateSplit(testDb, split.id);
     const week = (await listSplitWeeks(testDb, split.id))[0]!;
+
+    await expect(publishWeek(testDb, split.id, week.id, null)).rejects.toBeInstanceOf(DomainError);
+    expect(await testDb.weekPublication.count()).toBe(0);
+  });
+
+  it("rechaza publicar cuando el bloque de horas semanales no se ha guardado, aunque el resto de KPI este completo", async () => {
+    const split = await createDraftSplit();
+    const person = await createPerson(testDb, { fullName: "Persona Sin Horas", email: undefined });
+    const participant = await addParticipant(testDb, split.id, { personId: person.id, alias: "SinHoras", level: "N2", startWeekSequenceNumber: 1 });
+    await updateKpiConfig(testDb, split.id, "STABILITY_GUARDIAN", {
+      isActive: true, baseMax: 30, multiplierN2: 1, parameters: { pointsPerResult: 30 },
+    });
+    await activateSplit(testDb, split.id);
+    const week = (await listSplitWeeks(testDb, split.id))[0]!;
+    await saveStabilityEntries(testDb, split.id, week.id, form({ [`resultValue__${participant.id}`]: "1" }));
+    // A proposito, nunca se llama a saveChronomancyEntries/markAllPresent para esta semana.
 
     await expect(publishWeek(testDb, split.id, week.id, null)).rejects.toBeInstanceOf(DomainError);
     expect(await testDb.weekPublication.count()).toBe(0);
@@ -85,6 +104,22 @@ describe("publishWeek: instantanea y bloqueo", () => {
     expect(participantResult.kpiResults).toHaveLength(1);
     expect(participantResult.kpiResults[0]).toMatchObject({ kpiCode: "STABILITY_GUARDIAN", outcomeStatus: "COMPUTED" });
     expect(participantResult.kpiResults[0]!.finalPoints?.toNumber()).toBe(30);
+    // Asistencia congelada (`1.1.1`, ver docs/WEEKLY_ATTENDANCE_AND_HOURS.md).
+    expect(participantResult.attendanceStatus).toBe("PRESENT");
+    expect(participantResult.totalHoursSnapshot?.toNumber()).toBe(40);
+    expect(participantResult.positionPointsRuleRank).toBe(1);
+  });
+
+  it("tras publicar, editar las horas semanales de esa semana queda bloqueado", async () => {
+    const { split, week, participant } = await buildReadySplit();
+    await publishWeek(testDb, split.id, week.id, null);
+
+    const formData = new FormData();
+    formData.set(`totalHours__${participant.id}`, "0");
+    await expect(saveChronomancyEntries(testDb, split.id, week.id, formData)).rejects.toBeInstanceOf(DomainError);
+
+    const publication = await testDb.weekPublication.findUnique({ where: { splitWeekId: week.id } });
+    expect(publication!.publishedAt).not.toBeNull();
   });
 
   it("una segunda publicacion no duplica datos", async () => {
@@ -132,6 +167,10 @@ describe("publishWeek: instantanea y bloqueo", () => {
     await expect(
       saveStabilityEntries(testDb, split.id, week.id, form({ [`resultValue__${participant.id}`]: "2" })),
     ).rejects.toBeInstanceOf(DomainError);
+
+    const chronomancyForm = new FormData();
+    chronomancyForm.set(`totalHours__${participant.id}`, "0");
+    await expect(saveChronomancyEntries(testDb, split.id, week.id, chronomancyForm)).rejects.toBeInstanceOf(DomainError);
 
     await expect(
       saveWriterEntries(

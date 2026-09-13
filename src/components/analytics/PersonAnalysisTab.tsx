@@ -3,11 +3,14 @@ import { Badge, SectionHeader, TABLE_HEAD_ROW_CLASSES, TABLE_ROW_HOVER_CLASSES, 
 import type { AnalyticsSnapshot } from "@/domain/analytics";
 import { formatPercentEs, formatPointsEs, formatPpEs } from "./format";
 import { KPI_CATALOG } from "@/domain/kpis/catalog";
-import { ExclusionsPanel } from "./ExclusionsPanel";
-import type { RawSearchParams } from "@/app/analitica/filters";
 
-/** Bloque 5 - Análisis por persona (parte H6 del encargo). */
-export function PersonAnalysisTab({ snapshot, searchParams }: { snapshot: AnalyticsSnapshot; searchParams: RawSearchParams }) {
+/**
+ * Bloque 5 - Análisis por persona (parte H6 del encargo). Desde `1.1.1` ya
+ * no existe "Ver exclusiones" (ver docs/WEEKLY_ATTENDANCE_AND_HOURS.md): la
+ * asistencia real de cada semana, auditable y de solo lectura, se consulta
+ * en el detalle de cada persona (`/analitica/personas/[personId]`).
+ */
+export function PersonAnalysisTab({ snapshot }: { snapshot: AnalyticsSnapshot }) {
   return (
     <div className="space-y-6">
       <div className="rounded-card border border-border bg-surface p-4">
@@ -55,8 +58,6 @@ export function PersonAnalysisTab({ snapshot, searchParams }: { snapshot: Analyt
         </TableContainer>
         {snapshot.personRows.length === 0 && <p className="mt-3 text-sm text-text-muted">Sin personas analizables con los filtros actuales.</p>}
       </div>
-
-      <ExclusionsPanel exclusions={snapshot.exclusions} searchParams={searchParams} />
     </div>
   );
 }

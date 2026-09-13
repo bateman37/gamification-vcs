@@ -20,8 +20,8 @@ interface DisplayRow {
   publishedWeekCount: number;
   positionPoints: number;
   totalKpiPoints: number;
-  /** Posicion general individual (solo relevante sin KPI seleccionado). */
-  positionRank: number;
+  /** Posicion general individual (solo relevante sin KPI seleccionado). `null` para una ausencia esa semana. */
+  positionRank: number | null;
   /** Posicion dentro del KPI seleccionado (seccion 16.1): el mejor resultado es 1, VAC cuenta como 0, No aplica queda excluido. */
   kpiRank: number | null;
   kpiValue: number | null;
@@ -70,6 +70,11 @@ export default async function SplitClassificationPage({
   const selectedDir: "asc" | "desc" = searchParams.dir === "asc" ? "asc" : "desc";
 
   let rows: DisplayRow[];
+  // Denominador de "x de n" (`1.1.1`): la clasificacion acumulada sigue usando el total de
+  // participantes del split; una semana concreta usa el numero de presentes esa semana (ver
+  // docs/WEEKLY_ATTENDANCE_AND_HOURS.md). Publicaciones anteriores a esta version no tienen
+  // `attendanceStatus`: se tratan como presentes (no se reinterpreta ausencia historicamente).
+  let weeklyDenominator = splitParticipantCount;
 
   if (selectedWeek === "acumulado") {
     const kpiEntries = selectedKpiCode ? await computeSplitKpiClassification(prisma, split.id, selectedKpiCode, null) : null;
@@ -96,6 +101,7 @@ export default async function SplitClassificationPage({
       where: { splitId, publication: { splitWeekId: selectedWeek } },
       include: { kpiResults: true },
     });
+    weeklyDenominator = weekRows.filter((row) => row.attendanceStatus !== "ABSENT").length;
     rows = weekRows.map((row) => {
       const kpiResult = selectedKpiCode ? row.kpiResults.find((result) => result.kpiCode === selectedKpiCode) : undefined;
       return {
@@ -187,7 +193,17 @@ export default async function SplitClassificationPage({
               {rows.map((row) => (
                 <tr key={row.splitParticipantId} className="border-b border-border">
                   <td className="px-3 py-2 font-medium">
-                    {selectedKpiCode ? (row.kpiRank ?? "—") : row.positionRank} de {splitParticipantCount}
+                    {selectedKpiCode ? (
+                      <>
+                        {row.kpiRank ?? "—"} de {weeklyDenominator}
+                      </>
+                    ) : row.positionRank === null ? (
+                      "Ausencia"
+                    ) : (
+                      <>
+                        {row.positionRank} de {weeklyDenominator}
+                      </>
+                    )}
                   </td>
                   <td className="px-3 py-2 text-text-muted">{row.fullName}</td>
                   <td className="px-3 py-2 font-medium">{row.alias}</td>
@@ -202,7 +218,7 @@ export default async function SplitClassificationPage({
                         <td className="px-3 py-2 text-center">{row.kpiAverage === null ? "—" : formatPoints(row.kpiAverage)}</td>
                       )}
                       <td className="px-3 py-2 text-center">
-                        {row.kpiRank === null ? "—" : `${row.kpiRank} de ${splitParticipantCount}`}
+                        {row.kpiRank === null ? "—" : `${row.kpiRank} de ${weeklyDenominator}`}
                       </td>
                       <td className="px-3 py-2">
                         {selectedWeek !== "acumulado" && (

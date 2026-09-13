@@ -24,13 +24,14 @@ export function parseGamificationMode(value: string | string[] | undefined): Gam
   return value === "sin" ? "sin" : "con";
 }
 
-export type DisplayableKpiStatus = "COMPUTED" | "VAC" | "NOT_APPLICABLE";
+export type DisplayableKpiStatus = "COMPUTED" | "VAC" | "NOT_APPLICABLE" | "ABSENT";
 
 /**
  * Puntos de una celda de KPI segun el modo elegido. `NOT_APPLICABLE` nunca
- * cambia (`null`, mostrado como "No aplica" en ambos modos); `VAC` se
- * muestra siempre como `0` (hotfix AVISO/0, ver docs/DECISIONS.md), en
- * cualquiera de los dos modos, porque nunca recibio ningun bonus.
+ * cambia (`null`, mostrado como "No aplica" en ambos modos); `VAC` y
+ * `ABSENT` (`1.1.1`, ver docs/WEEKLY_ATTENDANCE_AND_HOURS.md) se muestran
+ * siempre como `0` (hotfix AVISO/0, ver docs/DECISIONS.md), en cualquiera de
+ * los dos modos, porque nunca recibieron ningun bonus.
  */
 export function resolveGamificationDisplayPoints(
   mode: GamificationMode,
@@ -39,7 +40,7 @@ export function resolveGamificationDisplayPoints(
   basePointsBeforeProfession: number | null | undefined,
 ): number | null {
   if (status === "NOT_APPLICABLE") return null;
-  if (status === "VAC") return 0;
+  if (status === "VAC" || status === "ABSENT") return 0;
   if (mode === "con") return finalPoints ?? 0;
   return basePointsBeforeProfession ?? finalPoints ?? 0;
 }

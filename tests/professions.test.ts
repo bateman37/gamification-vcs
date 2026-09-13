@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { resetDatabase, testDb } from "./helpers/db";
+import { markAllPresent } from "./helpers/attendance";
 import { createPerson } from "@/server/services/person.service";
 import { createSplitWithWeeks, activateSplit, listSplitWeeks } from "@/server/services/split.service";
 import { addParticipant, updateParticipant } from "@/server/services/participant.service";
@@ -155,6 +156,7 @@ describe("Profesiones: asignacion", () => {
     const results = await computeWeeklyResults(testDb, split.id, week.id);
     expect(results.usesProfessions).toBe(false);
     expect(results.blockingIssues).toHaveLength(0);
+    await markAllPresent(testDb, split.id, week.id);
     await expect(publishWeek(testDb, split.id, week.id, null)).resolves.toBeTruthy();
 
     const published = await testDb.publishedParticipantWeeklyResult.findFirstOrThrow({ where: { splitId: split.id } });
@@ -199,6 +201,7 @@ describe("Profesiones: asignacion", () => {
     await activateSplit(testDb, split.id);
     const week = (await listSplitWeeks(testDb, split.id))[0]!;
     await saveStabilityEntries(testDb, split.id, week.id, form({ [`resultValue__${participant.id}`]: "50" }));
+    await markAllPresent(testDb, split.id, week.id);
 
     const results = await computeWeeklyResults(testDb, split.id, week.id);
     expect(results.blockingIssues.some((issue) => issue.includes("SinElegir"))).toBe(true);
@@ -219,6 +222,7 @@ describe("Profesiones: bloqueo desde la primera publicacion", () => {
     await activateSplit(testDb, split.id);
     const week = (await listSplitWeeks(testDb, split.id))[0]!;
     await saveStabilityEntries(testDb, split.id, week.id, form({ [`resultValue__${participant.id}`]: "50" }));
+    await markAllPresent(testDb, split.id, week.id);
     await publishWeek(testDb, split.id, week.id, null);
     return { split, profession, participant, week };
   }
@@ -276,6 +280,7 @@ describe("Profesiones: bloqueo desde la primera publicacion", () => {
     await activateSplit(testDb, split.id);
     const week = (await listSplitWeeks(testDb, split.id))[0]!;
     await saveStabilityEntries(testDb, split.id, week.id, form({ [`resultValue__${participant.id}`]: "10" }));
+    await markAllPresent(testDb, split.id, week.id);
     await publishWeek(testDb, split.id, week.id, null);
 
     const other = await createPerson(testDb, { fullName: "Otra Legacy", email: undefined });
@@ -302,6 +307,7 @@ describe("Profesiones: calculo, publicacion e historico", () => {
 
   it("50 con maximo 70 produce 60 y 80 con maximo 70 produce 84 en el motor agregado", async () => {
     const below = await buildSplitWithProfession({ resultValue: "50" });
+    await markAllPresent(testDb, below.split.id, below.week.id);
     const belowResults = await computeWeeklyResults(testDb, below.split.id, below.week.id);
     const belowCell = belowResults.participants[0]!.kpiResults.find((kpi) => kpi.kpiCode === "STABILITY_GUARDIAN")!;
     expect(belowCell.basePointsBeforeProfession).toBe(50);
@@ -312,6 +318,7 @@ describe("Profesiones: calculo, publicacion e historico", () => {
     await resetDatabase();
 
     const capped = await buildSplitWithProfession({ resultValue: "80" });
+    await markAllPresent(testDb, capped.split.id, capped.week.id);
     const cappedResults = await computeWeeklyResults(testDb, capped.split.id, capped.week.id);
     const cappedCell = cappedResults.participants[0]!.kpiResults.find((kpi) => kpi.kpiCode === "STABILITY_GUARDIAN")!;
     expect(cappedCell.capped).toBe(true);
@@ -335,6 +342,7 @@ describe("Profesiones: calculo, publicacion e historico", () => {
     await activateSplit(testDb, split.id);
     const week = (await listSplitWeeks(testDb, split.id))[0]!;
     await saveStabilityEntries(testDb, split.id, week.id, form({ [`resultValue__${participant.id}`]: "50" }));
+    await markAllPresent(testDb, split.id, week.id);
 
     const results = await computeWeeklyResults(testDb, split.id, week.id);
     const cell = results.participants[0]!.kpiResults.find((kpi) => kpi.kpiCode === "STABILITY_GUARDIAN")!;
@@ -373,6 +381,7 @@ describe("Profesiones: calculo, publicacion e historico", () => {
       week.id,
       form({ [`resultValue__${withBonus.id}`]: "50", [`resultValue__${withoutBonus.id}`]: "55" }),
     );
+    await markAllPresent(testDb, split.id, week.id);
 
     const results = await computeWeeklyResults(testDb, split.id, week.id);
     const bonusEntry = results.participants.find((participant) => participant.splitParticipantId === withBonus.id)!;
@@ -390,6 +399,7 @@ describe("Profesiones: calculo, publicacion e historico", () => {
     const again = await computeWeeklyResults(testDb, split.id, week.id);
     expect(again.participants.find((participant) => participant.splitParticipantId === withBonus.id)!.totalKpiPoints).toBe(60);
 
+    await markAllPresent(testDb, split.id, week.id);
     await publishWeek(testDb, split.id, week.id, null);
     const publishedBonus = await testDb.publishedParticipantWeeklyResult.findFirstOrThrow({ where: { splitParticipantId: withBonus.id } });
     expect(publishedBonus.totalKpiPoints.toNumber()).toBe(60);
@@ -398,6 +408,7 @@ describe("Profesiones: calculo, publicacion e historico", () => {
 
   it("la publicacion congela profesion y desglose del bonus, y un cambio posterior de alias no los altera", async () => {
     const { split, profession, participant, week, person } = await buildSplitWithProfession({ resultValue: "80" });
+    await markAllPresent(testDb, split.id, week.id);
     await publishWeek(testDb, split.id, week.id, null);
 
     const published = await testDb.publishedParticipantWeeklyResult.findFirstOrThrow({
@@ -436,6 +447,7 @@ describe("Profesiones: calculo, publicacion e historico", () => {
     await activateSplit(testDb, split.id);
     const week = (await listSplitWeeks(testDb, split.id))[0]!;
     await saveStabilityEntries(testDb, split.id, week.id, form({ [`resultValue__${participant.id}`]: "50" }));
+    await markAllPresent(testDb, split.id, week.id);
     await publishWeek(testDb, split.id, week.id, null);
 
     const detail = await getPersonSplitDetail(testDb, person.id, split.id);
@@ -449,6 +461,7 @@ describe("Profesiones: calculo, publicacion e historico", () => {
 
   it("el historico suma los professionBonusPoints publicados, no los recalcula", async () => {
     const { split, profession, person, week } = await buildSplitWithProfession({ resultValue: "80" });
+    await markAllPresent(testDb, split.id, week.id);
     await publishWeek(testDb, split.id, week.id, null);
 
     // Un cambio posterior de la definicion (forzado directamente en base de datos, ya que el servicio lo bloquea)
@@ -475,6 +488,7 @@ describe("Historico general: rotulo semanal por fecha de inicio", () => {
     const weeks = await listSplitWeeks(testDb, split.id);
     for (const week of weeks) {
       await saveStabilityEntries(testDb, split.id, week.id, form({ [`resultValue__${participant.id}`]: "10" }));
+      await markAllPresent(testDb, split.id, week.id);
       await publishWeek(testDb, split.id, week.id, null);
     }
     return { split, person };
@@ -498,6 +512,7 @@ describe("Historico general: rotulo semanal por fecha de inicio", () => {
       await activateSplit(testDb, split.id);
       const week = (await listSplitWeeks(testDb, split.id))[0]!;
       await saveStabilityEntries(testDb, split.id, week.id, form({ [`resultValue__${participant.id}`]: "10" }));
+      await markAllPresent(testDb, split.id, week.id);
       await publishWeek(testDb, split.id, week.id, null);
     }
 

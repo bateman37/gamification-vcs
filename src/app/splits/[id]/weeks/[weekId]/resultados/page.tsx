@@ -2,7 +2,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSplitById, getSplitWeek } from "@/server/services/split.service";
-import { countParticipantsForSplit } from "@/server/services/participant.service";
 import { computeWeeklyResults } from "@/server/services/weekly-results.service";
 import { requireAdminSession } from "@/lib/session";
 import { KPI_CATALOG } from "@/domain/kpis/catalog";
@@ -23,7 +22,6 @@ export default async function WeeklyResultsPage({ params }: { params: { id: stri
 
   const backHref = `/splits/${split.id}/weeks/${week.id}/kpis`;
   const weekLabel = `Semana ${week.sequenceNumber} (${formatCalendarDate(week.startDate)} a ${formatCalendarDate(week.endDate)})`;
-  const splitParticipantCount = await countParticipantsForSplit(prisma, split.id);
 
   const publication = await prisma.weekPublication.findUnique({
     where: { splitWeekId: week.id },
@@ -62,6 +60,10 @@ export default async function WeeklyResultsPage({ params }: { params: { id: stri
         weeklyRank: participantResult.weeklyRank,
         positionPoints: participantResult.positionPoints,
         rankedParticipantCount: participantResult.rankedParticipantCount,
+        // `null` en publicaciones anteriores a `1.1.1`: se trata como presente para no reinterpretar
+        // ausencia historicamente (ver docs/WEEKLY_ATTENDANCE_AND_HOURS.md).
+        attendanceStatus: participantResult.attendanceStatus ?? "PRESENT",
+        totalHours: participantResult.totalHoursSnapshot?.toNumber() ?? 0,
         // Una semana publicada siempre explica el bonus con su propia instantanea, nunca con la definicion actual.
         professionName: participantResult.professionNameSnapshot,
         professionKpiNames:
@@ -73,7 +75,11 @@ export default async function WeeklyResultsPage({ params }: { params: { id: stri
           0,
         ),
       }))
-      .sort((a, b) => a.weeklyRank - b.weeklyRank || a.alias.localeCompare(b.alias, "es"));
+      // Presentes por posicion, despues ausentes por alias (seccion F1 del encargo `1.1.1`): un
+      // `weeklyRank` nulo siempre se ordena al final, sin convertirlo en `0`.
+      .sort((a, b) => (a.weeklyRank ?? Number.POSITIVE_INFINITY) - (b.weeklyRank ?? Number.POSITIVE_INFINITY) || a.alias.localeCompare(b.alias, "es"));
+
+    const presentParticipantCount = publication.participantResults.filter((result) => result.attendanceStatus !== "ABSENT").length;
 
     // Snapshot congelado al publicar (`0.8.5` / MVP-2C): nunca se consulta una posible
     // configuracion viva distinta de `SplitWeekLocation`.
@@ -139,7 +145,7 @@ export default async function WeeklyResultsPage({ params }: { params: { id: stri
         <WeeklyResultsTable
           rows={rows}
           activeKpis={activeKpis}
-          splitParticipantCount={splitParticipantCount}
+          presentParticipantCount={presentParticipantCount}
           showProfessionColumn={publication.participantResults.some((result) => result.splitUsedProfessions)}
           weekLocation={weekLocation}
         />
@@ -168,7 +174,8 @@ export default async function WeeklyResultsPage({ params }: { params: { id: stri
         <WeekLocationSummaryCard location={results.location} />
         <EmptyState>
           Esta semana todavía no está completa: {results.completeness.loadedCount} de {results.completeness.totalActiveCount} KPI
-          activos cargados. Completa todos los KPI activos antes de ver los resultados.
+          activos cargados. Completa todos los KPI activos y guarda las horas semanales de todos los
+          participantes aplicables antes de ver los resultados.
         </EmptyState>
         <Link href={backHref} className="inline-block text-sm text-text-muted underline hover:text-ink">
           Ir a las cargas de la semana
@@ -207,14 +214,17 @@ export default async function WeeklyResultsPage({ params }: { params: { id: stri
       applicableMaxPoints: participant.applicableMaxPoints,
       weeklyRank: participant.weeklyRank,
       positionPoints: participant.positionPoints,
-      rankedParticipantCount: results.participants.length,
+      rankedParticipantCount: results.presentParticipantCount,
+      attendanceStatus: participant.attendanceStatus,
+      totalHours: participant.totalHours,
       professionName: participant.profession?.name ?? null,
       professionKpiNames: participant.profession
         ? `${KPI_CATALOG[participant.profession.kpiCodeA].name} + ${KPI_CATALOG[participant.profession.kpiCodeB].name}`
         : null,
       professionBonusTotal: participant.professionBonusTotal,
     }))
-    .sort((a, b) => a.weeklyRank - b.weeklyRank || a.alias.localeCompare(b.alias, "es"));
+    // Presentes por posicion, despues ausentes por alias (seccion F1 del encargo `1.1.1`).
+    .sort((a, b) => (a.weeklyRank ?? Number.POSITIVE_INFINITY) - (b.weeklyRank ?? Number.POSITIVE_INFINITY) || a.alias.localeCompare(b.alias, "es"));
 
   const activeKpis = results.activeKpiCodes.map((code) => ({ code, name: KPI_CATALOG[code].name }));
 
@@ -233,8 +243,9 @@ export default async function WeeklyResultsPage({ params }: { params: { id: stri
         <p className="mt-1 text-sm text-text-muted">{weekLabel}</p>
         <p className="mt-1 text-xs text-text-muted">Calculado el {results.computedAt.toLocaleString("es-ES")}.</p>
         <p className="mt-2 text-sm text-text-muted">
-          {results.totalParticipantCount} participantes - {results.totalActiveKpiCount} KPI activos - {results.totalVacCount} valores en
-          0 por ausencia de datos en total.
+          {results.totalParticipantCount} participantes previstos · {results.presentParticipantCount} presentes ·{" "}
+          {results.absentParticipantCount} ausentes · {results.totalActiveKpiCount} KPI activos · {results.totalVacCount} valores en 0
+          por ausencia de datos en un origen ya confirmado.
         </p>
       </div>
 
@@ -254,7 +265,7 @@ export default async function WeeklyResultsPage({ params }: { params: { id: stri
       <WeeklyResultsTable
         rows={rows}
         activeKpis={activeKpis}
-        splitParticipantCount={splitParticipantCount}
+        presentParticipantCount={results.presentParticipantCount}
         showProfessionColumn={results.usesProfessions}
         weekLocation={results.location}
         isPreview

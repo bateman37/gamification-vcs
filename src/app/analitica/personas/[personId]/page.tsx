@@ -33,12 +33,7 @@ export default async function PersonaDetailPage({
     endDate,
     levels: effectiveLevels,
   });
-  const resolvedLookback = resolveObservations(observations, {
-    mode: filters.mode,
-    exclusionEnabled: filters.exclusionEnabled,
-    zeroThreshold: filters.zeroThreshold,
-    manualOverrides: filters.manualOverrides,
-  });
+  const resolvedLookback = resolveObservations(observations, { mode: filters.mode });
   const resolvedPeriod = resolvedLookback.filter(
     (o) => o.weekStartDate.getTime() >= startDate.getTime() && o.weekStartDate.getTime() <= endDate.getTime(),
   );

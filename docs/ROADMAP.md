@@ -455,6 +455,33 @@ satisfactorias.
   analitica predictiva, modelos de IA, diagnosticos personales, registros
   de vacaciones/bajas reales, y cualquier nueva mecanica de juego.
 
+## `1.1.1` — Asistencia semanal por horas y puntos por hora
+
+**Estado: completado.**
+
+- La asistencia semanal deja de inferirse (heuristica de posibles
+  ausencias de `1.1.0`) y pasa a determinarse exclusivamente por
+  "Horas totales de la semana": `totalHours > 0` = presente, `= 0` (o sin
+  guardar) = ausente/pendiente.
+- El bloque de horas semanales pasa a ser obligatorio para todo
+  participante aplicable de toda semana, independientemente de si
+  Cronomagia laboral (`WORK_CHRONOMANCY`) esta activa; el KPI en si sigue
+  siendo opcional/configurable.
+- Prioridad absoluta de la ausencia: `0` puntos KPI, `0` creditos, sin
+  bonus, sin posicion numerica, pero con los puntos de la ultima posicion
+  efectiva ocupada por una persona presente, contando en la clasificacion
+  general y en el top-3 de facciones.
+- Nueva medida "Puntos por hora" (numerador puntos KPI, denominador horas
+  totales), semanal y de periodo (razon de sumas, nunca media de razones),
+  con consolidacion explicita para splits simultaneos.
+- Eliminacion completa de la politica de exclusion de posibles ausencias
+  de `1.1.0` (umbral configurable, revision manual, `ExclusionsPanel`) y
+  nuevo selector de medida en Analitica avanzada
+  (`% del maximo | Puntos KPI | Puntos por hora`).
+- Migracion aditiva y compatible: publicaciones anteriores a esta version
+  nunca se reinterpretan (cobertura de asistencia legada, sin backfill).
+- Detalle completo en `docs/WEEKLY_ATTENDANCE_AND_HOURS.md`.
+
 ## Capas posteriores (fuera de alcance por ahora)
 
 **Estado: pendiente**, documentadas unicamente para no perder contexto:

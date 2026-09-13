@@ -6,6 +6,8 @@ import { colorBandForPercentage, COLOR_BAND_CLASSES, NOT_APPLICABLE_COLOR_BAND }
 import { resolveKpiResultDisplayPoints } from "@/domain/kpi-outcome-display";
 import type { KpiResultStatus } from "@/server/services/weekly-results.service";
 import { PROFESSION_BONUS_PERCENT } from "@/domain/profession-bonus";
+import { ABSENCE_LABEL, type WeeklyAttendanceStatus } from "@/domain/attendance";
+import { computeWeeklyPointsPerHour } from "@/domain/points-per-hour";
 
 export interface ResultKpiCell {
   kpiCode: string;
@@ -45,9 +47,13 @@ export interface ResultRow {
   kpiCells: ResultKpiCell[];
   totalKpiPoints: number;
   applicableMaxPoints: number | null;
-  weeklyRank: number;
+  /** `null` para una persona ausente esa semana, o cuando nadie estuvo presente (`1.1.1`). */
+  weeklyRank: number | null;
   positionPoints: number | null;
   rankedParticipantCount: number;
+  /** Asistencia semanal (`1.1.1`, ver docs/WEEKLY_ATTENDANCE_AND_HOURS.md). */
+  attendanceStatus: WeeklyAttendanceStatus;
+  totalHours: number;
   /** Profesion (actual en previsualizacion, congelada en una semana publicada). `null` si no hay. */
   professionName: string | null;
   professionKpiNames: string | null;
@@ -114,6 +120,13 @@ function KpiCellView({ cell, weekLocation }: { cell: ResultKpiCell; weekLocation
       </td>
     );
   }
+  if (cell.status === "ABSENT") {
+    return (
+      <td className={`px-3 py-2 text-center ${COLOR_BAND_CLASSES[NOT_APPLICABLE_COLOR_BAND.band]}`} title={ABSENCE_LABEL}>
+        Ausencia
+      </td>
+    );
+  }
   // VAC se muestra como el valor numerico 0, igual que cualquier otro cero (hotfix AVISO/0, ver docs/DECISIONS.md).
   const displayPoints = resolveKpiResultDisplayPoints(cell.status, cell.finalPoints) ?? 0;
   // El porcentaje se calcula sobre el maximo base, que no se infla con ningun bonus: por eso puede superar el 100 %
@@ -167,15 +180,15 @@ function KpiCellView({ cell, weekLocation }: { cell: ResultKpiCell; weekLocation
 export function WeeklyResultsTable({
   rows,
   activeKpis,
-  splitParticipantCount,
+  presentParticipantCount,
   showProfessionColumn,
   weekLocation,
   isPreview = false,
 }: {
   rows: ResultRow[];
   activeKpis: { code: string; name: string }[];
-  /** Numero total de participantes del split: denominador unico de "x de n" (seccion 17 de `0.7.0` / MVP-2A). */
-  splitParticipantCount: number;
+  /** Numero de presentes esta semana: denominador de "x de n" en las vistas semanales (`1.1.1`, sustituye el total del split, ver docs/WEEKLY_ATTENDANCE_AND_HOURS.md). */
+  presentParticipantCount: number;
   /** `false` cuando el split no usa profesiones: la columna no se muestra (comportamiento identico a `0.7.0`). */
   showProfessionColumn: boolean;
   /** Localizacion de esta semana (`0.8.5` / MVP-2C), o `null` si no tiene. */
@@ -199,7 +212,9 @@ export function WeeklyResultsTable({
     const copy = [...rows];
     copy.sort((a, b) => {
       let cmp = 0;
-      if (sortKey === "position") cmp = a.weeklyRank - b.weeklyRank;
+      // Los ausentes (`weeklyRank: null`) siempre quedan al final al ordenar por posicion, sin
+      // convertir `null` en `0` (no tienen ordinal que comparar).
+      if (sortKey === "position") cmp = (a.weeklyRank ?? Number.POSITIVE_INFINITY) - (b.weeklyRank ?? Number.POSITIVE_INFINITY);
       else if (sortKey === "alias") cmp = a.alias.localeCompare(b.alias, "es");
       else if (sortKey === "total") cmp = a.totalKpiPoints - b.totalKpiPoints;
       else {
@@ -242,6 +257,7 @@ export function WeeklyResultsTable({
               <th className="sticky left-0 z-10 bg-canvas px-3 py-2">{headerButton("Alias", "alias")}</th>
               <th className="px-3 py-2 font-medium">Nombre real</th>
               <th className="px-3 py-2 font-medium">Nivel</th>
+              <th className="px-3 py-2 font-medium">Asistencia</th>
               {showProfessionColumn && <th className="px-3 py-2 font-medium">Profesión</th>}
               {activeKpis.map((kpi) => (
                 <th key={kpi.code} className="px-3 py-2 text-center">
@@ -250,18 +266,33 @@ export function WeeklyResultsTable({
               ))}
               <th className="px-3 py-2 text-center">{headerButton("Total KPI", "total")}</th>
               <th className="px-3 py-2 text-center font-medium">% del máximo aplicable</th>
+              <th className="px-3 py-2 text-center font-medium">Puntos por hora</th>
               <th className="px-3 py-2 text-center">{headerButton("Posición", "position")}</th>
               <th className="px-3 py-2 text-center font-medium">Puntos por posición</th>
             </tr>
           </thead>
           <tbody>
             {sortedRows.map((row) => {
-              const percentage = row.applicableMaxPoints && row.applicableMaxPoints > 0 ? (row.totalKpiPoints / row.applicableMaxPoints) * 100 : null;
+              const isAbsent = row.attendanceStatus === "ABSENT";
+              const percentage = !isAbsent && row.applicableMaxPoints && row.applicableMaxPoints > 0 ? (row.totalKpiPoints / row.applicableMaxPoints) * 100 : null;
+              const pointsPerHour = !isAbsent ? computeWeeklyPointsPerHour(row.totalKpiPoints, row.totalHours) : null;
               return (
                 <tr key={row.splitParticipantId} className="border-b border-border">
                   <td className="sticky left-0 z-10 bg-surface px-3 py-2 font-medium">{row.alias}</td>
                   <td className="px-3 py-2 text-text-muted">{row.fullName}</td>
                   <td className="px-3 py-2 text-text-muted">{row.level}</td>
+                  <td className="px-3 py-2">
+                    {isAbsent ? (
+                      <span
+                        className="inline-block rounded-full bg-danger-soft px-2 py-0.5 text-xs font-medium text-danger-ink"
+                        title={ABSENCE_LABEL}
+                      >
+                        {ABSENCE_LABEL}
+                      </span>
+                    ) : (
+                      <span className="text-text-muted">Presente · {formatPoints(row.totalHours)} h</span>
+                    )}
+                  </td>
                   {showProfessionColumn && (
                     <td className="px-3 py-2 text-text-muted">
                       {row.professionName ? (
@@ -291,8 +322,15 @@ export function WeeklyResultsTable({
                   })}
                   <td className="px-3 py-2 text-center font-semibold">{formatPoints(row.totalKpiPoints)}</td>
                   <td className="px-3 py-2 text-center text-text-muted">{percentage === null ? "—" : `${formatPoints(percentage)} %`}</td>
+                  <td className="px-3 py-2 text-center text-text-muted">{pointsPerHour === null ? "—" : formatPoints(pointsPerHour)}</td>
                   <td className="px-3 py-2 text-center font-semibold">
-                    {row.weeklyRank} <span className="text-xs font-normal text-text-muted">de {splitParticipantCount}</span>
+                    {row.weeklyRank === null ? (
+                      "Ausencia"
+                    ) : (
+                      <>
+                        {row.weeklyRank} <span className="text-xs font-normal text-text-muted">de {presentParticipantCount}</span>
+                      </>
+                    )}
                   </td>
                   <td className="px-3 py-2 text-center font-semibold">{row.positionPoints ?? "—"}</td>
                 </tr>

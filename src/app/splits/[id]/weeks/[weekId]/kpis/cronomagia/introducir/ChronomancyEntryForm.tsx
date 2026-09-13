@@ -9,7 +9,6 @@ import {
 } from "@/server/actions/manual-entry-action-state";
 import { ErrorMessage, FieldError } from "@/components/ui";
 import { ManualEntrySuccessPanel } from "../../ManualEntrySuccessPanel";
-import { AVISO_LABEL } from "@/domain/kpi-load-status-display";
 import { formatPoints } from "@/lib/format";
 import type { ChronomancyFormRow, ChronomancyFormView } from "@/server/services/chronomancy-entry.service";
 
@@ -57,9 +56,11 @@ function ChronomancyRow({
   const productive = parseHours(productiveHours);
   const total = parseHours(totalHours);
   let occupancyText = "-";
-  if (total === 0) occupancyText = `${AVISO_LABEL} · 0 %`;
-  else if (productive !== null && total !== null && total > 0) {
+  if (total === 0) occupancyText = "Ausencia · 0 %";
+  else if (row.productiveHoursApplicable && productive !== null && total !== null && total > 0) {
     occupancyText = `${formatPoints(Math.min(productive / total, 1) * 100)} %`;
+  } else if (!row.productiveHoursApplicable) {
+    occupancyText = "No aplica";
   }
 
   return (
@@ -68,16 +69,22 @@ function ChronomancyRow({
       <td className="px-3 py-2">{row.fullName}</td>
       <td className="px-3 py-2">{row.level}</td>
       <td className="px-3 py-2">
-        <input
-          type="text"
-          inputMode="decimal"
-          name={`productiveHours__${row.participantId}`}
-          value={productiveHours}
-          onChange={(event) => setProductiveHours(event.target.value)}
-          aria-invalid={productiveError ? "true" : undefined}
-          className="w-24 rounded-control border border-border-strong px-2 py-1 text-sm"
-        />
-        <FieldError message={productiveError} />
+        {row.productiveHoursApplicable ? (
+          <>
+            <input
+              type="text"
+              inputMode="decimal"
+              name={`productiveHours__${row.participantId}`}
+              value={productiveHours}
+              onChange={(event) => setProductiveHours(event.target.value)}
+              aria-invalid={productiveError ? "true" : undefined}
+              className="w-24 rounded-control border border-border-strong px-2 py-1 text-sm"
+            />
+            <FieldError message={productiveError} />
+          </>
+        ) : (
+          <span className="text-sm text-text-muted">No aplica</span>
+        )}
       </td>
       <td className="px-3 py-2">
         <input

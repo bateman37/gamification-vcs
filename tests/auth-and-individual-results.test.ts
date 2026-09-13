@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { compare } from "bcryptjs";
 import { resetDatabase, testDb } from "./helpers/db";
+import { markAllPresent } from "./helpers/attendance";
 import { createPerson } from "@/server/services/person.service";
 import { createSplitWithWeeks, activateSplit, listSplitWeeks } from "@/server/services/split.service";
 import { addParticipant } from "@/server/services/participant.service";
@@ -116,6 +117,7 @@ describe("Privacidad de la vista individual: solo publicaciones y solo la person
       week.id,
       form({ [`resultValue__${participantA.id}`]: "1", [`resultValue__${(await testDb.splitParticipant.findFirstOrThrow({ where: { personId: personB.id } })).id}`]: "1" }),
     );
+    await markAllPresent(testDb, split.id, week.id);
     await publishWeek(testDb, split.id, week.id, null);
 
     const detailA = await getPersonSplitDetail(testDb, personA.id, split.id);
@@ -140,6 +142,7 @@ describe("Privacidad de la vista individual: solo publicaciones y solo la person
     await activateSplit(testDb, split.id);
     const week = (await listSplitWeeks(testDb, split.id))[0]!;
     await saveStabilityEntries(testDb, split.id, week.id, form({ [`resultValue__${participantA.id}`]: "1", [`resultValue__${participantB.id}`]: "1" }));
+    await markAllPresent(testDb, split.id, week.id);
     await publishWeek(testDb, split.id, week.id, null);
 
     // Se anade una tercera persona despues de publicar, sin ningun resultado publicado todavia.

@@ -7,6 +7,7 @@ import { formatCalendarDate } from "@/lib/dates";
 import { formatPoints } from "@/lib/format";
 import type { WorkChronomancyOutcomeView } from "@/domain/kpis/chronomancy";
 import { AVISO_LABEL } from "@/domain/kpi-load-status-display";
+import { ABSENCE_LABEL, HOURS_NOT_RECORDED_LABEL, type WeeklyAttendanceResolution } from "@/domain/attendance";
 import { EmptyState } from "@/components/ui";
 
 function formatOutcome(outcome: WorkChronomancyOutcomeView | null): string {
@@ -22,6 +23,11 @@ function formatOccupancy(outcome: WorkChronomancyOutcomeView | null): string {
   if (outcome.status === "vac") return "0 %";
   if (outcome.status !== "computed" || outcome.occupancy === undefined) return "-";
   return `${formatPoints(outcome.occupancy * 100)} %`;
+}
+
+function formatAttendance(attendance: WeeklyAttendanceResolution): string {
+  if (!attendance.recorded) return HOURS_NOT_RECORDED_LABEL;
+  return attendance.status === "PRESENT" ? "Presente" : ABSENCE_LABEL;
 }
 
 export default async function ChronomancyCheckPage({ params }: { params: { id: string; weekId: string } }) {
@@ -56,6 +62,7 @@ export default async function ChronomancyCheckPage({ params }: { params: { id: s
                 <th className="px-3 py-2 font-medium">Alias</th>
                 <th className="px-3 py-2 font-medium">Nombre real</th>
                 <th className="px-3 py-2 font-medium">Nivel</th>
+                <th className="px-3 py-2 font-medium">Asistencia</th>
                 <th className="px-3 py-2 font-medium">Horas productivas</th>
                 <th className="px-3 py-2 font-medium">Horas totales</th>
                 <th className="px-3 py-2 font-medium">Occupancy</th>
@@ -68,7 +75,8 @@ export default async function ChronomancyCheckPage({ params }: { params: { id: s
                   <td className="px-3 py-2">{row.alias}</td>
                   <td className="px-3 py-2">{row.fullName}</td>
                   <td className="px-3 py-2">{row.level}</td>
-                  <td className="px-3 py-2">{row.productiveHours ?? "Sin dato"}</td>
+                  <td className="px-3 py-2">{formatAttendance(row.attendance)}</td>
+                  <td className="px-3 py-2">{row.productiveHours ?? "No aplica"}</td>
                   <td className="px-3 py-2">{row.totalHours ?? "Sin dato"}</td>
                   <td className="px-3 py-2">{formatOccupancy(row.workChronomancy)}</td>
                   {view.workChronomancyActive && <td className="px-3 py-2">{formatOutcome(row.workChronomancy)}</td>}

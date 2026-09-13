@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { resetDatabase, testDb } from "./helpers/db";
+import { markAllPresent } from "./helpers/attendance";
 import { buildWorkbookBuffer, PRODUCTIVITY_HEADERS } from "./helpers/xlsx";
 import { createPerson } from "@/server/services/person.service";
 import { createSplitWithWeeks, activateSplit, listSplitWeeks } from "@/server/services/split.service";
@@ -202,6 +203,7 @@ describe("Ventana temporal", () => {
       form({ [`deliveredArticles__${participant.id}`]: "1", [`undeliveredArticles__${participant.id}`]: "0", [`proposedArticles__${participant.id}`]: "0" }),
     );
 
+    await markAllPresent(testDb, split.id, week.id);
     await publishWeek(testDb, split.id, week.id, null);
 
     await expect(
@@ -282,6 +284,7 @@ describe("Calculo: composicion no encadenada con profesion", () => {
     await upsertWeekLocation(testDb, split.id, week.id, { name: "Nebulosa", kpiCode: "STAR_WRITER", bonusPercent: 30 });
     const participant = await buildParticipantWithDeliveredArticles(split.id, week.id, 5);
 
+    await markAllPresent(testDb, split.id, week.id);
     const results = await computeWeeklyResults(testDb, split.id, week.id);
     const row = results.participants.find((p) => p.splitParticipantId === participant.id)!;
     const cell = row.kpiResults.find((k) => k.kpiCode === "STAR_WRITER")!;
@@ -301,6 +304,7 @@ describe("Calculo: composicion no encadenada con profesion", () => {
     await upsertWeekLocation(testDb, split.id, week.id, { name: "Nebulosa", kpiCode: "STAR_WRITER", bonusPercent: 30 });
     const participant = await buildParticipantWithDeliveredArticles(split.id, week.id, 8);
 
+    await markAllPresent(testDb, split.id, week.id);
     const results = await computeWeeklyResults(testDb, split.id, week.id);
     const cell = results.participants.find((p) => p.splitParticipantId === participant.id)!.kpiResults.find((k) => k.kpiCode === "STAR_WRITER")!;
     expect(cell.basePointsBeforeProfession).toBe(70);
@@ -345,6 +349,7 @@ describe("Calculo: composicion no encadenada con profesion", () => {
       }),
     );
 
+    await markAllPresent(testDb, split.id, week.id);
     const results = await computeWeeklyResults(testDb, split.id, week.id);
     const cell = results.participants.find((p) => p.splitParticipantId === participant.id)!.kpiResults.find((k) => k.kpiCode === "STAR_WRITER")!;
     expect(cell.basePointsBeforeProfession).toBe(70);
@@ -400,6 +405,7 @@ describe("Calculo: composicion no encadenada con profesion", () => {
     const productivityBuffer = await buildWorkbookBuffer([PRODUCTIVITY_HEADERS, ["Persona Decoy", 1, 0, 0, 0, 0, 1, 0]]);
     await confirmProductivityImport(testDb, split.id, week.id, { buffer: productivityBuffer, originalFilename: "productividad.xlsx" });
 
+    await markAllPresent(testDb, split.id, week.id);
     const results = await computeWeeklyResults(testDb, split.id, week.id);
     const row = results.participants.find((p) => p.splitParticipantId === participant.id)!;
     const writerCell = row.kpiResults.find((k) => k.kpiCode === "STAR_WRITER")!;
@@ -427,6 +433,7 @@ describe("Calculo: composicion no encadenada con profesion", () => {
     const buffer = await buildWorkbookBuffer([PRODUCTIVITY_HEADERS, ["Persona Decoy", 1, 0, 0, 0, 0, 1, 0]]);
     await confirmProductivityImport(testDb, split.id, week.id, { buffer, originalFilename: "productividad.xlsx" });
 
+    await markAllPresent(testDb, split.id, week.id);
     const results = await computeWeeklyResults(testDb, split.id, week.id);
     const cell = results.participants.find((p) => p.splitParticipantId === participant.id)!.kpiResults.find((k) => k.kpiCode === "SOLUTION_HUNTER")!;
     expect(cell.status).toBe("VAC");
@@ -447,6 +454,7 @@ describe("Calculo: composicion no encadenada con profesion", () => {
     const participant = await addParticipant(testDb, split.id, { personId: person.id, alias: "N1", level: "N1", startWeekSequenceNumber: 1 });
     await activateSplit(testDb, split.id);
 
+    await markAllPresent(testDb, split.id, week.id);
     const results = await computeWeeklyResults(testDb, split.id, week.id);
     const cell = results.participants.find((p) => p.splitParticipantId === participant.id)!.kpiResults.find((k) => k.kpiCode === "STABILITY_GUARDIAN")!;
     expect(cell.status).toBe("NOT_APPLICABLE");
@@ -474,6 +482,7 @@ describe("Calculo: composicion no encadenada con profesion", () => {
       }),
     );
 
+    await markAllPresent(testDb, split.id, week.id);
     const results = await computeWeeklyResults(testDb, split.id, week.id);
     const cell = results.participants.find((p) => p.splitParticipantId === participant.id)!.kpiResults.find((k) => k.kpiCode === "STAR_WRITER")!;
     expect(cell.status).toBe("COMPUTED");
@@ -503,6 +512,7 @@ describe("Calculo: composicion no encadenada con profesion", () => {
       }),
     );
 
+    await markAllPresent(testDb, split.id, week.id);
     const results = await computeWeeklyResults(testDb, split.id, week.id);
     const cell = results.participants.find((p) => p.splitParticipantId === participant.id)!.kpiResults.find((k) => k.kpiCode === "STAR_WRITER")!;
     expect(cell.finalPoints).toBeLessThan(0);
@@ -519,6 +529,7 @@ describe("Calculo: composicion no encadenada con profesion", () => {
     await upsertWeekLocation(testDb, split.id, week.id, { name: "Nebulosa", kpiCode: "STAR_WRITER", bonusPercent: 50 });
     const participant = await buildParticipantWithDeliveredArticles(split.id, week.id, 8);
 
+    await markAllPresent(testDb, split.id, week.id);
     const results = await computeWeeklyResults(testDb, split.id, week.id);
     const row = results.participants.find((p) => p.splitParticipantId === participant.id)!;
     expect(row.applicableMaxPoints).toBe(70);
@@ -553,6 +564,7 @@ describe("Publicacion e historico", () => {
 
   it("congela nombre, KPI y porcentaje de la localizacion, y el desglose por KPI", async () => {
     const { split, week, person } = await buildReadySplitWithLocation();
+    await markAllPresent(testDb, split.id, week.id);
     await publishWeek(testDb, split.id, week.id, null);
 
     const publication = await testDb.weekPublication.findUnique({ where: { splitWeekId: week.id }, include: { participantResults: { include: { kpiResults: true } } } });
@@ -585,6 +597,7 @@ describe("Publicacion e historico", () => {
       form({ [`deliveredArticles__${participant.id}`]: "1", [`undeliveredArticles__${participant.id}`]: "0", [`proposedArticles__${participant.id}`]: "0" }),
     );
 
+    await markAllPresent(testDb, split.id, week.id);
     await publishWeek(testDb, split.id, week.id, null);
     const publication = await testDb.weekPublication.findUnique({ where: { splitWeekId: week.id } });
     expect(publication!.locationNameSnapshot).toBeNull();
@@ -594,6 +607,7 @@ describe("Publicacion e historico", () => {
   it("una publicacion anterior a 0.8.5 (sin campos de localizacion) sigue siendo legible", async () => {
     // Simula una publicacion antigua actualizando directamente sus campos a null, como quedarian con la migracion.
     const { split, week, person } = await buildReadySplitWithLocation();
+    await markAllPresent(testDb, split.id, week.id);
     await publishWeek(testDb, split.id, week.id, null);
     await testDb.weekPublication.update({
       where: { splitWeekId: week.id },
@@ -611,6 +625,7 @@ describe("Publicacion e historico", () => {
 
   it("el historico suma unicamente los locationBonusPoints publicados", async () => {
     const { split, week, person } = await buildReadySplitWithLocation();
+    await markAllPresent(testDb, split.id, week.id);
     await publishWeek(testDb, split.id, week.id, null);
 
     const history = await getPersonHistory(testDb, person.id, { year: "todos", splitId: "todos", grouping: "semana" });

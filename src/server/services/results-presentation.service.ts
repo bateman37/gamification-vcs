@@ -53,8 +53,10 @@ export interface SplitResultsPresentationData {
   weekStartDate: Date;
   weekEndDate: Date;
   publishedAt: Date;
-  /** Top 6 (con empates) de la clasificacion individual de esa semana. */
+  /** Top 6 (con empates) de la clasificacion individual de esa semana. Excluye siempre a las ausencias (`1.1.1`). */
   weeklyIndividualTop: PresentationParticipant[];
+  /** Presentes de la ultima semana publicada (`1.1.1`): `0` activa el estado vacio "No hay participantes presentes en esta semana". */
+  weeklyPresentCount: number;
   /** Top 6 (con empates) de la clasificacion general individual acumulada hasta esa semana. */
   generalIndividualTop: PresentationParticipant[];
   /** Tabla completa (no solo el top 6) para la pantalla final de resumen. */
@@ -98,8 +100,10 @@ export async function buildSplitResultsPresentation(db: PrismaClient, splitId: s
   });
   const avatarVersionById = new Map(avatars.map((avatar) => [avatar.splitParticipantId, avatar.sha256]));
 
+  // Una ausencia no tiene posicion semanal (`1.1.1`, ver docs/WEEKLY_ATTENDANCE_AND_HOURS.md): nunca
+  // entra en el top semanal, aunque conserve sus puntos por posicion en la clasificacion general.
   const weeklyIndividualTop: PresentationParticipant[] = weeklyResults
-    .filter((row) => row.weeklyRank <= 6)
+    .filter((row): row is typeof row & { weeklyRank: number } => row.weeklyRank !== null && row.weeklyRank <= 6)
     .map((row) => ({
       splitParticipantId: row.splitParticipantId,
       alias: row.aliasSnapshot,
@@ -107,6 +111,7 @@ export async function buildSplitResultsPresentation(db: PrismaClient, splitId: s
       rank: row.weeklyRank,
       points: row.totalKpiPoints.toNumber(),
     }));
+  const weeklyPresentCount = weeklyResults.filter((row) => row.attendanceStatus !== "ABSENT").length;
 
   const generalIndividualTop: PresentationParticipant[] = classification.entries
     .filter((entry) => entry.rank <= 6)
@@ -167,6 +172,7 @@ export async function buildSplitResultsPresentation(db: PrismaClient, splitId: s
       weekEndDate: lastPublication.splitWeek.endDate,
       publishedAt: lastPublication.publishedAt,
       weeklyIndividualTop,
+      weeklyPresentCount,
       generalIndividualTop,
       generalIndividualFull,
       hasFactionData: factionClassification.hasFactionData,

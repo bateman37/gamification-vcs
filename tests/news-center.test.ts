@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { resetDatabase, testDb } from "./helpers/db";
+import { markAllPresent } from "./helpers/attendance";
 import { createPerson } from "@/server/services/person.service";
 import { createSplitWithWeeks, activateSplit } from "@/server/services/split.service";
 import { addParticipant, updateParticipant } from "@/server/services/participant.service";
@@ -419,6 +420,7 @@ describe("Mercado y compra", () => {
     });
     const week = await testDb.splitWeek.findFirstOrThrow({ where: { splitId: split.id, sequenceNumber: 1 } });
     await saveStabilityEntries(testDb, split.id, week.id, form({ [`resultValue__${participant.id}`]: "20" }));
+    await markAllPresent(testDb, split.id, week.id);
     await publishWeek(testDb, split.id, week.id, null);
     await openMarket(testDb, split.id);
     await testDb.newsItem.deleteMany({ where: { category: "PURCHASE" } });
@@ -460,6 +462,7 @@ describe("Publicacion semanal: resumen personalizado", () => {
     await saveStabilityEntries(testDb, split.id, week.id, form({ [`resultValue__${pA.id}`]: "10", [`resultValue__${pB.id}`]: "5" }));
 
     await testDb.newsItem.deleteMany({});
+    await markAllPresent(testDb, split.id, week.id);
     const result = await publishWeek(testDb, split.id, week.id, null);
     expect(result.alreadyPublished).toBe(false);
 
@@ -488,6 +491,7 @@ describe("Publicacion semanal: resumen personalizado", () => {
     expect(await testDb.newsItem.count()).toBe(0);
 
     await saveStabilityEntries(testDb, split.id, week.id, form({ [`resultValue__${participant.id}`]: "10" }));
+    await markAllPresent(testDb, split.id, week.id);
     // Carrera concurrente: dos publicaciones simultaneas de la misma semana solo deben crear un
     // resumen, nunca dos (la segunda se resuelve de forma idempotente, ver publish-week.service.ts).
     const [resultA, resultB] = await Promise.all([

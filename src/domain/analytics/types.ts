@@ -17,7 +17,7 @@ export type GamificationDisplayMode = "sin" | "con";
 export interface KpiCellObservation {
   kpiCode: string;
   kpiName: string;
-  status: "COMPUTED" | "VAC" | "NOT_APPLICABLE";
+  status: "COMPUTED" | "VAC" | "NOT_APPLICABLE" | "ABSENT";
   /** `finalPoints` oficial (con bonus). `null` solo si `NOT_APPLICABLE`. */
   finalPoints: number | null;
   /** `basePointsBeforeProfession` tal cual, sin fallback. `null` en publicaciones antiguas o inconsistencias. */
@@ -44,6 +44,15 @@ export interface ParticipantWeekObservation {
   publishedAt: Date;
   levelSnapshot: AnalyticsLevel;
   creditsEarned: number;
+  /**
+   * Asistencia semanal congelada (`1.1.1`, ver
+   * docs/WEEKLY_ATTENDANCE_AND_HOURS.md). `null` en publicaciones anteriores
+   * a esta version: cobertura legacy desconocida, nunca se reinterpreta como
+   * presente o ausente.
+   */
+  attendanceStatus: "PRESENT" | "ABSENT" | null;
+  /** Horas totales de la semana congeladas. `null` cuando `attendanceStatus` es `null` o la persona estaba ausente. */
+  totalHours: number | null;
   cells: KpiCellObservation[];
 }
 
@@ -62,6 +71,9 @@ export interface ResolvedCellBase {
   usedLegacyFallback: boolean;
 }
 
+/** Medida principal de los bloques 1-4 (`1.1.1`, sustituye la politica de ceros de `1.1.0`). */
+export type AnalyticsMeasure = "percentage" | "points" | "pph";
+
 export interface AnalyticsFilters {
   splitIds: string[];
   /** Intervalo inclusivo por `weekStartDate` (fecha de calendario UTC). */
@@ -69,13 +81,10 @@ export interface AnalyticsFilters {
   endDate: Date;
   levels: AnalyticsLevel[];
   mode: GamificationDisplayMode;
-  /** Politica de exclusion de posibles ausencias (parte F). */
-  excludeZeroObservations: boolean;
-  zeroThreshold: number;
-  /** Excepciones manuales de la consulta actual (parte F2), por `participantWeeklyResultId`. */
-  manualOverrides: Record<string, "include" | "exclude">;
   /** Agrupacion temporal de graficos (independiente del intervalo). */
   grouping: "semana" | "mes" | "año";
+  /** Medida seleccionada: `% del maximo` | `Puntos KPI` | `Puntos por hora` (`1.1.1`). */
+  measure: AnalyticsMeasure;
 }
 
 export type TemporalGrouping = AnalyticsFilters["grouping"];

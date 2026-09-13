@@ -30,6 +30,7 @@ export function PersonDetailView({
         <StatCard label="Semanas válidas / excluidas" value={`${summary.validWeekCount} / ${summary.excludedWeekCount}`} />
         <StatCard label="Media semanal de puntos" value={formatPointsEs(summary.averageWeeklyPoints)} tone="primary" />
         <StatCard label="Índice KPI medio" value={formatPercentEs(summary.teamIndex)} tone="game" />
+        <StatCard label="Puntos KPI por hora" value={summary.pointsPerHour === null ? "No calculable" : formatPointsEs(summary.pointsPerHour)} />
       </dl>
 
       <div className="rounded-card border border-border bg-surface p-4">
@@ -54,6 +55,8 @@ export function PersonDetailView({
                 <th className="px-3 py-2">Nivel</th>
                 <th className="px-3 py-2">Puntos</th>
                 <th className="px-3 py-2">Índice</th>
+                <th className="px-3 py-2">Horas totales</th>
+                <th className="px-3 py-2">Puntos por hora</th>
                 <th className="px-3 py-2">Media del resto (N)</th>
                 <th className="px-3 py-2">Diferencia</th>
                 <th className="px-3 py-2">Estado</th>
@@ -68,11 +71,17 @@ export function PersonDetailView({
                   <td className="px-3 py-2">{week.levelSnapshot}</td>
                   <td className="px-3 py-2 tabular">{formatPointsEs(week.totalPointsValid)}</td>
                   <td className="px-3 py-2 tabular">{formatPercentEs(week.indexNormalized)}</td>
+                  <td className="px-3 py-2 tabular">{week.totalHours === null ? "—" : formatPointsEs(week.totalHours)}</td>
+                  <td className="px-3 py-2 tabular">{week.pointsPerHour === null ? "—" : formatPointsEs(week.pointsPerHour)}</td>
                   <td className="px-3 py-2 tabular">
                     {formatPercentEs(week.restOfLevelAverage)} ({week.restOfLevelCount})
                   </td>
                   <td className="px-3 py-2 tabular">{formatPpEs(week.diffPpVsRest)}</td>
-                  <td className="px-3 py-2">{week.excluded ? <Badge tone="amber">Excluida ({week.decision})</Badge> : <Badge tone="green">Incluida</Badge>}</td>
+                  <td className="px-3 py-2">
+                    {week.attendance === "PRESENT" && <Badge tone="green">Presente</Badge>}
+                    {week.attendance === "ABSENT" && <Badge tone="amber">Ausencia · Sin datos semanales</Badge>}
+                    {week.attendance === "UNKNOWN_LEGACY" && <Badge tone="slate">Asistencia no disponible</Badge>}
+                  </td>
                   <td className="px-3 py-2">
                     <Link href={`/splits/${week.splitId}/weeks/${week.splitWeekId}/resultados`} className="text-primary hover:underline">
                       Ver publicación
@@ -110,7 +119,9 @@ export function PersonDetailView({
                       <td className="px-3 py-2">{formatDateEs(week.weekStartDate)}</td>
                       <td className="px-3 py-2">{cell.kpiName}</td>
                       <td className="px-3 py-2">
-                        <Badge tone={cell.status === "COMPUTED" ? "green" : "amber"}>{cell.status === "COMPUTED" ? "Computado" : "Ausencia (VAC)"}</Badge>
+                        <Badge tone={cell.status === "COMPUTED" ? "green" : "amber"}>
+                          {cell.status === "COMPUTED" ? "Computado" : cell.status === "ABSENT" ? "Ausencia · Sin datos semanales" : "Sin dato (VAC)"}
+                        </Badge>
                       </td>
                       <td className="px-3 py-2 tabular">{cell.basePoints !== null ? formatPointsEs(cell.basePoints) : "Dato base no disponible"}</td>
                       <td className="px-3 py-2 tabular">{formatPointsEs(cell.finalPoints)}</td>

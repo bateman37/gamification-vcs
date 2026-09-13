@@ -1,7 +1,7 @@
 import { requireAdminSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { PageHeader } from "@/components/ui";
-import { buildAnalyticsSnapshot, resolveObservations, DEFAULT_ZERO_THRESHOLD } from "@/domain/analytics";
+import { buildAnalyticsSnapshot, resolveObservations } from "@/domain/analytics";
 import { KPI_CATALOG_FOR_ANALYTICS, loadParticipantWeekObservationsWithLookback } from "@/server/services/analytics.service";
 import { ANALYTICS_TABS, type RawSearchParams } from "./filters";
 import { resolveEffectiveScope } from "./scope";
@@ -38,12 +38,7 @@ export default async function AnaliticaPage({ searchParams }: { searchParams: Ra
     levels: effectiveLevels,
   });
 
-  const resolvedLookback = resolveObservations(lookbackObservations, {
-    mode: filters.mode,
-    exclusionEnabled: filters.exclusionEnabled,
-    zeroThreshold: filters.zeroThreshold,
-    manualOverrides: filters.manualOverrides,
-  });
+  const resolvedLookback = resolveObservations(lookbackObservations, { mode: filters.mode });
   const resolvedPeriod = resolvedLookback.filter((o) => o.weekStartDate.getTime() >= startDate.getTime() && o.weekStartDate.getTime() <= endDate.getTime());
 
   const snapshot = buildAnalyticsSnapshot(
@@ -64,9 +59,6 @@ export default async function AnaliticaPage({ searchParams }: { searchParams: Ra
           startDate,
           endDate,
           levels: effectiveLevels,
-          exclusionEnabled: filters.exclusionEnabled,
-          zeroThreshold: filters.zeroThreshold,
-          manualOverrides: filters.manualOverrides,
         })
       : null;
 
@@ -82,16 +74,15 @@ export default async function AnaliticaPage({ searchParams }: { searchParams: Ra
         startDate={startDate}
         endDate={endDate}
         periodWeekStartDates={snapshot.periodWeekStartDates}
-        defaultZeroThreshold={DEFAULT_ZERO_THRESHOLD}
       />
 
       <AnalyticsTabsNav tabs={ANALYTICS_TABS} activeTab={filters.tab} searchParams={searchParams} />
 
-      {filters.tab === "vision-general" && <OverviewTab snapshot={snapshot} searchParams={searchParams} />}
+      {filters.tab === "vision-general" && <OverviewTab snapshot={snapshot} measure={filters.measure} />}
       {filters.tab === "rendimiento-kpi" && <KpiPerformanceTab snapshot={snapshot} selectedKpi={filters.selectedKpi} searchParams={searchParams} />}
       {filters.tab === "evolucion" && <TeamEvolutionTab snapshot={snapshot} filters={filters} searchParams={searchParams} />}
-      {filters.tab === "distribucion" && <DistributionTab snapshot={snapshot} selectedKpi={filters.selectedKpi} searchParams={searchParams} />}
-      {filters.tab === "personas" && <PersonAnalysisTab snapshot={snapshot} searchParams={searchParams} />}
+      {filters.tab === "distribucion" && <DistributionTab snapshot={snapshot} selectedKpi={filters.selectedKpi} measure={filters.measure} searchParams={searchParams} />}
+      {filters.tab === "personas" && <PersonAnalysisTab snapshot={snapshot} />}
       {filters.tab === "gamificacion" && gamificationData && <GamificationImpactTab data={gamificationData} startDate={startDate} endDate={endDate} />}
     </div>
   );

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { resetDatabase, testDb } from "./helpers/db";
+import { markAllPresent } from "./helpers/attendance";
 import { createPerson } from "@/server/services/person.service";
 import { createSplitWithWeeks, activateSplit, listSplitWeeks } from "@/server/services/split.service";
 import { addParticipant } from "@/server/services/participant.service";
@@ -51,6 +52,7 @@ describe("buildSplitResultsPresentation: elige la ultima semana publicada", () =
     const [week1, week2] = await listSplitWeeks(testDb, split.id);
 
     await saveStabilityEntries(testDb, split.id, week1!.id, form({ [`resultValue__${participant.id}`]: "10" }));
+    await markAllPresent(testDb, split.id, week1!.id);
     await publishWeek(testDb, split.id, week1!.id, null);
 
     // La semana 2 tambien queda completa (mismo KPI activo, misma fila guardada) pero nunca se publica:
@@ -82,6 +84,7 @@ describe("buildSplitResultsPresentation: fuentes oficiales, nunca recalculadas",
     const entries: Record<string, string> = {};
     participants.forEach((participant, index) => (entries[`resultValue__${participant.id}`] = String(scores[index])));
     await saveStabilityEntries(testDb, split.id, week.id, form(entries));
+    await markAllPresent(testDb, split.id, week.id);
     await publishWeek(testDb, split.id, week.id, null);
     return { split, week, participants };
   }
@@ -161,6 +164,7 @@ describe("buildSplitResultsPresentation: facciones", () => {
     participantsA.forEach((participant, index) => (entries[`resultValue__${participant.id}`] = String(scoresA[index])));
     participantsB.forEach((participant, index) => (entries[`resultValue__${participant.id}`] = String(scoresB[index])));
     await saveStabilityEntries(testDb, split.id, week.id, form(entries));
+    await markAllPresent(testDb, split.id, week.id);
     await publishWeek(testDb, split.id, week.id, null);
 
     const result = await buildSplitResultsPresentation(testDb, split.id);

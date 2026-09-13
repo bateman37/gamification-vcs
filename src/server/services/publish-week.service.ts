@@ -3,10 +3,14 @@ import { DomainError } from "@/lib/errors";
 import { getSplitById, getSplitWeek, listSplitWeeks } from "@/server/services/split.service";
 import { computeWeeklyResults } from "@/server/services/weekly-results.service";
 import { computeCreditsEarned } from "@/domain/credits";
-import { countParticipantsForSplit } from "@/server/services/participant.service";
 import { createNewsWithDeliveries, resolveActiveAdminUserIds } from "@/server/services/news.service";
 import { buildNewsActionPath } from "@/domain/news-links";
-import { weekPublishedNewsTemplate, adminWeekPublishedNewsTemplate, adminNextLocationMissingNewsTemplate } from "@/domain/news-templates";
+import {
+  weekPublishedNewsTemplate,
+  adminWeekPublishedNewsTemplate,
+  adminNextLocationMissingNewsTemplate,
+  adminWeekAllAbsentNewsTemplate,
+} from "@/domain/news-templates";
 import { resolveWeekLocationWindow } from "@/domain/location-window";
 import { currentCalendarDate } from "@/lib/dates";
 
@@ -74,9 +78,6 @@ export async function publishWeek(
         const factionById = new Map(factions.map((faction) => [faction.id, faction]));
         const factionRankById = new Map(results.factionPreview.factions.map((entry) => [entry.factionId, entry.weeklyRank]));
 
-        // Denominador unico de "x de n" en toda la aplicacion: el total de participantes del split,
-        // nunca el numero de participantes que entraron en el ranking de esta semana concreta.
-        const totalSplitParticipantCount = await countParticipantsForSplit(tx, splitId);
         // Primera publicacion del split (seccion 35 del encargo): si un participante tiene profesion,
         // su resumen semanal puede anadir que la profesion ya es definitiva.
         const isFirstPublicationForSplit = (await tx.weekPublication.count({ where: { splitWeek: { splitId } } })) === 0;
@@ -96,7 +97,9 @@ export async function publishWeek(
 
         for (const participant of results.participants) {
           if (participant.positionPoints === null) {
-            throw new DomainError(`Falta la regla de puntos por posicion para la posicion ${participant.weeklyRank}.`);
+            throw new DomainError(
+              `Falta la regla de puntos por posicion para la posicion ${participant.positionPointsRuleRank ?? participant.weeklyRank}.`,
+            );
           }
 
           const faction = participant.factionId ? factionById.get(participant.factionId) ?? null : null;
@@ -118,7 +121,10 @@ export async function publishWeek(
               applicableMaxPoints: participant.applicableMaxPoints,
               weeklyRank: participant.weeklyRank,
               positionPoints: participant.positionPoints,
-              rankedParticipantCount: results.participants.length,
+              // Denominador semanal (`1.1.1`, ver docs/WEEKLY_ATTENDANCE_AND_HOURS.md): el numero de
+              // presentes esa semana, nunca el total de participantes aplicables (que puede incluir
+              // ausentes que no ocupan ningun ordinal).
+              rankedParticipantCount: results.presentParticipantCount,
               factionId: faction?.id ?? null,
               factionNameSnapshot: faction?.name ?? null,
               factionColorSnapshot: faction?.color ?? null,
@@ -129,6 +135,10 @@ export async function publishWeek(
               professionBonusPercent: profession?.bonusPercent ?? null,
               splitUsedProfessions: results.usesProfessions,
               creditsEarned,
+              attendanceStatus: participant.attendanceStatus,
+              totalHoursSnapshot: participant.totalHours,
+              productiveHoursSnapshot: participant.productiveHours,
+              positionPointsRuleRank: participant.positionPointsRuleRank,
             },
           });
 
@@ -196,7 +206,7 @@ export async function publishWeek(
             weekStartDate: week.startDate,
             totalKpiPoints: participant.totalKpiPoints,
             rank: participant.weeklyRank,
-            totalParticipants: totalSplitParticipantCount,
+            totalParticipants: results.presentParticipantCount,
             positionPoints: participant.positionPoints,
             creditsEarned,
             faction: factionNews,
@@ -246,6 +256,25 @@ export async function publishWeek(
             },
             adminUserIds.map((userId) => ({ userId, actionPath: buildNewsActionPath({ kind: "WEEK_RESULTS_ADMIN", splitId, weekId: week.id }, "USER") })),
           );
+
+          // Semana con todos ausentes (`1.1.1`, seccion E4/F6): aviso administrativo dedicado, sin
+          // afirmar un ranking que no existe.
+          if (results.presentParticipantCount === 0) {
+            const allAbsentText = adminWeekAllAbsentNewsTemplate({ splitName: split.name, weekStartDate: week.startDate });
+            await createNewsWithDeliveries(
+              tx,
+              {
+                splitId,
+                splitNameSnapshot: split.name,
+                origin: "AUTOMATIC",
+                category: "ADMIN",
+                title: allAbsentText.title,
+                body: allAbsentText.body,
+                eventKey: `admin-week-all-absent:${created.id}`,
+              },
+              adminUserIds.map((userId) => ({ userId, actionPath: buildNewsActionPath({ kind: "WEEK_RESULTS_ADMIN", splitId, weekId: week.id }, "USER") })),
+            );
+          }
 
           // Proxima ubicacion pendiente (seccion 39 del encargo): solo si la siguiente semana sigue
           // siendo futura, editable y todavia no tiene ninguna localizacion configurada.

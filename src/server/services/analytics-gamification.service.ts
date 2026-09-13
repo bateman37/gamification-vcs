@@ -8,7 +8,6 @@ import {
   sumOpeningBalance,
   computeClosingBalance,
   type AnalyticsLevel,
-  type ManualOverride,
   type EquippedItemAggregate,
   type GamificationBonusSnapshot,
 } from "@/domain/analytics";
@@ -50,9 +49,6 @@ export interface GamificationTabScope {
   startDate: Date;
   endDate: Date;
   levels: AnalyticsLevel[];
-  exclusionEnabled: boolean;
-  zeroThreshold: number;
-  manualOverrides: ReadonlyMap<string, ManualOverride>;
 }
 
 export async function buildGamificationTabData(db: Db, scope: GamificationTabScope): Promise<GamificationTabData> {
@@ -63,12 +59,7 @@ export async function buildGamificationTabData(db: Db, scope: GamificationTabSco
     levels: scope.levels,
   });
 
-  const resolvedSin = resolveObservations(observations, {
-    mode: "sin",
-    exclusionEnabled: scope.exclusionEnabled,
-    zeroThreshold: scope.zeroThreshold,
-    manualOverrides: scope.manualOverrides,
-  }).filter((o) => !o.excluded);
+  const resolvedSin = resolveObservations(observations, { mode: "sin" }).filter((o) => !o.excluded);
 
   const bonus = buildGamificationBonusSnapshot(resolvedSin, KPI_CATALOG_FOR_ANALYTICS);
 

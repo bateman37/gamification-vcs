@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { resetDatabase, testDb } from "./helpers/db";
+import { markAllPresent } from "./helpers/attendance";
 import { buildWorkbookBuffer, PRODUCTIVITY_HEADERS } from "./helpers/xlsx";
 import { createPerson } from "@/server/services/person.service";
 import { createSplitWithWeeks, activateSplit, listSplitWeeks } from "@/server/services/split.service";
@@ -152,6 +153,8 @@ describe("Clasificacion e historico: una semana VAC participa en sumas/rankings 
     const buffer2 = await buildWorkbookBuffer([PRODUCTIVITY_HEADERS, ["Persona Otra", 5, 0, 0, 0, 0, 5, 0]]);
     await confirmProductivityImport(testDb, split.id, week2!.id, { buffer: buffer2, originalFilename: "semana2.xlsx" });
 
+    await markAllPresent(testDb, split.id, week1!.id);
+    await markAllPresent(testDb, split.id, week2!.id);
     await publishWeek(testDb, split.id, week1!.id, null);
     await publishWeek(testDb, split.id, week2!.id, null);
 
@@ -203,6 +206,7 @@ describe("Clasificacion e historico: una semana VAC participa en sumas/rankings 
     await activateSplit(testDb, split.id);
     const week = (await listSplitWeeks(testDb, split.id))[0]!;
     await saveStabilityEntries(testDb, split.id, week.id, form({ [`resultValue__${participantN2.id}`]: "1" }));
+    await markAllPresent(testDb, split.id, week.id);
     await publishWeek(testDb, split.id, week.id, null);
 
     const entries = await computeSplitKpiClassification(testDb, split.id, "STABILITY_GUARDIAN", null);

@@ -506,14 +506,19 @@ model StabilityWeeklyEntry {
 }
 
 /// Entrada manual semanal de Cronomagia laboral (`WORK_CHRONOMANCY`, ver
-/// docs/MANUAL_KPI_ENTRY.md). `totalHours = 0` significa vacaciones toda la
-/// semana (VAC, sin puntos); el occupancy no se guarda, se calcula al
-/// consultar.
+/// docs/MANUAL_KPI_ENTRY.md y, desde `1.1.1`,
+/// docs/WEEKLY_ATTENDANCE_AND_HOURS.md). `totalHours` es ahora tambien el
+/// unico dato operativo de asistencia semanal (`totalHours = 0` significa
+/// ausencia, con prioridad sobre cualquier otro KPI), independiente de si
+/// `WORK_CHRONOMANCY` esta activo. `productiveHours` es nullable desde
+/// `1.1.1`: solo se captura cuando el KPI esta activo y aplica al nivel del
+/// participante; `null` significa "no aplica", nunca "vacaciones" ni cero
+/// implicito.
 model ChronomancyWeeklyEntry {
   id                 String   @id @default(uuid())
   splitWeekId        String
   splitParticipantId String
-  productiveHours    Decimal  @db.Decimal(12, 4)
+  productiveHours    Decimal? @db.Decimal(12, 4)
   totalHours         Decimal  @db.Decimal(12, 4)
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
@@ -603,6 +608,20 @@ enum PublishedKpiOutcomeStatus {
   COMPUTED
   VAC
   NOT_APPLICABLE
+  /// KPI aplicable de una persona ausente esa semana (`1.1.1`, ver
+  /// docs/WEEKLY_ATTENDANCE_AND_HOURS.md). Distinto de `VAC` (dato ausente
+  /// de una persona presente) y de `NOT_APPLICABLE` (KPI ajeno al nivel).
+  ABSENT
+}
+
+/// Asistencia semanal de una persona (`1.1.1`, ver
+/// docs/WEEKLY_ATTENDANCE_AND_HOURS.md): se determina exclusivamente por
+/// `totalHours` de la captura semanal de horas (`ChronomancyWeeklyEntry`),
+/// nunca por otro KPI, VAC, creditos o nivel. `PRESENT` = `totalHours > 0`;
+/// `ABSENT` = `totalHours = 0` (o fila guardada vacia, normalizada a 0).
+enum WeeklyAttendanceStatus {
+  PRESENT
+  ABSENT
 }
 
 /// Publicacion de una semana (`0.6.0` / MVP-1C, ver
@@ -671,50 +690,69 @@ model SplitWeekLocation {
 /// poder consultar la clasificacion de un split con un numero acotado de
 /// consultas, sin recorrer `publication -> splitWeek -> split` por fila.
 model PublishedParticipantWeeklyResult {
-  id                     String           @id @default(uuid())
-  publicationId          String
-  splitId                String
-  splitParticipantId     String
-  personId               String
-  fullNameSnapshot       String
-  aliasSnapshot          String
-  levelSnapshot          ParticipantLevel
+  id                      String                  @id @default(uuid())
+  publicationId           String
+  splitId                 String
+  splitParticipantId      String
+  personId                String
+  fullNameSnapshot        String
+  aliasSnapshot           String
+  levelSnapshot           ParticipantLevel
   /// Suma de `finalPoints` de los KPI activos de la semana. Puede ser negativa.
-  totalKpiPoints         Decimal          @db.Decimal(14, 4)
+  totalKpiPoints          Decimal                 @db.Decimal(14, 4)
   /// Suma de `baseMax` de los KPI en estado `COMPUTED`. `null` si ninguno lo estuvo.
-  applicableMaxPoints    Decimal?         @db.Decimal(14, 4)
-  weeklyRank             Int
-  positionPoints         Int
+  applicableMaxPoints     Decimal?                @db.Decimal(14, 4)
+  /// Posicion semanal entre presentes. `null` para una persona ausente esa
+  /// semana, o cuando ningun participante aplicable estuvo presente
+  /// (`1.1.1`, ver docs/WEEKLY_ATTENDANCE_AND_HOURS.md): una ausencia nunca
+  /// ocupa ni consume un ordinal.
+  weeklyRank              Int?
+  positionPoints          Int
   /// Numero total de participantes que entraron en el ranking semanal (denominador de "x de n").
-  rankedParticipantCount Int
+  rankedParticipantCount  Int
+  /// Asistencia semanal congelada (`1.1.1`). `null` en publicaciones
+  /// anteriores a esta version: no se completa retroactivamente.
+  attendanceStatus        WeeklyAttendanceStatus?
+  /// Horas totales de la semana, congeladas (`1.1.1`). `null` en
+  /// publicaciones anteriores a esta version.
+  totalHoursSnapshot      Decimal?                @db.Decimal(12, 4)
+  /// Horas productivas congeladas cuando existian (`1.1.1`). `null` cuando
+  /// no se capturaron (Cronomagia inactiva o no aplicable al nivel) o en
+  /// publicaciones anteriores a esta version.
+  productiveHoursSnapshot Decimal?                @db.Decimal(12, 4)
+  /// Posicion realmente usada para conceder los puntos por posicion
+  /// (`1.1.1`): coincide con `weeklyRank` para un presente; para un
+  /// ausente es la ultima posicion efectivamente ocupada por una persona
+  /// presente esa semana. `null` cuando no hubo ninguna persona presente.
+  positionPointsRuleRank  Int?
   /// Faccion congelada del participante en el momento de publicar (`0.7.0` /
   /// MVP-2A, ver docs/FACTIONS.md). `null` para splits que no usan facciones
   /// o para publicaciones anteriores a esta version: quedan excluidas de la
   /// clasificacion de facciones, sin recalculo retroactivo.
-  factionId              String?
-  factionNameSnapshot    String?
-  factionColorSnapshot   String?
+  factionId               String?
+  factionNameSnapshot     String?
+  factionColorSnapshot    String?
   /// Profesion congelada del participante en el momento de publicar (`0.8.0` /
   /// MVP-2B, ver docs/PROFESSIONS_AND_PROFILES.md). Los cuatro campos son
   /// `null` cuando el split no usa profesiones o en publicaciones anteriores
   /// a esta version: nunca se completan retroactivamente.
-  professionId           String?
-  professionNameSnapshot String?
-  professionKpiCodeA     KpiCode?
-  professionKpiCodeB     KpiCode?
+  professionId            String?
+  professionNameSnapshot  String?
+  professionKpiCodeA      KpiCode?
+  professionKpiCodeB      KpiCode?
   /// Porcentaje de bonus congelado (siempre `20` cuando hay profesion).
-  professionBonusPercent Int?
+  professionBonusPercent  Int?
   /// `true` si el split usaba profesiones al publicar esta semana. `false`
   /// en publicaciones anteriores a `0.8.0` y en splits sin profesiones: es
   /// lo que permite distinguir "sin profesiones" de "profesion desconocida".
-  splitUsedProfessions   Boolean          @default(false)
+  splitUsedProfessions    Boolean                 @default(false)
   /// Creditos ganados por esta fila publicada (`0.9.0` / MVP-2D, ver
   /// docs/ECONOMY_INVENTORY_AND_EQUIPMENT.md): `max(0, floor(totalKpiPoints))`,
   /// congelado en la misma transaccion que crea el movimiento `WEEKLY_EARNING`
   /// vinculado. El libro de movimientos sigue siendo la fuente economica; este
   /// campo es la instantanea legible sin tener que sumar el libro.
-  creditsEarned          Int              @default(0)
-  createdAt              DateTime         @default(now())
+  creditsEarned           Int                     @default(0)
+  createdAt               DateTime                @default(now())
 
   publication      WeekPublication         @relation(fields: [publicationId], references: [id], onDelete: Cascade)
   split            Split                   @relation(fields: [splitId], references: [id], onDelete: Restrict)
@@ -1041,21 +1079,21 @@ enum NewsPriority {
 /// duplique la noticia. `createdByUserId` y `manualAudienceSnapshot` solo se
 /// usan en envio manual.
 model NewsItem {
-  id                      String       @id @default(uuid())
-  splitId                 String?
-  splitNameSnapshot       String?
-  origin                  NewsOrigin
-  category                NewsCategory
-  priority                NewsPriority @default(NORMAL)
-  title                   String
-  body                    String
-  eventKey                String?      @unique
-  createdByUserId         String?
+  id                     String       @id @default(uuid())
+  splitId                String?
+  splitNameSnapshot      String?
+  origin                 NewsOrigin
+  category               NewsCategory
+  priority               NewsPriority @default(NORMAL)
+  title                  String
+  body                   String
+  eventKey               String?      @unique
+  createdByUserId        String?
   /// Descripcion congelada del publico elegido por el administrador (por
   /// ejemplo "Todo el split", "Faccion Aurora" o el alias de una persona).
   /// Solo para envio manual; `null` en noticias automaticas.
-  manualAudienceSnapshot  String?
-  createdAt               DateTime     @default(now())
+  manualAudienceSnapshot String?
+  createdAt              DateTime     @default(now())
 
   split         Split?         @relation(fields: [splitId], references: [id], onDelete: SetNull)
   // Restrict: el autor de un envio manual no se borra fisicamente mientras conserve mensajes enviados.
