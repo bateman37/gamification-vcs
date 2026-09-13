@@ -47,6 +47,8 @@ export async function resetDatabase(): Promise<void> {
   await testDb.splitPositionPointRule.deleteMany();
   // SplitStoreItem restringe el borrado de SplitEquipmentSlot: se borra primero explicitamente en vez
   // de confiar en el orden de la cascada de Split (SplitEconomySettings si cae en cascada sin problema).
+  // La imagen del objeto (`1.2.0`) cae en cascada con el, pero se borra explicitamente para no depender de ello.
+  await testDb.splitStoreItemImage.deleteMany();
   await testDb.splitStoreItem.deleteMany();
   await testDb.splitEquipmentSlot.deleteMany();
   await testDb.splitWeek.deleteMany();

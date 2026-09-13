@@ -277,6 +277,82 @@ motivo en `docs/DECISIONS.md` (detalle completo en
   publicaciones anteriores a `0.8.0`), nunca de un recalculo con la
   configuracion actual.
 
+## Equipo visual, inventario RPG e imagenes de objetos (`1.2.0`, no romper sin justificarlo)
+
+Reglas asentadas que una sesion futura no debe deshacer sin registrar el
+motivo en `docs/DECISIONS.md` (detalle completo en
+`docs/ECONOMY_INVENTORY_AND_EQUIPMENT.md`, seccion 22, y en
+`docs/DESIGN_SYSTEM.md`, seccion 12):
+
+- **Identidad tecnica, posicion visual y nombre visible son tres conceptos
+  distintos.** `SplitEquipmentSlot.id` es lo unico que relaciona objetos,
+  compras, inventario, equipo y snapshots. Renombrar una ranura no la
+  mueve; ubicarla no reasigna ni un solo objeto. Nunca uses el nombre como
+  clave de relacion o de autorizacion, y nunca cambies el
+  `equipmentSlotId` de un objeto comprado para "reubicarlo".
+- El catalogo de posiciones es **cerrado y de diez claves**
+  (`EquipmentVisualPosition`, `src/domain/equipment-visual-positions.ts`).
+  No amplies el conjunto, no aceptes claves libres del navegador y no
+  permitas dos ranuras en la misma posicion dentro de un split (la
+  restriccion existe en servicio **y** en base de datos).
+- **Ya no se crean ranuras arbitrarias:** la unica via es
+  `activateVisualPosition`. No reintroduzcas la creacion con nombre libre
+  ni el reordenamiento manual (`displayOrder` solo ordena las ranuras
+  historicas sin ubicar). `MAX_EQUIPMENT_SLOTS_PER_SPLIT` es el tamaño del
+  catalogo y es un tope de ranuras **ubicadas**: una base con mas ranuras
+  sin ubicar nunca puede fallar, truncarse ni perder datos.
+- Una ranura historica sin posicion (`visualPosition = null`) **nunca
+  desaparece** de la experiencia: sigue visible en administracion
+  ("Ranuras pendientes de ubicar", un aviso, no un error) y en la ficha
+  ("Otras ranuras"), conserva objetos y equipo y su bonus se sigue
+  calculando. No deduzcas una posicion a partir de un nombre libre
+  (`Arma`, `Escudo`, `Anillo`) ni en la migracion ni en ningun servicio.
+- **Desactivar una ranura es un cambio de estado, nunca un borrado ni un
+  desequipado.** Solo se permite si nadie tiene un objeto equipado en ella
+  y ningun objeto suyo sigue a la venta; el mensaje identifica a quien la
+  bloquea. Nunca desequipes, reasignes ni retires nada de forma
+  automatica. Una ranura inactiva conserva objetos, compras y
+  publicaciones.
+- La imagen del objeto vive en `SplitStoreItemImage` (PostgreSQL, entidad
+  uno-a-uno separada, mismo patron que `SplitParticipantAvatar`). Nunca la
+  guardes en `public/`, en disco, en base64 ni dentro de una compra o
+  publicacion; no introduzcas un servicio externo de imagenes; no
+  selecciones `imageData` en ningun listado (las DTO solo llevan
+  `imageVersion`); valida el formato real decodificando con `sharp`, nunca
+  por extension o `File.type`, y procesa siempre **antes** de abrir la
+  transaccion.
+- **La imagen es la unica excepcion cosmetica** a la inmutabilidad de un
+  objeto ya comprado. Nombre, descripcion, precio, ranura, KPI y
+  porcentaje siguen congelados tras la primera compra: no amplies esta
+  excepcion a ningun otro campo.
+- El equipo se confirma **siempre como conjunto completo**
+  (`saveEquipmentLoadout`), dentro de una unica transaccion serializable
+  que revalida en servidor todas las reglas del borrador y compara la
+  revision (`computeLoadoutRevision`, firma del contenido, nunca
+  `updatedAt`). No reintroduzcas acciones inmediatas de equipar/desequipar
+  una a una, no guardes cada `drop`, y no mezcles estados automaticamente
+  ante un conflicto de revision.
+- Un borrador sin confirmar **nunca** afecta a previsualizaciones
+  administrativas, calculos, resultados, creditos ni publicaciones.
+  `publishWeek` sigue releyendo el equipo confirmado dentro de su propia
+  transaccion.
+- El panel "Bonificadores activos" (`src/domain/equipment-bonus-summary.ts`)
+  es **declarativo y puro**: agrega porcentajes por KPI de forma
+  aritmetica (`20 % + 50 % + 40 % + 40 % = +150 %`). No encadenes
+  porcentajes, no reimplantes aqui ninguna formula del motor semanal y no
+  envies estos valores al servidor como si fueran oficiales.
+- El tablero **nunca** es una imagen rasterizada: la silueta es un SVG
+  decorativo (`aria-hidden`, generico, sin rostro, genero, raza ni
+  tematica) y ranuras, miniaturas, textos, badges y controles son HTML
+  accesible. Todo lo que se hace arrastrando se puede hacer con clic y
+  teclado sobre botones reales; esa paridad es un requisito, no una
+  alternativa secundaria.
+- La pantalla usa **solo** los tokens de Prisma competitivo, de forma
+  atenuada (ver `docs/DESIGN_SYSTEM.md`, seccion 12). No introduzcas
+  colores nuevos, rarezas, neones, degradados dominantes ni tematica
+  medieval/futurista, y no llenes de miniaturas las tablas densas de
+  resultados.
+
 ## Centro de noticias y renovacion visual (`1.0.0` / MVP-3, no romper sin justificarlo)
 
 Reglas asentadas que una sesion futura no debe deshacer sin registrar el

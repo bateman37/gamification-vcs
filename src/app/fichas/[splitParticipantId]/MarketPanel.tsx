@@ -5,6 +5,7 @@ import { useFormState, useFormStatus } from "react-dom";
 import { purchaseStoreItemAction } from "@/server/actions/purchase.actions";
 import { initialActionState } from "@/server/actions/action-result";
 import { Badge, ErrorMessage } from "@/components/ui";
+import { StoreItemImage } from "@/components/equipment/StoreItemImage";
 import type { StoreCatalogEntryView } from "@/server/services/character-config.service";
 
 const STATUS_LABEL: Record<StoreCatalogEntryView["status"], string> = {
@@ -67,11 +68,13 @@ function BuyForm({ splitParticipantId, item }: { splitParticipantId: string; ite
 /** Catalogo de objetos a la venta (`0.9.0` / MVP-2D, parte E del encargo). */
 export function MarketPanel({
   splitParticipantId,
+  splitId,
   marketStatus,
   balance,
   catalog,
 }: {
   splitParticipantId: string;
+  splitId: string;
   marketStatus: "OPEN" | "CLOSED";
   balance: number;
   catalog: StoreCatalogEntryView[];
@@ -93,18 +96,27 @@ export function MarketPanel({
       ) : (
         <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {catalog.map((item) => (
-            <li key={item.storeItemId} className="space-y-1 rounded-md border border-border bg-surface p-3 text-sm">
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <span className="font-medium text-ink">{item.name}</span>
-                <Badge tone={STATUS_TONE[item.status]}>{STATUS_LABEL[item.status]}</Badge>
+            <li key={item.storeItemId} className="flex gap-3 rounded-md border border-border bg-surface p-3 text-sm">
+              <StoreItemImage
+                splitId={splitId}
+                storeItemId={item.storeItemId}
+                imageVersion={item.imageVersion}
+                itemName={item.name}
+                decorative
+              />
+              <div className="min-w-0 flex-1 space-y-1">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <span className="font-medium text-ink">{item.name}</span>
+                  <Badge tone={STATUS_TONE[item.status]}>{STATUS_LABEL[item.status]}</Badge>
+                </div>
+                <p className="text-text-muted">Ranura: {item.equipmentSlotName}</p>
+                <p className="text-text-muted">
+                  {item.kpiName} · <span className="tabular">+{item.bonusPercent} %</span>
+                </p>
+                {item.description && <p className="text-text-muted">{item.description}</p>}
+                <p className="tabular font-medium text-ink">{item.priceCredits} créditos</p>
+                {item.status === "DISPONIBLE" && <BuyForm splitParticipantId={splitParticipantId} item={item} />}
               </div>
-              <p className="text-text-muted">Ranura: {item.equipmentSlotName}</p>
-              <p className="text-text-muted">
-                {item.kpiName} · +{item.bonusPercent} %
-              </p>
-              {item.description && <p className="text-text-muted">{item.description}</p>}
-              <p className="font-medium text-ink">{item.priceCredits} créditos</p>
-              {item.status === "DISPONIBLE" && <BuyForm splitParticipantId={splitParticipantId} item={item} />}
             </li>
           ))}
         </ul>

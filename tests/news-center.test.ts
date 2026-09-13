@@ -366,7 +366,10 @@ describe("Mercado y compra", () => {
     const participant = await addParticipant(testDb, split.id, { personId: person.id, alias: "gara", level: "N2", startWeekSequenceNumber: 1 });
     await activateSplit(testDb, split.id);
 
-    const slot = await testDb.splitEquipmentSlot.create({ data: { splitId: split.id, name: "Arma", nameNormalized: "arma", displayOrder: 0 } });
+    const slot = await testDb.splitEquipmentSlot.create({
+      // `1.2.0`: una ranura debe estar activa y ubicada en una posicion del tablero para poder vender desde ella.
+      data: { splitId: split.id, name: "Arma", nameNormalized: "arma", displayOrder: 0, visualPosition: "LEFT_HAND" },
+    });
     await testDb.splitStoreItem.create({
       data: {
         splitId: split.id,
@@ -406,7 +409,10 @@ describe("Mercado y compra", () => {
     const participant = await addParticipant(testDb, split.id, { personId: person.id, alias: "gara", level: "N2", startWeekSequenceNumber: 1 });
     await activateSplit(testDb, split.id);
 
-    const slot = await testDb.splitEquipmentSlot.create({ data: { splitId: split.id, name: "Arma", nameNormalized: "arma", displayOrder: 0 } });
+    const slot = await testDb.splitEquipmentSlot.create({
+      // `1.2.0`: una ranura debe estar activa y ubicada en una posicion del tablero para poder vender desde ella.
+      data: { splitId: split.id, name: "Arma", nameNormalized: "arma", displayOrder: 0, visualPosition: "LEFT_HAND" },
+    });
     const item = await testDb.splitStoreItem.create({
       data: {
         splitId: split.id,
@@ -437,7 +443,10 @@ describe("Mercado y compra", () => {
     await activateStabilityKpi(split.id);
     const participant = await addParticipant(testDb, split.id, { personId: person.id, alias: "gara", level: "N2", startWeekSequenceNumber: 1 });
     await activateSplit(testDb, split.id);
-    const slot = await testDb.splitEquipmentSlot.create({ data: { splitId: split.id, name: "Arma", nameNormalized: "arma", displayOrder: 0 } });
+    const slot = await testDb.splitEquipmentSlot.create({
+      // `1.2.0`: una ranura debe estar activa y ubicada en una posicion del tablero para poder vender desde ella.
+      data: { splitId: split.id, name: "Arma", nameNormalized: "arma", displayOrder: 0, visualPosition: "LEFT_HAND" },
+    });
     const item = await testDb.splitStoreItem.create({
       data: { splitId: split.id, name: "Espada", nameNormalized: "espada", priceCredits: 999, equipmentSlotId: slot.id, kpiCode: "STABILITY_GUARDIAN", bonusPercent: 10 },
     });

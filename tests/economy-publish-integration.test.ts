@@ -7,11 +7,10 @@ import { addParticipant } from "@/server/services/participant.service";
 import { updateKpiConfig } from "@/server/services/kpi.service";
 import { saveStabilityEntries } from "@/server/services/stability-entry.service";
 import { publishWeek } from "@/server/services/publish-week.service";
-import { createEquipmentSlot } from "@/server/services/equipment-slot.service";
 import { createStoreItem } from "@/server/services/store-item.service";
 import { openMarket } from "@/server/services/economy.service";
 import { purchaseStoreItem } from "@/server/services/purchase.service";
-import { equipOwnedItem, unequipSlot } from "@/server/services/equipment.service";
+import { createSlot, equipItem, unequipSlotItem } from "./helpers/equipment";
 import { createProfession } from "@/server/services/profession.service";
 import { upsertWeekLocation } from "@/server/services/location.service";
 import { getParticipantBalance } from "@/server/services/ledger.service";
@@ -61,7 +60,7 @@ describe("Bonus de equipo compuesto con profesion y localizacion", () => {
 
     // El objeto tambien debe estar equipado ANTES de publicar: se compra con creditos de una primera
     // semana neutra para no alterar la semana bajo prueba.
-    const slot = await createEquipmentSlot(testDb, split.id, { name: "Artefacto" });
+    const slot = await createSlot(split.id, "ARTIFACT");
     const storeItem = await createStoreItem(testDb, split.id, {
       name: "Cristal de datos",
       description: null,
@@ -74,7 +73,7 @@ describe("Bonus de equipo compuesto con profesion y localizacion", () => {
     await grantCredits(participant.id, split.id, week.id, 100);
     await purchaseStoreItem(testDb, person.id, participant.id, storeItem.id);
     const owned = await testDb.splitParticipantItem.findFirstOrThrow({ where: { splitParticipantId: participant.id } });
-    await equipOwnedItem(testDb, person.id, participant.id, owned.id);
+    await equipItem(person.id, participant.id, slot.id, owned.id);
 
     await markAllPresent(testDb, split.id, week.id);
     const preview = await computeWeeklyResults(testDb, split.id, week.id);
@@ -97,7 +96,7 @@ describe("Publicacion: snapshots de equipo y creditos", () => {
     const week = (await listSplitWeeks(testDb, split.id))[0]!;
     await saveStabilityEntries(testDb, split.id, week.id, form({ [`resultValue__${participant.id}`]: "1" }));
 
-    const slot = await createEquipmentSlot(testDb, split.id, { name: "Artefacto" });
+    const slot = await createSlot(split.id, "ARTIFACT");
     const storeItem = await createStoreItem(testDb, split.id, {
       name: "Cristal de datos",
       description: null,
@@ -110,7 +109,7 @@ describe("Publicacion: snapshots de equipo y creditos", () => {
     await grantCredits(participant.id, split.id, week.id, 100);
     await purchaseStoreItem(testDb, person.id, participant.id, storeItem.id);
     const owned = await testDb.splitParticipantItem.findFirstOrThrow({ where: { splitParticipantId: participant.id } });
-    await equipOwnedItem(testDb, person.id, participant.id, owned.id);
+    await equipItem(person.id, participant.id, slot.id, owned.id);
 
     return { split, person, participant, slot, storeItem, week };
   }
@@ -172,7 +171,7 @@ describe("Publicacion: snapshots de equipo y creditos", () => {
     await markAllPresent(testDb, split.id, week.id);
     await publishWeek(testDb, split.id, week.id, null);
 
-    await unequipSlot(testDb, person.id, participant.id, slot.id);
+    await unequipSlotItem(person.id, participant.id, slot.id);
 
     const result = await testDb.publishedParticipantWeeklyResult.findFirstOrThrow({
       where: { splitParticipantId: participant.id, publication: { splitWeekId: week.id } },

@@ -2,14 +2,22 @@
 
 import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
+import type { EquipmentVisualPosition } from "@prisma/client";
 import {
   createStoreItemAction,
   deleteStoreItemAction,
+  deleteStoreItemImageAction,
+  saveStoreItemImageAction,
   setStoreItemForSaleAction,
   updateStoreItemAction,
 } from "@/server/actions/store-item.actions";
 import { initialActionState } from "@/server/actions/action-result";
-import { Badge, ErrorMessage, SubmitButton, SuccessMessage } from "@/components/ui";
+import { Badge, ErrorMessage, FieldError, SubmitButton, SuccessMessage } from "@/components/ui";
+import { StoreItemImage } from "@/components/equipment/StoreItemImage";
+import {
+  STORE_ITEM_IMAGE_ACCEPT_ATTRIBUTE,
+  STORE_ITEM_IMAGE_FIELD,
+} from "@/domain/store-item-image-constraints";
 import type { KpiCode } from "@/domain/kpis/catalog";
 import { StoreItemFormFields } from "./StoreItemFormFields";
 
@@ -20,16 +28,84 @@ export interface StoreItemRow {
   priceCredits: number;
   equipmentSlotId: string;
   equipmentSlotName: string;
+  equipmentSlotVisualPosition: EquipmentVisualPosition | null;
+  equipmentSlotIsActive: boolean;
   kpiCode: KpiCode;
   kpiName: string;
   bonusPercent: number;
   isForSale: boolean;
   ownedCount: number;
+  imageVersion: string | null;
 }
 
 function SaveButton() {
   const { pending } = useFormStatus();
   return <SubmitButton pending={pending}>Guardar</SubmitButton>;
+}
+
+/**
+ * Imagen del objeto (`1.2.0`, seccion 7 del encargo). Unica excepcion
+ * cosmetica a la inmutabilidad de un objeto ya comprado: puede añadirse,
+ * reemplazarse o eliminarse aunque tenga propietarios, siempre con el mercado
+ * cerrado. No altera compras, snapshots ni resultados publicados.
+ */
+function ItemImageManager({ splitId, item }: { splitId: string; item: StoreItemRow }) {
+  const [saveState, saveAction] = useFormState(saveStoreItemImageAction.bind(null, splitId, item.id), initialActionState);
+  const [deleteState, deleteAction] = useFormState(
+    deleteStoreItemImageAction.bind(null, splitId, item.id),
+    initialActionState,
+  );
+
+  return (
+    <div className="space-y-2 border-t border-border pt-3">
+      <div className="flex flex-wrap items-center gap-3">
+        <StoreItemImage
+          splitId={splitId}
+          storeItemId={item.id}
+          imageVersion={item.imageVersion}
+          itemName={item.name}
+          visualPosition={item.equipmentSlotVisualPosition}
+          size="lg"
+          decorative
+        />
+        <div className="min-w-[12rem] flex-1 space-y-1">
+          <form action={saveAction} className="space-y-1">
+            <label htmlFor={`image-${item.id}`} className="block text-xs font-medium text-ink">
+              Imagen del objeto (opcional)
+            </label>
+            <input
+              id={`image-${item.id}`}
+              type="file"
+              name={STORE_ITEM_IMAGE_FIELD}
+              accept={STORE_ITEM_IMAGE_ACCEPT_ATTRIBUTE}
+              className="block w-full text-xs"
+            />
+            <SubmitButton pending={false} className="px-3 py-1 text-xs">
+              {item.imageVersion ? "Reemplazar imagen" : "Subir imagen"}
+            </SubmitButton>
+            <FieldError message={saveState.fieldErrors?.[STORE_ITEM_IMAGE_FIELD]} />
+          </form>
+          {item.imageVersion && (
+            <form action={deleteAction}>
+              <button
+                type="submit"
+                className="rounded-control border border-border-strong px-3 py-1 text-xs font-medium text-ink transition-colors duration-150 hover:bg-surface-muted"
+              >
+                Eliminar imagen
+              </button>
+            </form>
+          )}
+        </div>
+      </div>
+      <p className="text-xs text-text-muted">
+        JPEG, PNG o WebP, hasta 5 MB. Se procesa en el servidor a WebP (máximo 512 px). Sin imagen se muestra un icono
+        neutro de su posición.
+      </p>
+      {!saveState.ok && saveState.error && <ErrorMessage>{saveState.error}</ErrorMessage>}
+      {saveState.ok && <SuccessMessage>Imagen guardada correctamente.</SuccessMessage>}
+      {!deleteState.ok && deleteState.error && <ErrorMessage>{deleteState.error}</ErrorMessage>}
+    </div>
+  );
 }
 
 function ItemCard({
@@ -89,13 +165,26 @@ function ItemCard({
   return (
     <div className="space-y-2 rounded-card border border-border bg-surface p-4">
       <div className="flex flex-wrap items-start justify-between gap-2">
-        <div>
+        <div className="flex gap-3">
+          <StoreItemImage
+            splitId={splitId}
+            storeItemId={item.id}
+            imageVersion={item.imageVersion}
+            itemName={item.name}
+            visualPosition={item.equipmentSlotVisualPosition}
+            decorative
+          />
+          <div>
           <p className="font-medium text-ink">{item.name}</p>
-          <p className="text-sm text-text-muted">Ranura: {item.equipmentSlotName}</p>
+          <p className="text-sm text-text-muted">
+            Ranura: {item.equipmentSlotName}
+            {!item.equipmentSlotIsActive && " (desactivada)"}
+          </p>
           <p className="text-sm text-text-muted">Potencia: {item.kpiName}</p>
           <p className="text-sm text-text-muted">Bonus: +{item.bonusPercent} % después del máximo base</p>
           <p className="text-sm text-text-muted">Precio: {item.priceCredits} créditos</p>
           {item.description && <p className="mt-1 text-sm text-text-muted">{item.description}</p>}
+          </div>
         </div>
         <Badge tone={item.isForSale ? "green" : "gray"}>{item.isForSale ? "A la venta" : "Retirado"}</Badge>
       </div>
@@ -131,6 +220,7 @@ function ItemCard({
           </form>
         </div>
       )}
+      {!locked && <ItemImageManager splitId={splitId} item={item} />}
       {!forSaleState.ok && forSaleState.error && <ErrorMessage>{forSaleState.error}</ErrorMessage>}
       {!deleteState.ok && deleteState.error && <ErrorMessage>{deleteState.error}</ErrorMessage>}
     </div>
@@ -165,7 +255,7 @@ export function StoreItemsPanel({
       {locked && <p className="text-sm text-reward-ink">Cierra el mercado para crear, editar o eliminar objetos.</p>}
       {slots.length === 0 && (
         <p className="rounded-card border border-dashed border-border-strong px-4 py-4 text-sm text-text-muted">
-          Crea al menos una ranura de equipo antes de añadir objetos.
+          Activa al menos una ranura de equipo antes de añadir objetos.
         </p>
       )}
       {activeKpis.length === 0 && (
@@ -189,7 +279,7 @@ export function StoreItemsPanel({
       {!locked && slots.length > 0 && activeKpis.length > 0 && (
         <form action={createAction} className="space-y-3 rounded-card border border-dashed border-border-strong bg-surface p-4">
           <h4 className="text-sm font-semibold text-ink">Nuevo objeto</h4>
-          <StoreItemFormFields idPrefix="item-new" activeKpis={activeKpis} slots={slots} />
+          <StoreItemFormFields idPrefix="item-new" activeKpis={activeKpis} slots={slots} withImageField />
           <SaveButton />
           {!createState.ok && createState.error && <ErrorMessage>{createState.error}</ErrorMessage>}
           {createState.ok && <SuccessMessage>Objeto creado correctamente.</SuccessMessage>}

@@ -49,9 +49,14 @@ export async function collectMarketOpenIssues(db: Db, splitId: string): Promise<
     issues.push("El split debe estar activo para abrir el mercado.");
   }
 
-  const slotCount = await db.splitEquipmentSlot.count({ where: { splitId } });
-  if (slotCount === 0) {
-    issues.push("Crea al menos una ranura de equipo antes de abrir el mercado.");
+  // `1.2.0`: no basta con que exista una ranura; debe haber al menos una activa y ubicada
+  // en una posicion visual del catalogo cerrado (seccion 6.7 del encargo).
+  const slots = await db.splitEquipmentSlot.findMany({ where: { splitId } });
+  const slotById = new Map(slots.map((slot) => [slot.id, slot]));
+  if (slots.length === 0) {
+    issues.push("Activa al menos una ranura de equipo antes de abrir el mercado.");
+  } else if (!slots.some((slot) => slot.isActive && slot.visualPosition !== null)) {
+    issues.push("Activa y ubica al menos una ranura de equipo en una posición del tablero antes de abrir el mercado.");
   }
 
   const itemsForSale = await db.splitStoreItem.findMany({ where: { splitId, isForSale: true } });
@@ -73,6 +78,20 @@ export async function collectMarketOpenIssues(db: Db, splitId: string): Promise<
       }
       if (item.priceCredits <= 0) {
         issues.push(`El objeto "${item.name}" tiene un precio no valido.`);
+      }
+
+      // Un objeto a la venta debe pertenecer a una ranura activa y ubicada. Una ranura
+      // historica pendiente con objetos ya comprados no bloquea el mercado por si sola:
+      // solo lo bloquea si se pretende seguir vendiendo desde ella.
+      const slot = slotById.get(item.equipmentSlotId);
+      if (slot && !slot.isActive) {
+        issues.push(
+          `El objeto "${item.name}" pertenece a la ranura desactivada "${slot.name}": reactívala o retíralo de la venta.`,
+        );
+      } else if (slot && slot.visualPosition === null) {
+        issues.push(
+          `El objeto "${item.name}" pertenece a la ranura "${slot.name}", todavía pendiente de ubicar: asígnale una posición del tablero o retíralo de la venta.`,
+        );
       }
     }
   }

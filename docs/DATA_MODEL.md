@@ -71,6 +71,7 @@ erDiagram
     Split ||--o{ SplitEquipmentSlot : "tiene"
     Split ||--o{ SplitStoreItem : "tiene"
     SplitEquipmentSlot ||--o{ SplitStoreItem : "contiene"
+    SplitStoreItem ||--o| SplitStoreItemImage : "tiene imagen"
     SplitParticipant ||--o{ ItemPurchase : "compra"
     SplitParticipant ||--o{ SplitParticipantItem : "posee"
     SplitParticipant ||--o{ SplitParticipantEquippedItem : "equipa"
@@ -438,7 +439,9 @@ erDiagram
         string splitId FK
         string name
         string nameNormalized "unico por split"
-        int displayOrder "no negativo"
+        int displayOrder "no negativo; solo ordena las ranuras historicas sin ubicar"
+        enum visualPosition "1.2.0: catalogo cerrado de 10; unico por split; null = pendiente de ubicar"
+        boolean isActive "1.2.0: por defecto true"
         datetime createdAt
         datetime updatedAt
     }
@@ -454,6 +457,16 @@ erDiagram
         enum kpiCode "catalogo cerrado; activo en el split al crear/editar"
         int bonusPercent "10, 20, 30, 40 o 50"
         boolean isForSale "por defecto true"
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    SplitStoreItemImage {
+        string splitStoreItemId PK "1.2.0: uno-a-uno con el objeto"
+        bytes imageData "WebP ya procesado en servidor"
+        string mimeType "image/webp"
+        int byteSize "> 0 y = octet_length(imageData)"
+        string sha256 "version estable para ETag e imageVersion"
         datetime createdAt
         datetime updatedAt
     }
@@ -997,12 +1010,32 @@ completo. Resumen del esquema:
 - **`SplitEquipmentSlot`**: ranuras de equipo de un split, sin numero ni
   nombres codificados. `nameNormalized` unico por split
   (`@@unique([splitId, nameNormalized])`); `displayOrder` decide el orden
-  de presentacion.
+  de presentacion. **`1.2.0`** anade `visualPosition`
+  (`EquipmentVisualPosition`, catalogo cerrado de diez claves, unica por
+  split con `@@unique([splitId, visualPosition])`; `null` = ranura historica
+  todavia sin ubicar, y varios `null` conviven porque PostgreSQL no los hace
+  colisionar) e `isActive`. La identidad (`id`), la posicion visual y el
+  nombre visible son tres conceptos distintos: solo el `id` relaciona
+  objetos, compras, inventario, equipo y snapshots, asi que renombrar o
+  ubicar una ranura nunca rompe ninguna relacion. Desde `1.2.0`
+  `displayOrder` solo ordena las ranuras sin ubicar (las ubicadas usan el
+  orden fijo del catalogo).
 - **`SplitStoreItem`**: catalogo de objetos del split. `equipmentSlotId`
   con `onDelete: Restrict` (no se borra una ranura con objetos). `kpiCode`
   y `bonusPercent` (restringido en base de datos al conjunto cerrado
   `10/20/30/40/50`, igual que `SplitWeekLocation`) definen su efecto;
   `isForSale` controla su disponibilidad sin afectar a quien ya lo posee.
+- **`SplitStoreItemImage`** (`1.2.0`): imagen opcional del objeto, en una
+  entidad separada uno-a-uno (clave primaria = `splitStoreItemId`,
+  `onDelete: Cascade`), con el mismo patron que `SplitParticipantAvatar`.
+  Guarda los bytes **ya procesados a WebP en servidor**, el MIME real, el
+  tamano (`byteSize > 0` y `= octet_length(imageData)`, restricciones de
+  base de datos) y el `sha256` usado como `ETag` y como `imageVersion` en
+  las DTO. Los bytes nunca se seleccionan en un listado y nunca se duplican
+  dentro de una compra ni de una publicacion. La imagen es puramente
+  cosmetica: es la unica propiedad que puede cambiar despues de la primera
+  compra del objeto (ver `docs/ECONOMY_INVENTORY_AND_EQUIPMENT.md`,
+  seccion 22.5).
 - **`ItemPurchase`**: compra confirmada, con instantanea inmutable de
   nombre, precio, ranura, KPI y porcentaje tal como eran al comprar.
   `@@unique([splitParticipantId, storeItemId])`: como mucho una compra del
@@ -1147,3 +1180,16 @@ cambia: las noticias se generan leyendo el resultado de operaciones ya
 persistidas por los servicios de negocio (alta de participante,
 activacion, facciones, profesiones, localizaciones, mercado, compra y
 publicacion), nunca al reves. Ver `docs/NEWS_CENTER.md`.
+
+Con `1.2.0` (equipo visual, inventario RPG e imagenes de objetos) se anade
+el enum `EquipmentVisualPosition` y la tabla `SplitStoreItemImage`, y
+`SplitEquipmentSlot` gana `visualPosition` (nullable, unica por split) e
+`isActive`. La migracion es estrictamente aditiva y no destructiva: ninguna
+ranura, objeto, compra, inventario, equipo, movimiento de creditos ni
+publicacion se elimina, se sustituye ni se reasigna, y `visualPosition` solo
+se rellena automaticamente por coincidencia exacta del nombre normalizado
+con un nombre base del catalogo (nunca se deduce una posicion a partir de un
+nombre libre). Ninguna otra tabla cambia: la posicion visual es presentacion
+y **no** se congela en `PublishedEquippedItem`, cuyos snapshots de nombre,
+ranura, KPI y porcentaje siguen siendo la verdad historica. Ver
+`docs/ECONOMY_INVENTORY_AND_EQUIPMENT.md`, seccion 22.

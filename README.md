@@ -22,9 +22,10 @@ inventario y equipo**, **`1.0.0` / MVP-3 — Centro de noticias y
 renovacion visual**, **`1.0.1` — UX y presentacion de resultados** y
 **`1.0.2` — Hotfix de sincronizacion de ranuras de equipo, bonus de
 objetos en la tabla administrativa y submenu de "Presentar resultados"** y
-**`1.1.0` — Analitica avanzada del equipo, exclusiva de administracion** y
-**`1.1.1` — Asistencia semanal por horas y puntos por hora**
-(ver `docs/ROADMAP.md`). Version actual: `1.1.1`.
+**`1.1.0` — Analitica avanzada del equipo, exclusiva de administracion**,
+**`1.1.1` — Asistencia semanal por horas y puntos por hora** y
+**`1.2.0` — Equipo visual, inventario RPG e imagenes de objetos**
+(ver `docs/ROADMAP.md`). Version actual: `1.2.0`.
 
 Estas entregas implementan:
 
@@ -828,6 +829,86 @@ Cuarta capa de juego. Detalle funcional exhaustivo en
     alterar posicion oficial, puntos de posicion, facciones ni saldo.
 14. Cierra el split y confirma que mercado y equipo quedan en solo
     lectura.
+
+> Los puntos 3 y 4 de esta lista describen el comportamiento de `0.9.0`.
+> Desde `1.2.0` las ranuras no se crean con nombre libre ni se reordenan a
+> mano: se activa una de las diez posiciones del tablero y se renombra. Ver
+> la seccion siguiente.
+
+## Equipo visual, inventario RPG e imagenes de objetos (`1.2.0`)
+
+Rediseño de la experiencia de inventario y equipo de la `0.9.0`, **sin**
+crear una segunda economia y sin cambiar ninguna formula, porcentaje,
+credito, clasificacion ni semana publicada. Detalle funcional exhaustivo en
+[`docs/ECONOMY_INVENTORY_AND_EQUIPMENT.md`](docs/ECONOMY_INVENTORY_AND_EQUIPMENT.md)
+(seccion 22) y [`docs/DESIGN_SYSTEM.md`](docs/DESIGN_SYSTEM.md) (seccion 12).
+
+- **Catalogo cerrado de diez posiciones visuales** (`Cabeza`,
+  `Mano izquierda`, `Torso`, `Mano derecha`, `Manos`, `Piernas`, `Capa`,
+  `Artefacto`, `Pies`, `Reliquia`) con rejilla fija. El administrador
+  decide cuales activa en cada split y como se llaman (`Cabeza` -> `Casco`,
+  `Mano izquierda` -> `Arma`): **identidad tecnica, posicion visual y
+  nombre visible son tres cosas distintas**, y renombrar o ubicar nunca
+  rompe objetos, compras, inventario, equipo ni publicaciones.
+- **Editor visual administrativo** en `/splits/[id]/economia`, con estado
+  `Activa`/`Inactiva`, contadores de objetos, propietarios y equipos, y
+  bloqueos explicados: una ranura con equipo actual o con objetos a la
+  venta no se puede desactivar, y **nunca** se desequipa a nadie de forma
+  automatica.
+- **Compatibilidad total de las ranuras anteriores a `1.2.0`**: conservan
+  su identidad, su nombre y todas sus relaciones, quedan activas y solo
+  reciben posicion si su nombre coincide exactamente con un nombre base.
+  Mientras no se ubiquen aparecen como "Ranuras pendientes de ubicar" en
+  administracion y "Otras ranuras" en la ficha, plenamente funcionales.
+- **Imagen opcional por objeto**, procesada en servidor con `sharp`
+  (JPEG/PNG/WebP, 5 MB, EXIF corregido, metadatos eliminados, maximo
+  512 px, salida WebP) y servida por una ruta autenticada con `ETag`. Es la
+  **unica** propiedad cosmetica que puede cambiar despues de la primera
+  compra; nombre, precio, ranura, KPI y porcentaje siguen congelados.
+- **Tablero de equipo con silueta neutra** e **inventario unico** por
+  participante y split en `/fichas/[splitParticipantId]`: arrastrar y
+  soltar con alternativa completa por clic, teclado y tactil, borrador
+  local y un unico boton **"Confirmar equipo"** que sustituye el conjunto
+  de forma atomica. Dos pestañas no se sobrescriben en silencio.
+- **Panel "Bonificadores activos"**: agrupa por KPI los porcentajes de
+  profesion, localizacion y objetos y muestra el total potencial como suma
+  aritmetica (`20 % + 50 % + 40 % + 40 % = +150 %`), nunca encadenada.
+
+### Comprobar manualmente
+
+1. Abre un split existente con ranuras y objetos y comprueba que tras la
+   migracion no se ha perdido nada (objetos, compras, inventario, equipo,
+   creditos y semanas publicadas).
+2. Revisa "Ranuras pendientes de ubicar"; asocia `Arma` a `Mano izquierda`
+   y comprueba que conserva sus objetos y el equipo actual.
+3. Activa una posicion nueva, renombrala y comprueba que no se mueve;
+   intenta duplicar una posicion y verifica el error.
+4. Intenta desactivar una ranura con un objeto equipado: comprueba el
+   bloqueo y los participantes afectados; desequipalo desde el jugador,
+   confirma y vuelve a desactivarla.
+5. Intenta abrir el mercado con un objeto a la venta en una ranura
+   inactiva o pendiente de ubicar.
+6. Sube, reemplaza y elimina la imagen de un objeto; rechaza un archivo
+   falso, un SVG y uno por encima del limite; comprueba el icono de
+   reserva en un objeto sin imagen y las miniaturas en administracion,
+   mercado, inventario, equipo y resumen lateral.
+7. Compra un objeto, cierra el mercado y comprueba que todavia puedes
+   preparar y confirmar equipo.
+8. Arrastra un objeto a su ranura compatible y a una incompatible; repite
+   la misma operacion solo con clic y teclado; sustituye un objeto y usa
+   "Restablecer cambios".
+9. Cambia varias ranuras y confirma una sola vez; comprueba que **antes**
+   de confirmar la previsualizacion administrativa no cambia y que
+   **despues** si.
+10. Abre dos pestañas, confirma en una y luego en la otra: debe avisar del
+    conflicto sin sobrescribir.
+11. Revisa el panel lateral con objeto, profesion y localizacion sobre el
+    mismo KPI y comprueba que los porcentajes se suman sin encadenarse.
+12. Publica una semana, revisa el snapshot y el desglose del bonus de
+    objetos, cambia el equipo despues y confirma que la semana publicada
+    permanece intacta.
+13. Revisa la vista movil (sin scroll horizontal) y un split cerrado en
+    modo solo lectura.
 
 ## Centro de noticias y renovacion visual (`1.0.0` / MVP-3)
 
