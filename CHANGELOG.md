@@ -5,6 +5,96 @@ La primera version publicada es `0.1.0`; `1.0.0` cierra la primera version
 estable del producto (nucleo funcional y las cuatro capas de juego, mas
 comunicacion y renovacion visual).
 
+## [1.2.2] - Cierre de split, imágenes de facción y mejoras operativas
+
+Entrega de correccion y mejora sobre la `1.2.1`: identidad de sesion junto a
+la campana, imagen opcional de faccion, puntos por posicion configurables
+mas alla de la posicion 15, finalizacion formal de un split con noticia de
+podio/faccion/KPI, y un resumen ampliado de "Economia y mercado".
+
+### Añadido
+
+- **Identidad de sesion junto a la campana** (`AppShell.tsx`): el nombre
+  completo real de la persona para un participante, o el texto fijo
+  `Administrador` para un administrador (prevalece siempre sobre cualquier
+  relacion adicional con una persona). Visible en la barra lateral de
+  escritorio y, de forma abreviada, junto a la campana en movil/tablet;
+  nunca alias, correo, id tecnico ni una presencia en linea real.
+- **Imagen opcional de faccion** (`SplitFactionImage`, ver
+  `docs/FACTIONS.md`): mismo patron seguro que el avatar y la imagen de
+  objeto (procesada con `sharp` a WebP, 5 MB de entrada, 512 px maximo,
+  ruta autenticada con `ETag`). Subir, reemplazar y eliminar desde la
+  tarjeta administrativa de cada faccion, sin exigir mercado cerrado (solo
+  que el split no este `CLOSED`). Recurso cosmetico actual: no se congela
+  en ningun snapshot ni altera ninguna clasificacion o noticia historica.
+- **Puntos por posicion dinamicos** (ver
+  `docs/POSITION_POINTS_CONFIGURATION.md`): el rango de un split deja de
+  estar fijo en `1..15` y pasa a ser `1..N`, con
+  `N = maximo(15, participantes del split, mayor posicion ya persistida)`.
+  Las posiciones nuevas (16 en adelante) nacen con `0` puntos, editables
+  por separado; `ensurePositionPointRuleCoverage` garantiza la cobertura de
+  forma idempotente al crear un split, al anadir un participante (incluso
+  con la configuracion ya bloqueada), al cargar la pantalla y como defensa
+  final antes de publicar una semana. Los valores `1..15` no cambian.
+- **Finalizar split** (ver `docs/SPLIT_FINALIZATION.md`): un administrador
+  puede finalizar formalmente un split `ACTIVE` cuando todas sus semanas
+  programadas ya estan publicadas (`WeekPublication` es la unica prueba de
+  cierre). Reutiliza el estado terminal existente `CLOSED` (etiqueta visible
+  ahora "Finalizado"), cierra el mercado si estaba abierto y envia, dentro
+  de la misma transaccion, una unica noticia idempotente
+  (`split-finalized:{splitId}`) a todos los participantes y un aviso
+  administrativo, con el podio individual, la faccion ganadora (si aplica)
+  y el ganador de cada KPI activo — todo calculado reutilizando
+  `computeSplitClassification`/`computeFactionClassification`/
+  `computeSplitKpiClassification`, sin reimplementar ningun ranking. El
+  bloque "Resumen" del detalle del split muestra siempre "Semanas
+  publicadas: X de Y".
+- **Resumen ampliado de "Economia y mercado"** (ver
+  `docs/ECONOMY_INVENTORY_AND_EQUIPMENT.md`, seccion 23): el enlace
+  subrayado se sustituye por un boton-enlace visual, y el bloque compacto
+  anade ranuras activas, objetos activos, creditos gastados y disponibles,
+  objetos comprados, participantes compradores y objetos equipados, todo
+  con agregaciones acotadas (`getEconomyDashboardSummary`) que reutilizan
+  `listEconomySummaryForSplit` en vez de duplicar la logica de saldo.
+
+### Cambiado
+
+- `SPLIT_STATUS_LABELS.CLOSED` pasa de "Cerrado" a "Finalizado" en toda la
+  aplicacion (misma constante compartida, `src/lib/labels.ts`): no se anade
+  ningun estado nuevo al enum `SplitStatus`.
+- `SplitPositionPointRule.position` pierde su restriccion de base de datos
+  `<= 15` (conserva `>= 1` y la unicidad `(splitId, position)`); el limite
+  superior pasa a calcularse siempre en servicio.
+- `closeMarket` (`economy.service.ts`) se reorganiza en un nucleo
+  reutilizable (`closeMarketWithinTransaction`) que `finalizeSplit` invoca
+  dentro de su propia transaccion, sin duplicar la logica de cierre de
+  mercado ni sus noticias.
+
+### Migracion
+
+- `add_faction_image_and_dynamic_position_points`: crea `SplitFactionImage`
+  (mismo patron que `SplitStoreItemImage`); elimina las dos restricciones
+  historicas que limitaban `SplitPositionPointRule.position` a `15` y las
+  sustituye por una unica `position >= 1`; crea, solo para los splits cuyo
+  numero de participantes ya superaba 15, las filas `16..N` ausentes con
+  `0` puntos (`ON CONFLICT DO NOTHING`, reejecutable). No toca ninguna
+  regla `1..15`, ninguna imagen existente ni ningun resultado publicado.
+  Aditiva y no destructiva: no finaliza ningun split automaticamente
+  aunque ya tenga todas sus semanas publicadas, y no crea noticias
+  retroactivas.
+
+### Sin cambios (verificado)
+
+- Ninguna formula de KPI, bonus, credito, clasificacion ni semana publicada
+  cambia. Las protecciones de solo lectura de un split `CLOSED` ya existian
+  para participantes, facciones, profesiones, localizaciones, KPI, puntos
+  por posicion, publicaciones, mercado, catalogo, compras y equipo:
+  finalizar un split solo activa ese mismo bloqueo ya existente.
+- No se ejecutaron pruebas automatizadas nuevas en esta entrega (las
+  existentes se actualizaron para seguir compilando con la nueva firma de
+  `parsePositionPointsForm`); el usuario realizara las pruebas funcionales
+  manuales.
+
 ## [1.2.1] - Hotfix: cuadricula de ranuras y renombre a Anillo
 
 Minihotfix de alcance minimo sobre la `1.2.0`: no rediseña el modulo ni

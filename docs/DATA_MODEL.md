@@ -22,8 +22,14 @@ Fuente de verdad: `prisma/schema.prisma` y las migraciones
 `prisma/migrations/20260912003932_add_weekly_locations/migration.sql`
 (`0.8.5` / MVP-2C) y
 `prisma/migrations/20260912115557_add_economy_inventory_equipment/migration.sql`
-(`0.9.0` / MVP-2D). Este documento describe y explica ese esquema; en caso
-de discrepancia, el esquema real manda.
+(`0.9.0` / MVP-2D) y
+`prisma/migrations/20260913150000_add_faction_image_and_dynamic_position_points/migration.sql`
+(`1.2.2`, imagen de faccion y rango dinamico de puntos por posicion). Este
+documento describe y explica ese esquema; en caso de discrepancia, el
+esquema real manda. (Las migraciones intermedias entre `0.9.0` y `1.2.2`
+—noticias, analitica, asistencia, equipo visual— se documentan en sus
+propios ficheros de `docs/`, referenciados desde `README.md` y
+`docs/ROADMAP.md`.)
 
 ## Diagrama entidad-relacion
 
@@ -37,6 +43,7 @@ erDiagram
     Split ||--o{ SplitFaction : "tiene"
     SplitFaction ||--o{ SplitParticipant : "agrupa"
     SplitFaction ||--o{ PublishedParticipantWeeklyResult : "tiene resultado en (snapshot)"
+    SplitFaction ||--o| SplitFactionImage : "tiene imagen"
     Split ||--o{ SplitProfession : "tiene"
     SplitProfession ||--o{ SplitParticipant : "es profesion de"
     SplitProfession ||--o{ PublishedParticipantWeeklyResult : "tiene resultado en (snapshot)"
@@ -677,6 +684,26 @@ Faccion de un split (ver `docs/FACTIONS.md`).
   `PublishedParticipantWeeklyResult.factionId`: el servicio comprueba
   ademas explicitamente que no tenga participantes asignados ni el split
   publicaciones antes de permitir eliminarla.
+- `image` (`1.2.2`): relacion opcional uno-a-uno con `SplitFactionImage`
+  (ver mas abajo). Recurso cosmetico actual: nunca se congela en un
+  snapshot y un cambio de emblema no altera ninguna publicacion existente.
+
+### `SplitFactionImage` (`1.2.2`)
+
+Emblema opcional de una faccion (ver `docs/FACTIONS.md`, seccion 16). Misma
+forma y mismo patron que `SplitParticipantAvatar`/`SplitStoreItemImage`:
+entidad uno-a-uno separada para no cargar los bytes en listados de
+facciones.
+
+- `splitFactionId`: clave primaria y unica, con `onDelete: Cascade` desde
+  `SplitFaction`.
+- `imageData`: `Bytes` con la imagen ya procesada (WebP, maximo 512 px por
+  lado, sin EXIF ni metadatos del original).
+- `mimeType`: siempre `image/webp` en esta entrega.
+- `byteSize`: `Int`, con restricciones de base de datos que exigen que sea
+  positivo y que coincida con `octet_length("imageData")`.
+- `sha256`: hash de `imageData`, usado como version estable de cache
+  (`ETag`) y como `imageVersion` en las DTO de faccion.
 
 ### `SplitKpiConfig`
 
@@ -826,20 +853,22 @@ consultar.
 Migracion `add_manual_kpi_entries`, compatible con los datos existentes de
 `0.4.0`.
 
-### `SplitPositionPointRule` (`BUGFIX-1 / UX-SPLIT-1`)
+### `SplitPositionPointRule` (`BUGFIX-1 / UX-SPLIT-1`, rango dinamico desde `1.2.2`)
 
 Puntos por posicion semanal de un split (ver
 `docs/POSITION_POINTS_CONFIGURATION.md`). No es un KPI ni se relaciona con
-`SplitKpiConfig`: es una configuracion aparte que todavia no se aplica a
-ningun resultado.
+`SplitKpiConfig`: es una configuracion aparte.
 
 - `id`: UUID, clave primaria.
 - `splitId`: referencia a `Split` (borrado en cascada si se borra el
   split).
-- `position`: entero. Restriccion de base de datos
-  `SplitPositionPointRule_position_range_check` que exige `1 <= position
-  <= 15`: en esta primera version existen exactamente esas quince
-  posiciones, sin filas dinamicas.
+- `position`: entero. Restriccion de base de datos `position >= 1` (hasta
+  `1.2.2`, `SplitPositionPointRule_position_range_check` exigia ademas
+  `<= 15`; esa migracion elimino el limite superior). Desde `1.2.2` el
+  rango superior es dinamico por split
+  (`N = maximo(15, participantes del split, mayor posicion ya persistida)`,
+  `resolveRequiredPositionCount`, `src/domain/position-points.ts`),
+  calculado siempre en servicio, nunca en base de datos.
 - `points`: entero. Restriccion de base de datos
   `SplitPositionPointRule_points_nonnegative_check` que exige un valor no
   negativo.

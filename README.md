@@ -24,8 +24,10 @@ renovacion visual**, **`1.0.1` — UX y presentacion de resultados** y
 objetos en la tabla administrativa y submenu de "Presentar resultados"** y
 **`1.1.0` — Analitica avanzada del equipo, exclusiva de administracion**,
 **`1.1.1` — Asistencia semanal por horas y puntos por hora** y
-**`1.2.0` — Equipo visual, inventario RPG e imagenes de objetos**
-(ver `docs/ROADMAP.md`). Version actual: `1.2.0`.
+**`1.2.0` — Equipo visual, inventario RPG e imagenes de objetos**,
+**`1.2.1` — Hotfix de cuadricula de ranuras y renombre a Anillo** y
+**`1.2.2` — Cierre de split, imagenes de faccion y mejoras operativas**
+(ver `docs/ROADMAP.md`). Version actual: `1.2.2`.
 
 Estas entregas implementan:
 
@@ -1007,6 +1009,45 @@ formulas. Detalle funcional exhaustivo en
 7. Con una semana publicada, entra en "Presentar resultados" y recorre
    todas las fases con los controles manuales, automaticos y de teclado.
 
+## Cierre de split, imagenes de faccion y mejoras operativas (`1.2.2`)
+
+Entrega de correccion y mejora sobre la `1.2.1`. Detalle funcional completo
+en [`docs/SPLIT_FINALIZATION.md`](docs/SPLIT_FINALIZATION.md),
+[`docs/FACTIONS.md`](docs/FACTIONS.md) (seccion 16),
+[`docs/POSITION_POINTS_CONFIGURATION.md`](docs/POSITION_POINTS_CONFIGURATION.md)
+y [`docs/ECONOMY_INVENTORY_AND_EQUIPMENT.md`](docs/ECONOMY_INVENTORY_AND_EQUIPMENT.md)
+(seccion 23).
+
+- **Identidad de sesion** junto a la campana: nombre completo real para un
+  participante, `Administrador` para un administrador.
+- **Imagen opcional de faccion**, mismo patron seguro que avatares e
+  imagenes de objeto.
+- **Puntos por posicion dinamicos**: el rango deja de estar fijo en
+  `1..15` y cubre siempre, como minimo, el numero de participantes del
+  split; las posiciones nuevas nacen con `0` puntos.
+- **Finalizar split**: un administrador puede cerrar formalmente un split
+  activo cuando todas sus semanas estan publicadas, con noticia final de
+  podio, faccion ganadora y ganadores por KPI.
+- **Resumen ampliado de "Economia y mercado"**: boton-enlace visual y
+  metricas de uso real (ranuras/objetos activos, creditos gastados y
+  disponibles, compras, compradores, objetos equipados).
+
+### Comprobar manualmente
+
+1. Entra como participante y como administrador: confirma el nombre junto
+   a la campana en escritorio y movil.
+2. Sube, cambia y elimina la imagen de una faccion.
+3. En un split con mas de quince participantes, comprueba que aparecen
+   reglas de posicion 16 en adelante con `0` puntos, editables por
+   separado, y que la clasificacion las usa correctamente al publicar.
+4. Publica todas las semanas de un split activo, comprueba
+   "Semanas publicadas: X de Y" y el boton "Finalizar split"; finaliza y
+   revisa el estado "Finalizado", el mercado cerrado y la noticia final.
+5. Intenta finalizar dos veces seguidas (doble clic) y comprueba que no se
+   duplica la noticia.
+6. Revisa el nuevo resumen de "Economia y mercado" en un split sin
+   actividad y en uno con compras/equipo.
+
 ## Reinicio opcional y destructivo del entorno local
 
 **Solo para una base de datos local ficticia.** Este comando **borra
@@ -1082,6 +1123,9 @@ estan excluidos en `.gitignore`).
   — asistencia semanal exclusivamente por horas totales, prioridad
   absoluta sobre cualquier KPI, ranking y puntos por posicion de
   ausencias, y puntos por hora (`1.1.1`).
+- [`docs/SPLIT_FINALIZATION.md`](docs/SPLIT_FINALIZATION.md) —
+  finalizacion formal de un split, condicion exacta, resumen final de
+  podio/faccion/KPI y noticia idempotente (`1.2.2`).
 - [`docs/DECISIONS.md`](docs/DECISIONS.md) — decisiones tecnicas y de
   producto registradas.
 - [`CHANGELOG.md`](CHANGELOG.md) — historial de cambios.
