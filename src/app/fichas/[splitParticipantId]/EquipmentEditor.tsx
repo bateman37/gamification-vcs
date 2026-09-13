@@ -7,6 +7,7 @@ import { saveEquipmentLoadoutAction } from "@/server/actions/equipment.actions";
 import { initialActionState } from "@/server/actions/action-result";
 import { Alert, Badge, Button, ErrorMessage, SuccessMessage } from "@/components/ui";
 import { EquipmentSilhouette } from "@/components/equipment/EquipmentSilhouette";
+import { EquipmentPositionBoard } from "@/components/equipment/EquipmentPositionBoard";
 import { EQUIPMENT_VISUAL_POSITIONS } from "@/domain/equipment-visual-positions";
 import { areLoadoutsEqual, computeLoadoutRevision, type LoadoutAssignment } from "@/domain/equipment-loadout";
 import { EquipmentSlotCard } from "./EquipmentSlotCard";
@@ -337,18 +338,7 @@ export function EquipmentEditor({
               <div className="pointer-events-none absolute inset-0 hidden items-center justify-center sm:flex" aria-hidden="true">
                 <EquipmentSilhouette className="h-full max-h-[30rem] opacity-[0.07]" />
               </div>
-              <div className="relative grid grid-cols-2 gap-2 sm:grid-cols-3">
-                <div className="sm:col-start-2">{placedCell("HEAD")}</div>
-                {placedCell("LEFT_HAND")}
-                {placedCell("TORSO")}
-                {placedCell("RIGHT_HAND")}
-                {placedCell("HANDS")}
-                {placedCell("LEGS")}
-                {placedCell("CAPE")}
-                {placedCell("ARTIFACT")}
-                {placedCell("FEET")}
-                {placedCell("RELIC")}
-              </div>
+              <EquipmentPositionBoard responsive className="relative" renderCell={placedCell} />
             </section>
 
             {unplacedSlots.length > 0 && (

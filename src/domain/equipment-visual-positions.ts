@@ -41,7 +41,7 @@ export interface EquipmentVisualPositionDefinition {
  *                  Cabeza
  * Mano izquierda   Torso      Mano derecha
  * Manos            Piernas    Capa
- * Artefacto        Pies       Reliquia
+ * Anillo           Pies       Reliquia
  * ```
  */
 export const EQUIPMENT_VISUAL_POSITIONS: readonly EquipmentVisualPositionDefinition[] = [
@@ -52,7 +52,7 @@ export const EQUIPMENT_VISUAL_POSITIONS: readonly EquipmentVisualPositionDefinit
   { position: "HANDS", baseName: "Manos", row: 3, column: 1, order: 4 },
   { position: "LEGS", baseName: "Piernas", row: 3, column: 2, order: 5 },
   { position: "CAPE", baseName: "Capa", row: 3, column: 3, order: 6 },
-  { position: "ARTIFACT", baseName: "Artefacto", row: 4, column: 1, order: 7 },
+  { position: "ARTIFACT", baseName: "Anillo", row: 4, column: 1, order: 7 },
   { position: "FEET", baseName: "Pies", row: 4, column: 2, order: 8 },
   { position: "RELIC", baseName: "Reliquia", row: 4, column: 3, order: 9 },
 ] as const;
