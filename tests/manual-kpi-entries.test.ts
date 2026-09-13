@@ -13,6 +13,8 @@ import {
 } from "@/server/services/stability-entry.service";
 import {
   getChronomancyCheckView,
+  getChronomancyFormView,
+  getChronomancyLoadStatus,
   saveChronomancyEntries,
 } from "@/server/services/chronomancy-entry.service";
 import { getWriterCheckView, saveWriterEntries } from "@/server/services/writer-entry.service";
@@ -209,6 +211,87 @@ describe("Cronomagia laboral: occupancy, limite al 100% y VAC de 0/0", () => {
         form({ [`productiveHours__${participant.id}`]: "1", [`totalHours__${participant.id}`]: "0" }),
       ),
     ).rejects.toBeInstanceOf(ManualEntryValidationError);
+  });
+});
+
+describe("Horas semanales independientes de si Cronomagia laboral esta activa (1.1.1)", () => {
+  it("permite guardar horas totales aunque WORK_CHRONOMANCY este inactivo, sin generar puntos ni exigir horas productivas", async () => {
+    const split = await createDraftSplit();
+    const person = await createPerson(testDb, { fullName: "Persona Sin Cronomagia", email: undefined });
+    const participant = await addParticipant(testDb, split.id, { personId: person.id, alias: "SinCrono", level: "N1", startWeekSequenceNumber: 1 });
+    // WORK_CHRONOMANCY se deja inactivo a proposito (es el objeto de esta prueba); se activa otro KPI
+    // cualquiera solo para satisfacer la precondicion de activacion del split (al menos un KPI activo).
+    await updateKpiConfig(testDb, split.id, "STABILITY_GUARDIAN", {
+      isActive: true, baseMax: 30, multiplierN2: 1, parameters: { pointsPerResult: 30 },
+    });
+    await activateSplit(testDb, split.id);
+    const week = (await listSplitWeeks(testDb, split.id))[0]!;
+
+    const formView = await getChronomancyFormView(testDb, split.id, week.id);
+    expect(formView.chronomancyActive).toBe(false);
+    expect(formView.rows[0]?.productiveHoursApplicable).toBe(false);
+
+    await saveChronomancyEntries(testDb, split.id, week.id, form({ [`totalHours__${participant.id}`]: "24" }));
+
+    const entry = await testDb.chronomancyWeeklyEntry.findUnique({
+      where: { splitWeekId_splitParticipantId: { splitWeekId: week.id, splitParticipantId: participant.id } },
+    });
+    expect(entry?.totalHours.toNumber()).toBe(24);
+    expect(entry?.productiveHours).toBeNull();
+
+    const check = await getChronomancyCheckView(testDb, split.id, week.id);
+    expect(check.workChronomancyActive).toBe(false);
+    expect(check.rows[0]?.workChronomancy).toBeNull();
+    expect(check.rows[0]?.attendance).toEqual({ recorded: true, status: "PRESENT", totalHours: 24, productiveHours: null });
+  });
+
+  it("la cobertura de horas se calcula siempre, independiente de si WORK_CHRONOMANCY esta activo", async () => {
+    const split = await createDraftSplit();
+    const person = await createPerson(testDb, { fullName: "Persona Cobertura", email: undefined });
+    const participant = await addParticipant(testDb, split.id, { personId: person.id, alias: "Cobertura", level: "N1", startWeekSequenceNumber: 1 });
+    // WORK_CHRONOMANCY se deja inactivo a proposito (es el objeto de esta prueba); se activa otro KPI
+    // cualquiera solo para satisfacer la precondicion de activacion del split (al menos un KPI activo).
+    await updateKpiConfig(testDb, split.id, "STABILITY_GUARDIAN", {
+      isActive: true, baseMax: 30, multiplierN2: 1, parameters: { pointsPerResult: 30 },
+    });
+    await activateSplit(testDb, split.id);
+    const week = (await listSplitWeeks(testDb, split.id))[0]!;
+
+    const pending = await getChronomancyLoadStatus(testDb, split.id, week.id, week.sequenceNumber);
+    expect(pending).toMatchObject({ status: "PENDING", chronomancyActive: false, savedCount: 0, totalApplicableCount: 1 });
+
+    await saveChronomancyEntries(testDb, split.id, week.id, form({ [`totalHours__${participant.id}`]: "0" }));
+    const loaded = await getChronomancyLoadStatus(testDb, split.id, week.id, week.sequenceNumber);
+    expect(loaded).toMatchObject({ status: "LOADED", savedCount: 1, totalApplicableCount: 1 });
+  });
+
+  it("con el KPI activo pero el nivel no aplicable, horas productivas no se piden ni se guardan", async () => {
+    const split = await createDraftSplit();
+    const person = await createPerson(testDb, { fullName: "Persona Nivel No Aplicable", email: undefined });
+    const participant = await addParticipant(testDb, split.id, { personId: person.id, alias: "NoAplica", level: "N0", startWeekSequenceNumber: 1 });
+    // multiplierN0 vacio: WORK_CHRONOMANCY no aplica a N0, pero las horas totales siguen siendo obligatorias.
+    await updateKpiConfig(testDb, split.id, "WORK_CHRONOMANCY", {
+      isActive: true,
+      baseMax: 60,
+      multiplierN1: 1,
+      parameters: { pointsAtFullOccupancy: 60 },
+    });
+    await activateSplit(testDb, split.id);
+    const week = (await listSplitWeeks(testDb, split.id))[0]!;
+
+    const formView = await getChronomancyFormView(testDb, split.id, week.id);
+    expect(formView.chronomancyActive).toBe(true);
+    expect(formView.rows[0]?.productiveHoursApplicable).toBe(false);
+
+    await saveChronomancyEntries(testDb, split.id, week.id, form({ [`totalHours__${participant.id}`]: "16", [`productiveHours__${participant.id}`]: "999" }));
+    const entry = await testDb.chronomancyWeeklyEntry.findUnique({
+      where: { splitWeekId_splitParticipantId: { splitWeekId: week.id, splitParticipantId: participant.id } },
+    });
+    // El campo enviado para "productiveHours" se ignora: no aplica a N0, nunca se guarda un valor implicito.
+    expect(entry?.productiveHours).toBeNull();
+
+    const check = await getChronomancyCheckView(testDb, split.id, week.id);
+    expect(check.rows[0]?.workChronomancy).toEqual({ status: "not_applicable" });
   });
 });
 

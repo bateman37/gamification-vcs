@@ -173,6 +173,21 @@ Si el multiplicador N2 es `null`, el resultado es `No aplica`.
 
 **Participantes:** todos los aplicables.
 
+> **Desde `1.1.1`** (ver `docs/WEEKLY_ATTENDANCE_AND_HOURS.md`): el campo
+> `Horas totales de la semana` deja de ser exclusivo de este KPI. Es
+> **obligatorio guardarlo para todo participante aplicable de toda
+> semana**, exista o no `WORK_CHRONOMANCY` activo en el split: es el
+> unico dato que determina la asistencia semanal
+> (`totalHours > 0` = presente, `= 0` = ausente), con prioridad absoluta
+> sobre cualquier otro KPI. `Horas productivas` sigue siendo exclusivo
+> del calculo de este KPI: solo se pide y se guarda cuando esta activo
+> **y** aplica al nivel del participante (columna nullable desde esta
+> version; `null` significa "no aplica", nunca "vacaciones" ni cero
+> implicito). Con el KPI inactivo o no aplicable, el formulario y
+> `getChronomancyFormView`/`saveChronomancyEntries` solo piden y guardan
+> `totalHours`; la cobertura de carga (`getChronomancyLoadStatus`) se
+> calcula siempre sobre este mismo campo.
+
 **Campos:** `Horas productivas` y `Horas totales de la semana` (ambos
 decimales, mayores o iguales que cero). Desde `0.6.0` / MVP-1C, un campo
 vacio, ausente o solo con espacios en cualquiera de los dos se interpreta y

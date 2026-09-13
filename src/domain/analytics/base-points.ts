@@ -31,7 +31,6 @@ export function resolveCellBase(cell: KpiCellObservation): ResolvedCellBase {
 export type CellExclusionReason =
   | "not_applicable"
   | "observation_excluded"
-  | "vac_uncounted"
   | "base_unavailable";
 
 /**
@@ -59,19 +58,13 @@ export interface ResolvedCellValue {
 }
 
 /**
- * Resuelve una celda para las estadisticas de rendimiento, aplicando la
- * politica de exclusion de posibles ausencias (parte F) y el modo
- * con/sin gamificacion (parte C3/E1).
- *
- * `observationExcluded` ya debe venir decidido (parte F: umbral de ceros +
- * excepciones manuales) para toda la observacion persona-split-semana.
+ * Resuelve una celda para las estadisticas de rendimiento, segun la
+ * asistencia ya decidida para toda la observacion persona-split-semana
+ * (`1.1.1`, sustituye la politica de posibles ausencias de `1.1.0`, ver
+ * docs/WEEKLY_ATTENDANCE_AND_HOURS.md) y el modo con/sin gamificacion
+ * (parte C3/E1).
  */
-export function resolveCellValue(
-  cell: KpiCellObservation,
-  mode: GamificationDisplayMode,
-  observationExcluded: boolean,
-  exclusionPolicyEnabled: boolean,
-): ResolvedCellValue {
+export function resolveCellValue(cell: KpiCellObservation, mode: GamificationDisplayMode, observationExcluded: boolean): ResolvedCellValue {
   const base = {
     kpiCode: cell.kpiCode,
     kpiName: cell.kpiName,
@@ -88,17 +81,15 @@ export function resolveCellValue(
     return { ...base, included: false, x: null, q: null, reason: "not_applicable" };
   }
 
-  if (exclusionPolicyEnabled && observationExcluded) {
+  // Ausencia (real o cobertura legacy desconocida): fuera de rendimiento, tanto la observacion
+  // completa como, defensivamente, una celda individual `ABSENT`.
+  if (observationExcluded || cell.status === "ABSENT") {
     return { ...base, included: false, x: null, q: null, reason: "observation_excluded" };
   }
 
   if (cell.status === "VAC") {
-    if (exclusionPolicyEnabled) {
-      // La observacion no alcanzo el umbral, pero esta celda VAC concreta
-      // sigue siendo ausencia de dato: se excluye de la media de su KPI.
-      return { ...base, included: false, x: null, q: null, reason: "vac_uncounted" };
-    }
-    // Politica desactivada: VAC cuenta como cero analitico (nunca "No aplica").
+    // VAC cuenta siempre como cero analitico (hotfix AVISO/0, ver docs/DECISIONS.md): es una
+    // ausencia de dato de una persona presente, no una ausencia laboral.
     const max = cell.baseMax;
     return { ...base, included: true, x: 0, q: max !== null && max > 0 ? 0 : null, reason: null };
   }

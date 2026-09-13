@@ -30,6 +30,7 @@ export function KpiPerformanceTab({
                 <th className="px-3 py-2">KPI</th>
                 <th className="px-3 py-2">Media (%)</th>
                 <th className="px-3 py-2">Media (pts)</th>
+                <th className="px-3 py-2">Media (pts/hora)</th>
                 <th className="px-3 py-2">Mediana</th>
                 <th className="px-3 py-2">Mín–Máx</th>
                 <th className="px-3 py-2">Actual</th>
@@ -49,6 +50,7 @@ export function KpiPerformanceTab({
                   </td>
                   <td className="px-3 py-2 tabular">{formatPercentEs(row.teamAveragePercentage)}</td>
                   <td className="px-3 py-2 tabular">{formatPointsEs(row.teamAveragePoints)}</td>
+                  <td className="px-3 py-2 tabular">{row.teamPointsPerHour === null ? "—" : formatPointsEs(row.teamPointsPerHour)}</td>
                   <td className="px-3 py-2 tabular">{formatPercentEs(row.medianPercentage)}</td>
                   <td className="px-3 py-2 tabular">
                     {row.minPercentage !== null && row.maxPercentage !== null ? `${formatPercentEs(row.minPercentage)} – ${formatPercentEs(row.maxPercentage)}` : "—"}

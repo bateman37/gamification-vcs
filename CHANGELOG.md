@@ -5,6 +5,71 @@ La primera version publicada es `0.1.0`; `1.0.0` cierra la primera version
 estable del producto (nucleo funcional y las cuatro capas de juego, mas
 comunicacion y renovacion visual).
 
+## [1.1.1] - Asistencia semanal por horas y puntos por hora
+
+Sustituye la heuristica de "posibles ausencias" de `1.1.0` (umbral de KPI
+en cero/sin dato, revisable fila a fila) por una regla objetiva y unica:
+la asistencia semanal se determina exclusivamente por "Horas totales de
+la semana" de la captura compartida con Cronomagia laboral. Afecta a
+carga semanal, calculo, publicacion, clasificacion, facciones, creditos,
+vista individual y Analitica avanzada.
+
+### Anadido
+
+- **Bloque de horas semanales obligatorio**: `totalHours` debe guardarse
+  para todo participante aplicable de toda semana, exista o no Cronomagia
+  laboral activa; el KPI sigue siendo opcional/configurable, y
+  `productiveHours` sigue siendo exclusivo de su calculo (columna
+  nullable desde esta version).
+- **Asistencia con prioridad absoluta** (`src/domain/attendance.ts`,
+  `resolveWeeklyAttendance`): `totalHours > 0` = presente; `= 0` o sin
+  guardar = ausente/pendiente. Una ausencia ignora cualquier otro dato
+  operativo de esa semana: `0` puntos KPI, `0` creditos, sin bonus, sin
+  posicion numerica, pero con los puntos de la ultima posicion efectiva
+  ocupada por una persona presente (contando en la clasificacion general
+  y en el top-3 de facciones). Caso "todos ausentes" soportado de forma
+  explicita.
+- **Nuevo estado `ABSENT`** en `PublishedKpiOutcomeStatus`, distinto de
+  `VAC` (dato ausente de una persona presente) y de `NOT_APPLICABLE` (KPI
+  ajeno al nivel).
+- **Puntos por hora** (`src/domain/points-per-hour.ts`): nueva medida de
+  rendimiento real (numerador puntos KPI, denominador horas totales
+  trabajadas), semanal, de periodo (razon de sumas, nunca media de
+  razones semanales) y con consolidacion explicita para splits
+  simultaneos de la misma persona y semana.
+- **Nuevo selector de medida en Analitica avanzada**
+  (`% del maximo | Puntos KPI | Puntos por hora`), en sustitucion completa
+  de la politica de exclusion de posibles ausencias de `1.1.0`
+  (`DEFAULT_ZERO_THRESHOLD`, `excludeZeroObservations`, `zeroThreshold`,
+  `manualOverrides`, `ExclusionsPanel` y los parametros de URL
+  `exclusion`/`umbral`/`ov_*`, todos eliminados).
+- **Migracion aditiva y compatible**
+  (`20260913085103_add_weekly_attendance_and_points_per_hour`): nuevo
+  enum `WeeklyAttendanceStatus`, nuevas columnas nullable en
+  `PublishedParticipantWeeklyResult` (`attendanceStatus`,
+  `totalHoursSnapshot`, `productiveHoursSnapshot`,
+  `positionPointsRuleRank`), `weeklyRank` pasa a nullable. Ninguna
+  publicacion anterior a esta version se reinterpreta: queda con
+  cobertura de asistencia desconocida (`UNKNOWN_LEGACY` solo en el
+  dominio de analitica), sin backfill.
+- Documentacion completa en `docs/WEEKLY_ATTENDANCE_AND_HOURS.md`, con
+  ejemplos numericos de referencia y checklist manual pendiente.
+
+### Cambiado
+
+- El denominador de "x de n" en las vistas **semanales** (previsualizacion,
+  publicacion, resultados de esa semana) pasa a ser el numero de
+  presentes, no el total de participantes aplicables; las vistas
+  **generales/acumuladas** (clasificacion general, facciones, historico)
+  mantienen el total de participantes del split (ver
+  `docs/DECISIONS.md`).
+
+### Fuera de alcance de esta entrega
+
+Serie de puntos por hora por KPI individual (solo indice de equipo
+agregado), backfill de asistencia para publicaciones anteriores a esta
+version, y cualquier nueva mecanica de juego no descrita arriba.
+
 ## [1.1.0] - Analitica avanzada del equipo, exclusiva de administracion
 
 Nuevo modulo de solo lectura `/analitica`, situado inmediatamente debajo de

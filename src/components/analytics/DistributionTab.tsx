@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { SectionHeader, StatCard } from "@/components/ui";
-import type { AnalyticsSnapshot } from "@/domain/analytics";
+import type { AnalyticsMeasure, AnalyticsSnapshot } from "@/domain/analytics";
 import { DISTRIBUTION_BUCKET_LABELS, DISTRIBUTION_BUCKET_ORDER } from "@/domain/analytics";
-import { formatNumberEs, formatPercentEs } from "./format";
+import { formatNumberEs, formatPercentEs, formatPointsEs } from "./format";
 import { SimpleBarChart } from "./charts/SimpleBarChart";
 import { buildAnalyticsHref, type RawSearchParams } from "@/app/analitica/filters";
 import { KPI_CATALOG_LIST } from "@/domain/kpis/catalog";
@@ -11,15 +11,25 @@ import { KPI_CATALOG_LIST } from "@/domain/kpis/catalog";
 export function DistributionTab({
   snapshot,
   selectedKpi,
+  measure,
   searchParams,
 }: {
   snapshot: AnalyticsSnapshot;
   selectedKpi: string | null;
+  measure: AnalyticsMeasure;
   searchParams: RawSearchParams;
 }) {
-  const stats = selectedKpi ? snapshot.distribution.perKpi[selectedKpi]?.stats : snapshot.distribution.totalIndex.stats;
-  const buckets = selectedKpi ? snapshot.distribution.perKpi[selectedKpi]?.buckets : snapshot.distribution.totalIndex.buckets;
-  const label = selectedKpi ? KPI_CATALOG_LIST.find((k) => k.code === selectedKpi)?.name ?? selectedKpi : "Índice total normalizado";
+  // Puntos por hora solo tiene distribucion propia para el indice total (razon de sumas, G2): un
+  // KPI concreto sigue distribuyendose por `%` del maximo base.
+  const usesPph = measure === "pph" && !selectedKpi;
+  const stats = usesPph
+    ? snapshot.distribution.totalPointsPerHour.stats
+    : selectedKpi
+      ? snapshot.distribution.perKpi[selectedKpi]?.stats
+      : snapshot.distribution.totalIndex.stats;
+  const buckets = selectedKpi ? snapshot.distribution.perKpi[selectedKpi]?.buckets : usesPph ? undefined : snapshot.distribution.totalIndex.buckets;
+  const label = selectedKpi ? KPI_CATALOG_LIST.find((k) => k.code === selectedKpi)?.name ?? selectedKpi : usesPph ? "Puntos por hora del equipo" : "Índice total normalizado";
+  const formatter = usesPph ? formatPointsEs : formatPercentEs;
 
   const barData = DISTRIBUTION_BUCKET_ORDER.map((bucket) => ({ label: DISTRIBUTION_BUCKET_LABELS[bucket], value: buckets?.[bucket] ?? 0 }));
 
@@ -51,14 +61,20 @@ export function DistributionTab({
         ) : (
           <>
             <dl className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <StatCard label="Media" value={formatPercentEs(stats?.mean ?? null)} />
-              <StatCard label="Mediana" value={formatPercentEs(stats?.median ?? null)} />
-              <StatCard label="Mín / Máx" value={`${formatPercentEs(stats?.min ?? null)} / ${formatPercentEs(stats?.max ?? null)}`} />
-              <StatCard label="Q1 / Q3 (RIC)" value={`${formatPercentEs(stats?.q1 ?? null)} / ${formatPercentEs(stats?.q3 ?? null)}`} helpText={stats?.iqr !== null && stats?.iqr !== undefined ? `RIC: ${formatNumberEs(stats.iqr)} pp` : undefined} />
+              <StatCard label="Media" value={formatter(stats?.mean ?? null)} />
+              <StatCard label="Mediana" value={formatter(stats?.median ?? null)} />
+              <StatCard label="Mín / Máx" value={`${formatter(stats?.min ?? null)} / ${formatter(stats?.max ?? null)}`} />
+              <StatCard label="Q1 / Q3 (RIC)" value={`${formatter(stats?.q1 ?? null)} / ${formatter(stats?.q3 ?? null)}`} helpText={stats?.iqr !== null && stats?.iqr !== undefined ? `RIC: ${formatNumberEs(stats.iqr)}` : undefined} />
             </dl>
-            <div className="mt-4">
-              <SimpleBarChart data={barData} valueSuffix=" personas" />
-            </div>
+            {usesPph ? (
+              <p className="mt-4 text-xs text-text-muted">
+                Puntos por hora no se agrupa por intervalos de porcentaje: consulta la media, mediana y rango anteriores.
+              </p>
+            ) : (
+              <div className="mt-4">
+                <SimpleBarChart data={barData} valueSuffix=" personas" />
+              </div>
+            )}
           </>
         )}
       </div>

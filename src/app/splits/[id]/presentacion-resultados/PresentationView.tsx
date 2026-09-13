@@ -244,20 +244,26 @@ export function PresentationView({ splitId, data }: { splitId: string; data: Spl
               <p className="tabular text-sm text-white/60">{weekIntervalLabel}</p>
             </div>
             <div className="space-y-3">
-              {currentGroups.slice(0, revealedCount).map((group, groupIndex) =>
-                group.map((entry) =>
-                  "alias" in entry ? (
-                    <ParticipantRevealCard
-                      key={entry.splitParticipantId}
-                      entry={entry}
-                      pointsLabel={phase === "weekly-individual" ? "Puntos KPI de la semana" : "Puntos por posición acumulados"}
-                    />
-                  ) : (
-                    <FactionRevealCard key={`${groupIndex}-${entry.factionId}`} entry={entry} />
-                  ),
-                ),
+              {phase === "weekly-individual" && data.weeklyPresentCount === 0 ? (
+                <p className="text-center text-white/70">No hay participantes presentes en esta semana.</p>
+              ) : (
+                <>
+                  {currentGroups.slice(0, revealedCount).map((group, groupIndex) =>
+                    group.map((entry) =>
+                      "alias" in entry ? (
+                        <ParticipantRevealCard
+                          key={entry.splitParticipantId}
+                          entry={entry}
+                          pointsLabel={phase === "weekly-individual" ? "Puntos KPI de la semana" : "Puntos por posición acumulados"}
+                        />
+                      ) : (
+                        <FactionRevealCard key={`${groupIndex}-${entry.factionId}`} entry={entry} />
+                      ),
+                    ),
+                  )}
+                  {revealedCount === 0 && <p className="text-center text-white/50">Pulsa &quot;Siguiente&quot; para empezar a revelar posiciones.</p>}
+                </>
               )}
-              {revealedCount === 0 && <p className="text-center text-white/50">Pulsa &quot;Siguiente&quot; para empezar a revelar posiciones.</p>}
             </div>
           </div>
         )}

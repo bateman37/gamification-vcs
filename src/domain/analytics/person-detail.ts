@@ -1,6 +1,7 @@
 import { collapseSimultaneousSplits, collapseWeeksToPersonPeriod, computeHierarchicalAverage, mean, type WeightedCell } from "./aggregation";
 import { ppDifference } from "./comparison";
 import { resolveCellBase } from "./base-points";
+import { computeWeeklyPointsPerHour, computePeriodPointsPerHour } from "@/domain/points-per-hour";
 import { formatCalendarDate } from "@/lib/dates";
 import type { ResolvedObservation } from "./observation";
 import type { AnalyticsLevel } from "./types";
@@ -34,7 +35,11 @@ export interface PersonDetailWeekRow {
   weekSequenceNumber: number;
   levelSnapshot: AnalyticsLevel;
   excluded: boolean;
-  decision: string;
+  /** Asistencia real (`1.1.1`): `"PRESENT"` | `"ABSENT"` | `"UNKNOWN_LEGACY"` (publicacion anterior a esta version, sin dato). */
+  attendance: "PRESENT" | "ABSENT" | "UNKNOWN_LEGACY";
+  totalHours: number | null;
+  /** Puntos KPI por hora de esta semana. `null` si no es calculable. */
+  pointsPerHour: number | null;
   totalPointsValid: number | null;
   indexNormalized: number | null;
   restOfLevelAverage: number | null;
@@ -78,7 +83,12 @@ export function buildPersonDetailWeeks(
         weekSequenceNumber: observation.weekSequenceNumber,
         levelSnapshot: observation.levelSnapshot,
         excluded: observation.excluded,
-        decision: observation.exclusionDecision,
+        attendance: observation.attendance,
+        totalHours: observation.hours,
+        pointsPerHour:
+          observation.hours !== null && observation.totals.totalPointsValid !== null
+            ? computeWeeklyPointsPerHour(observation.totals.totalPointsValid, observation.hours)
+            : null,
         totalPointsValid: observation.excluded ? null : observation.totals.totalPointsValid,
         indexNormalized: observation.excluded ? null : observation.totals.indexNormalized,
         restOfLevelAverage: restAverage,
@@ -121,6 +131,8 @@ export interface PersonDetailSummary {
   excludedWeekCount: number;
   averageWeeklyPoints: number | null;
   teamIndex: number | null;
+  /** Puntos KPI por hora del periodo: razon de sumas (G2), solo semanas presentes con horas validas. */
+  pointsPerHour: number | null;
 }
 
 export function buildPersonDetailSummary(personId: string, personFullName: string, weeks: readonly PersonDetailWeekRow[]): PersonDetailSummary {
@@ -131,6 +143,11 @@ export function buildPersonDetailSummary(personId: string, personFullName: strin
   const indexCells: WeightedCell[] = included
     .filter((w) => w.indexNormalized !== null)
     .map((w) => ({ personId, splitId: w.splitId, weekKey: formatCalendarDate(w.weekStartDate), value: w.indexNormalized as number }));
+  const pointsPerHour = computePeriodPointsPerHour(
+    included
+      .filter((w) => w.totalHours !== null && w.totalPointsValid !== null)
+      .map((w) => ({ points: w.totalPointsValid as number, hours: w.totalHours as number })),
+  );
 
   return {
     personId,
@@ -140,5 +157,6 @@ export function buildPersonDetailSummary(personId: string, personFullName: strin
     excludedWeekCount: weeks.length - included.length,
     averageWeeklyPoints: computeHierarchicalAverage(pointsCells).teamAverage,
     teamIndex: computeHierarchicalAverage(indexCells).teamAverage,
+    pointsPerHour,
   };
 }

@@ -91,13 +91,19 @@ export const ORIGIN_ROUTE_SLUGS: Record<LoadOrigin, string> = {
   EXPERT_APPRENTICE: "formaciones",
 };
 
+/**
+ * `WORK_CHRONOMANCY` queda fuera de este orden a proposito desde `1.1.1`
+ * (ver docs/WEEKLY_ATTENDANCE_AND_HOURS.md): su bloque de horas es siempre
+ * visible en la pantalla semanal, independiente de si el KPI esta activo,
+ * asi que ya no se muestra como un grupo de carga mas que aparece/desaparece
+ * segun `SplitKpiConfig.isActive`.
+ */
 const ORIGIN_ORDER: LoadOrigin[] = [
   "PRODUCTIVITY",
   "ESCALATION_TAMER",
   "MASTER_CRAFTSMAN",
   "VOICE_AMBASSADOR",
   "STABILITY_GUARDIAN",
-  "WORK_CHRONOMANCY",
   "STAR_WRITER",
   "ENTHUSIASTIC_STUDENT",
   "EXPERT_APPRENTICE",
@@ -130,7 +136,9 @@ export function buildWeeklyLoadGroups(
   coverageByOrigin: Partial<Record<LoadOrigin, LoadCoverageStatus>>,
 ): LoadGroupView[] {
   const groups: LoadGroupView[] = [];
-  const handledCodes = new Set<KpiCode>();
+  // Cronomagia tiene su propio bloque de horas siempre visible (ver comentario de ORIGIN_ORDER):
+  // nunca debe aparecer aqui, ni como grupo implementado ni como "pendiente".
+  const handledCodes = new Set<KpiCode>(["WORK_CHRONOMANCY"]);
 
   for (const origin of ORIGIN_ORDER) {
     const entries = activeCatalogEntries.filter((entry) => ORIGIN_KPI_CODES[origin].includes(entry.code));

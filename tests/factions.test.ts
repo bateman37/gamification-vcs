@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { resetDatabase, testDb } from "./helpers/db";
+import { markAllPresent } from "./helpers/attendance";
 import { createPerson } from "@/server/services/person.service";
 import { createSplitWithWeeks, activateSplit, listSplitWeeks } from "@/server/services/split.service";
 import { addParticipant, updateParticipant } from "@/server/services/participant.service";
@@ -214,6 +215,7 @@ describe("Facciones: publicacion, congelacion y clasificacion", () => {
 
   it("la publicacion congela faccion, nombre, color y puntos del momento; la suma usa exactamente los tres mejores", async () => {
     const { split, factionA, week } = await buildTwoFactionSplit();
+    await markAllPresent(testDb, split.id, week.id);
     await publishWeek(testDb, split.id, week.id, null);
 
     const classification = await computeFactionClassification(testDb, split.id);
@@ -232,6 +234,7 @@ describe("Facciones: publicacion, congelacion y clasificacion", () => {
 
   it("renombrar o cambiar el color de la faccion despues de publicar no cambia el snapshot de la semana ya publicada", async () => {
     const { split, factionA, week } = await buildTwoFactionSplit();
+    await markAllPresent(testDb, split.id, week.id);
     await publishWeek(testDb, split.id, week.id, null);
 
     await updateFaction(testDb, split.id, factionA.id, { name: "Alfa Renombrada", color: "#00ff00" });
@@ -250,6 +253,7 @@ describe("Facciones: publicacion, congelacion y clasificacion", () => {
 
   it("reasignar la faccion de un participante despues de publicar no cambia la clasificacion historica", async () => {
     const { split, factionA, factionB, week } = await buildTwoFactionSplit();
+    await markAllPresent(testDb, split.id, week.id);
     await publishWeek(testDb, split.id, week.id, null);
 
     const beforeClassification = await computeFactionClassification(testDb, split.id);
@@ -289,6 +293,7 @@ describe("Facciones: publicacion, congelacion y clasificacion", () => {
     const allParticipants = await testDb.splitParticipant.findMany({ where: { splitId: split.id, startWeekSequenceNumber: 1 } });
     for (const participant of allParticipants) entries[`resultValue__${participant.id}`] = "10";
     await saveStabilityEntries(testDb, split.id, week.id, form(entries));
+    await markAllPresent(testDb, split.id, week.id);
 
     await expect(publishWeek(testDb, split.id, week.id, null)).rejects.toBeInstanceOf(DomainError);
     expect(await testDb.weekPublication.count()).toBe(0);
@@ -302,6 +307,7 @@ describe("Facciones: publicacion, congelacion y clasificacion", () => {
     await activateSplit(testDb, split.id);
     const week = (await listSplitWeeks(testDb, split.id))[0]!;
     await saveStabilityEntries(testDb, split.id, week.id, form({ [`resultValue__${participant.id}`]: "10" }));
+    await markAllPresent(testDb, split.id, week.id);
     await publishWeek(testDb, split.id, week.id, null);
 
     const classification = await computeFactionClassification(testDb, split.id);

@@ -22,8 +22,9 @@ inventario y equipo**, **`1.0.0` / MVP-3 — Centro de noticias y
 renovacion visual**, **`1.0.1` — UX y presentacion de resultados** y
 **`1.0.2` — Hotfix de sincronizacion de ranuras de equipo, bonus de
 objetos en la tabla administrativa y submenu de "Presentar resultados"** y
-**`1.1.0` — Analitica avanzada del equipo, exclusiva de administracion**
-(ver `docs/ROADMAP.md`). Version actual: `1.1.0`.
+**`1.1.0` — Analitica avanzada del equipo, exclusiva de administracion** y
+**`1.1.1` — Asistencia semanal por horas y puntos por hora**
+(ver `docs/ROADMAP.md`). Version actual: `1.1.1`.
 
 Estas entregas implementan:
 
@@ -131,10 +132,21 @@ Estas entregas implementan:
   distribucion y consistencia, analisis por persona e impacto de la
   gamificacion) leen exclusivamente semanas publicadas, con identidad de
   analisis por `personId` (nunca alias ni faccion), filtros compartidos de
-  splits/periodo/nivel/modo, una politica ajustable de exclusion de
-  posibles ausencias, comparacion frente a la semana anterior o a la media
-  del periodo, y un detalle por persona con enlace a la publicacion
-  original. Ver `docs/ADVANCED_ANALYTICS.md`.
+  splits/periodo/nivel/modo, un selector de medida
+  (`% del maximo | Puntos KPI | Puntos por hora`, desde `1.1.1`),
+  comparacion frente a la semana anterior o a la media del periodo, y un
+  detalle por persona con enlace a la publicacion original. Ver
+  `docs/ADVANCED_ANALYTICS.md`.
+
+- **Asistencia semanal por horas y puntos por hora**: la asistencia se
+  determina exclusivamente por "Horas totales de la semana" (bloque
+  obligatorio para todo participante aplicable, exista o no Cronomagia
+  laboral activa), con prioridad absoluta sobre cualquier otro KPI. Una
+  ausencia no compite ni ocupa posicion numerica, pero recibe los puntos
+  por posicion de la ultima posicion efectiva y cuenta en la clasificacion
+  general y en las facciones. Nueva medida "Puntos por hora" (puntos KPI
+  entre horas totales trabajadas). Ver
+  `docs/WEEKLY_ATTENDANCE_AND_HOURS.md`.
 
 Todavia **no** incluye despublicar/reabrir una semana, exportacion
 Excel/PDF de resultados, ni transferencias, regalos, reventa ni misiones.
@@ -985,6 +997,10 @@ estan excluidos en `.gitignore`).
 - [`docs/DESIGN_SYSTEM.md`](docs/DESIGN_SYSTEM.md) — sistema visual
   "Prisma competitivo": paleta, tokens, app shell y componentes
   compartidos (`1.0.0` / MVP-3).
+- [`docs/WEEKLY_ATTENDANCE_AND_HOURS.md`](docs/WEEKLY_ATTENDANCE_AND_HOURS.md)
+  — asistencia semanal exclusivamente por horas totales, prioridad
+  absoluta sobre cualquier KPI, ranking y puntos por posicion de
+  ausencias, y puntos por hora (`1.1.1`).
 - [`docs/DECISIONS.md`](docs/DECISIONS.md) — decisiones tecnicas y de
   producto registradas.
 - [`CHANGELOG.md`](CHANGELOG.md) — historial de cambios.

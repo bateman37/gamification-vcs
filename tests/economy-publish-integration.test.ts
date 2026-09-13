@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { resetDatabase, testDb } from "./helpers/db";
+import { markAllPresent } from "./helpers/attendance";
 import { createPerson } from "@/server/services/person.service";
 import { createSplitWithWeeks, activateSplit, listSplitWeeks } from "@/server/services/split.service";
 import { addParticipant } from "@/server/services/participant.service";
@@ -75,6 +76,7 @@ describe("Bonus de equipo compuesto con profesion y localizacion", () => {
     const owned = await testDb.splitParticipantItem.findFirstOrThrow({ where: { splitParticipantId: participant.id } });
     await equipOwnedItem(testDb, person.id, participant.id, owned.id);
 
+    await markAllPresent(testDb, split.id, week.id);
     const preview = await computeWeeklyResults(testDb, split.id, week.id);
     const kpiCell = preview.participants[0]!.kpiResults.find((cell) => cell.kpiCode === "STABILITY_GUARDIAN")!;
     expect(kpiCell.basePointsBeforeProfession).toBe(70);
@@ -115,6 +117,7 @@ describe("Publicacion: snapshots de equipo y creditos", () => {
 
   it("congela el objeto equipado (nombre, ranura, KPI, porcentaje) en PublishedEquippedItem", async () => {
     const { split, participant, slot, storeItem, week } = await buildSplitReadyToPublish();
+    await markAllPresent(testDb, split.id, week.id);
     await publishWeek(testDb, split.id, week.id, null);
 
     const result = await testDb.publishedParticipantWeeklyResult.findFirstOrThrow({
@@ -138,6 +141,7 @@ describe("Publicacion: snapshots de equipo y creditos", () => {
   it("crea el credito congelado y el movimiento WEEKLY_EARNING en la misma transaccion que la publicacion", async () => {
     const { split, participant, week } = await buildSplitReadyToPublish();
     const balanceBefore = await getParticipantBalance(testDb, participant.id);
+    await markAllPresent(testDb, split.id, week.id);
     await publishWeek(testDb, split.id, week.id, null);
 
     const result = await testDb.publishedParticipantWeeklyResult.findFirstOrThrow({
@@ -152,6 +156,7 @@ describe("Publicacion: snapshots de equipo y creditos", () => {
 
   it("un unico movimiento WEEKLY_EARNING por resultado publicado: no se duplica al reintentar", async () => {
     const { split, participant, week } = await buildSplitReadyToPublish();
+    await markAllPresent(testDb, split.id, week.id);
     await publishWeek(testDb, split.id, week.id, null);
     await expect(publishWeek(testDb, split.id, week.id, null)).rejects.toBeInstanceOf(DomainError);
     // Un movimiento por ESTA semana (ademas del que ya otorgo el credito inicial de prueba, ligado a otra semana).
@@ -164,6 +169,7 @@ describe("Publicacion: snapshots de equipo y creditos", () => {
 
   it("cambiar el equipo despues de publicar nunca modifica la semana ya publicada", async () => {
     const { split, person, participant, slot, week } = await buildSplitReadyToPublish();
+    await markAllPresent(testDb, split.id, week.id);
     await publishWeek(testDb, split.id, week.id, null);
 
     await unequipSlot(testDb, person.id, participant.id, slot.id);
@@ -181,6 +187,7 @@ describe("Publicacion: snapshots de equipo y creditos", () => {
     const { split, week } = await buildSplitReadyToPublish();
     // El helper ya equipa antes de publicar; esta prueba documenta que un cambio de equipo hecho antes
     // de llamar a publishWeek (nunca despues) es el que se congela, coherente con la seccion 21 del encargo.
+    await markAllPresent(testDb, split.id, week.id);
     const result = await publishWeek(testDb, split.id, week.id, null);
     expect(result.alreadyPublished).toBe(false);
   });
@@ -189,6 +196,7 @@ describe("Publicacion: snapshots de equipo y creditos", () => {
     const { split, participant, week } = await buildSplitReadyToPublish();
     // Simula una publicacion anterior a 0.9.0: sin equippedItems y con equipmentBonusPoints/Applied nulos/false.
     await testDb.splitParticipantEquippedItem.deleteMany({ where: { splitParticipantId: participant.id } });
+    await markAllPresent(testDb, split.id, week.id);
     const publication = await publishWeek(testDb, split.id, week.id, null);
     void publication;
 
@@ -205,6 +213,7 @@ describe("Publicacion: snapshots de equipo y creditos", () => {
   it("un fallo de publicacion (falta la regla de puntos por posicion) no deja publicacion, snapshot ni credito parcial", async () => {
     const { split, participant, week } = await buildSplitReadyToPublish();
     await testDb.splitPositionPointRule.deleteMany({ where: { splitId: split.id } });
+    await markAllPresent(testDb, split.id, week.id);
 
     await expect(publishWeek(testDb, split.id, week.id, null)).rejects.toBeInstanceOf(DomainError);
     expect(await testDb.weekPublication.count({ where: { splitWeekId: week.id } })).toBe(0);

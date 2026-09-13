@@ -29,6 +29,7 @@ import { applyLocationBonus, isAllowedLocationBonusPercent, type ApplicableWeekL
 import { applyEquipmentBonuses, type EquippedItemForBonus } from "@/domain/equipment-bonus";
 import { loadEquippedItemsForParticipants } from "@/server/services/equipment.service";
 import { computeCreditsEarned } from "@/domain/credits";
+import { resolveWeeklyAttendance, type WeeklyAttendanceStatus } from "@/domain/attendance";
 
 type Db = PrismaClient | Prisma.TransactionClient;
 
@@ -41,7 +42,7 @@ type Db = PrismaClient | Prisma.TransactionClient;
  * datos calculados previamente).
  */
 
-export type KpiResultStatus = "COMPUTED" | "VAC" | "NOT_APPLICABLE";
+export type KpiResultStatus = "COMPUTED" | "VAC" | "NOT_APPLICABLE" | "ABSENT";
 
 export interface ParticipantKpiResult {
   kpiCode: KpiCode;
@@ -111,8 +112,15 @@ export interface ParticipantWeeklyResult {
   kpiResults: ParticipantKpiResult[];
   totalKpiPoints: number;
   applicableMaxPoints: number | null;
-  weeklyRank: number;
+  /** Asistencia semanal (`1.1.1`, ver docs/WEEKLY_ATTENDANCE_AND_HOURS.md): unica fuente = horas totales de la semana. */
+  attendanceStatus: WeeklyAttendanceStatus;
+  totalHours: number;
+  productiveHours: number | null;
+  /** Posicion semanal entre presentes. `null` para un ausente o cuando nadie estuvo presente. */
+  weeklyRank: number | null;
   positionPoints: number | null;
+  /** Posicion realmente usada para conceder `positionPoints`: `weeklyRank` para un presente, la ultima posicion efectiva para un ausente. `null` sin ningun presente. */
+  positionPointsRuleRank: number | null;
   /** Faccion actual del participante (`0.7.0` / MVP-2A). `null` si el split no usa facciones. */
   factionId: string | null;
   /** Profesion actual del participante (`0.8.0` / MVP-2B). `null` si el split no usa profesiones o no ha elegido. */
@@ -139,7 +147,12 @@ export interface WeeklyResultsComputation {
   activeKpiCodes: KpiCode[];
   participants: ParticipantWeeklyResult[];
   totalActiveKpiCount: number;
+  /** Total de participantes aplicables (presentes + ausentes). */
   totalParticipantCount: number;
+  /** Participantes presentes esta semana (`1.1.1`): denominador de "x de n" en las vistas semanales. */
+  presentParticipantCount: number;
+  /** Participantes ausentes esta semana (`totalHours = 0`). */
+  absentParticipantCount: number;
   vacCountsByKpi: Partial<Record<KpiCode, number>>;
   totalVacCount: number;
   completeness: { loadedCount: number; totalActiveCount: number };
@@ -168,7 +181,7 @@ interface RawDataContext {
   quality: Map<string, { good: number; bad: number }>;
   escalation: Map<string, { groupReassignments: number }>;
   stability: Map<string, number>;
-  chronomancy: Map<string, { productiveHours: number; totalHours: number }>;
+  chronomancy: Map<string, { productiveHours: number | null; totalHours: number }>;
   writer: Map<string, { delivered: number; undelivered: number; proposed: number }>;
   student: Map<string, number>;
   apprentice: Map<string, number>;
@@ -271,7 +284,7 @@ function resolveParticipantKpi(
     }
     case "WORK_CHRONOMANCY": {
       const row = ctx.chronomancy.get(participant.id);
-      const outcome = resolveWorkChronomancyOutcome(config, level, row?.productiveHours, row?.totalHours);
+      const outcome = resolveWorkChronomancyOutcome(config, level, row?.productiveHours ?? undefined, row?.totalHours);
       if (outcome.status === "not_applicable") return { status: "NOT_APPLICABLE", computation: null, blockingIssue: null };
       if (outcome.status === "no_data") {
         return {
@@ -308,7 +321,6 @@ async function loadRawDataContext(db: Db, splitId: string, weekId: string, activ
   const needsQuality = activeCodes.has("MASTER_CRAFTSMAN");
   const needsEscalation = activeCodes.has("ESCALATION_TAMER");
   const needsStability = activeCodes.has("STABILITY_GUARDIAN");
-  const needsChronomancy = activeCodes.has("WORK_CHRONOMANCY");
   const needsWriter = activeCodes.has("STAR_WRITER");
   const needsStudent = activeCodes.has("ENTHUSIASTIC_STUDENT");
   const needsApprentice = activeCodes.has("EXPERT_APPRENTICE");
@@ -320,7 +332,9 @@ async function loadRawDataContext(db: Db, splitId: string, weekId: string, activ
       needsQuality ? db.qualityImport.findUnique({ where: { splitWeekId: weekId }, include: { rows: true } }) : Promise.resolve(null),
       needsEscalation ? db.escalationImport.findUnique({ where: { splitWeekId: weekId }, include: { rows: true } }) : Promise.resolve(null),
       needsStability ? db.stabilityWeeklyEntry.findMany({ where: { splitWeekId: weekId } }) : Promise.resolve([]),
-      needsChronomancy ? db.chronomancyWeeklyEntry.findMany({ where: { splitWeekId: weekId } }) : Promise.resolve([]),
+      // Las horas semanales se cargan siempre, independiente de si WORK_CHRONOMANCY esta activo
+      // (`1.1.1`, ver docs/WEEKLY_ATTENDANCE_AND_HOURS.md): son el unico dato de asistencia.
+      db.chronomancyWeeklyEntry.findMany({ where: { splitWeekId: weekId } }),
       needsWriter ? db.writerWeeklyEntry.findMany({ where: { splitWeekId: weekId } }) : Promise.resolve([]),
       needsStudent ? db.studentWeeklyEntry.findMany({ where: { splitWeekId: weekId } }) : Promise.resolve([]),
       needsApprentice ? db.apprenticeWeeklyEntry.findMany({ where: { splitWeekId: weekId } }) : Promise.resolve([]),
@@ -353,7 +367,7 @@ async function loadRawDataContext(db: Db, splitId: string, weekId: string, activ
     chronomancy: new Map(
       chronomancyEntries.map((entry) => [
         entry.splitParticipantId,
-        { productiveHours: entry.productiveHours.toNumber(), totalHours: entry.totalHours.toNumber() },
+        { productiveHours: entry.productiveHours?.toNumber() ?? null, totalHours: entry.totalHours.toNumber() },
       ]),
     ),
     writer: new Map(
@@ -380,13 +394,31 @@ export async function computeWeeklyResults(db: Db, splitId: string, weekId: stri
   const week = await getSplitWeek(db, splitId, weekId);
   if (!week) throw new DomainError("La semana indicada no pertenece a este split.");
 
-  const [kpiConfigs, summaryByWeek, weekLocationRow] = await Promise.all([
+  const [kpiConfigs, summaryByWeek, weekLocationRow, participants, chronomancyEntries] = await Promise.all([
     listKpiConfigsForSplit(db, splitId),
     getWeeklyKpiLoadSummary(db, splitId, [week]),
     db.splitWeekLocation.findUnique({ where: { splitWeekId: week.id } }),
+    listApplicableParticipantsWithProfessionForWeek(db, splitId, week.sequenceNumber),
+    // Horas semanales (asistencia, seccion C del encargo `1.1.1`): se comprueban siempre,
+    // independiente de si WORK_CHRONOMANCY esta activo.
+    db.chronomancyWeeklyEntry.findMany({ where: { splitWeekId: week.id } }),
   ]);
   const completeness = summaryByWeek.get(week.id) ?? { loadedCount: 0, totalActiveCount: 0 };
-  const isComplete = completeness.totalActiveCount > 0 && completeness.loadedCount === completeness.totalActiveCount;
+  const kpiCoverageComplete = completeness.totalActiveCount > 0 && completeness.loadedCount === completeness.totalActiveCount;
+
+  const hoursByParticipant = new Map(
+    chronomancyEntries.map((entry) => [
+      entry.splitParticipantId,
+      { totalHours: entry.totalHours.toNumber(), productiveHours: entry.productiveHours?.toNumber() ?? null },
+    ]),
+  );
+  const attendanceByParticipant = new Map(
+    participants.map((participant) => [participant.id, resolveWeeklyAttendance(hoursByParticipant.get(participant.id))]),
+  );
+  // El bloque de horas debe estar guardado para cada participante aplicable antes de poder
+  // publicar (seccion D3 del encargo `1.1.1`): una fila ausente no se inventa como asistencia.
+  const hoursRecordedForAll = participants.every((participant) => attendanceByParticipant.get(participant.id)!.recorded);
+  const isComplete = kpiCoverageComplete && hoursRecordedForAll;
 
   const activeConfigs = kpiConfigs.filter((config) => config.isActive);
   const activeCodes = KPI_CATALOG_LIST.map((entry) => entry.code).filter((code) => activeConfigs.some((config) => config.kpiCode === code));
@@ -414,6 +446,8 @@ export async function computeWeeklyResults(db: Db, splitId: string, weekId: stri
     participants: [],
     totalActiveKpiCount: activeCodes.length,
     totalParticipantCount: 0,
+    presentParticipantCount: 0,
+    absentParticipantCount: 0,
     vacCountsByKpi: {},
     totalVacCount: 0,
     completeness,
@@ -439,7 +473,6 @@ export async function computeWeeklyResults(db: Db, splitId: string, weekId: stri
         }
       : null;
 
-  const participants = await listApplicableParticipantsWithProfessionForWeek(db, splitId, week.sequenceNumber);
   // El split "usa profesiones" en cuanto tiene al menos una creada: si no tiene ninguna, el
   // comportamiento es identico a `0.7.0` (sin requisitos, sin bonus y sin campos nuevos informados).
   const professionCount = await db.splitProfession.count({ where: { splitId } });
@@ -457,6 +490,9 @@ export async function computeWeeklyResults(db: Db, splitId: string, weekId: stri
 
   interface WorkingParticipant {
     participant: ParticipantWithPersonAndProfession;
+    attendanceStatus: WeeklyAttendanceStatus;
+    totalHours: number;
+    productiveHours: number | null;
     kpiResults: ParticipantKpiResult[];
     totalKpiPointsDecimal: Prisma.Decimal;
     applicableMaxPointsDecimal: Prisma.Decimal;
@@ -481,9 +517,26 @@ export async function computeWeeklyResults(db: Db, splitId: string, weekId: stri
       usesProfessions && participant.profession ? toApplicableProfession(participant.profession) : null;
     const equippedItems = equippedItemsByParticipant.get(participant.id) ?? [];
 
+    // La asistencia ya esta resuelta (garantizada `recorded: true` porque `isComplete` lo exige):
+    // tiene prioridad absoluta sobre cualquier otro KPI (seccion E1/E2 del encargo `1.1.1`).
+    const attendance = attendanceByParticipant.get(participant.id)!;
+    if (!attendance.recorded) {
+      throw new DomainError("Falta el bloque de horas semanales: esta semana no deberia haberse marcado como completa.");
+    }
+    const isAbsent = attendance.status === "ABSENT";
+
     const kpiResults: ParticipantKpiResult[] = activeCodes.map((code) => {
       const config = configByCode.get(code)!;
-      const resolved = resolveParticipantKpi(code, config, participant, ctx);
+      // Una persona ausente ignora los resultados operativos de cualquier otro KPI: sus KPI
+      // aplicables se publican como `ABSENT` (sin puntos), los no aplicables como `NOT_APPLICABLE`,
+      // exactamente igual que para una persona presente (seccion E2 del encargo `1.1.1`).
+      const resolved: ResolvedKpiOutcome = isAbsent
+        ? {
+            status: multiplierForLevel(config, participant.level) === null ? "NOT_APPLICABLE" : "ABSENT",
+            computation: null,
+            blockingIssue: null,
+          }
+        : resolveParticipantKpi(code, config, participant, ctx);
       if (resolved.blockingIssue) blockingIssues.push(resolved.blockingIssue);
       if (resolved.status === "VAC") vacCountsByKpi[code] = (vacCountsByKpi[code] ?? 0) + 1;
 
@@ -542,6 +595,9 @@ export async function computeWeeklyResults(db: Db, splitId: string, weekId: stri
 
     return {
       participant,
+      attendanceStatus: attendance.status,
+      totalHours: attendance.totalHours,
+      productiveHours: attendance.productiveHours,
       kpiResults,
       totalKpiPointsDecimal,
       applicableMaxPointsDecimal,
@@ -583,21 +639,28 @@ export async function computeWeeklyResults(db: Db, splitId: string, weekId: stri
     }
   }
 
-  // Ranking semanal (seccion 3.4): todos los participantes aplicables entran, ordenados por la suma de KPI descendente.
+  // Ranking semanal (seccion E3 del encargo `1.1.1`): solo entre presentes, ordenados por la suma
+  // de KPI descendente. Una persona ausente nunca ocupa ni consume un ordinal.
   const positionRules = await listPositionPointRules(db, splitId);
   const pointsByPosition = new Map(positionRules.map((rule) => [rule.position, rule.points]));
 
-  const weeklyRanked = rankByScoreDescending(
-    working,
-    (entry) => entry.totalKpiPointsDecimal,
-    (a, b) => compareNormalizedAlias(a.participant.aliasNormalized, b.participant.aliasNormalized) || a.participant.id.localeCompare(b.participant.id),
-  );
+  const tiebreak = (a: WorkingParticipant, b: WorkingParticipant) =>
+    compareNormalizedAlias(a.participant.aliasNormalized, b.participant.aliasNormalized) || a.participant.id.localeCompare(b.participant.id);
 
-  const resultParticipants: ParticipantWeeklyResult[] = weeklyRanked.map(({ item, rank }) => {
-    const positionPoints = pointsByPosition.get(rank);
-    if (positionPoints === undefined) {
-      blockingIssues.push(`No existe una regla de puntos por posicion configurada para la posicion ${rank}. Configurala antes de publicar.`);
-    }
+  const presentWorking = working.filter((entry) => entry.attendanceStatus === "PRESENT");
+  const absentWorking = working.filter((entry) => entry.attendanceStatus === "ABSENT");
+
+  const presentRanked = rankByScoreDescending(presentWorking, (entry) => entry.totalKpiPointsDecimal, tiebreak);
+  // Ultima posicion efectivamente ocupada por una persona presente (seccion E3): puede no ser
+  // igual al numero de presentes si el ranking de competicion produce un empate en el ultimo puesto.
+  const lastEffectiveRank = presentRanked.length > 0 ? (presentRanked[presentRanked.length - 1] as { rank: number }).rank : null;
+
+  function buildResultRow(
+    item: WorkingParticipant,
+    weeklyRank: number | null,
+    positionPointsRuleRank: number | null,
+    positionPoints: number | null,
+  ): ParticipantWeeklyResult {
     return {
       splitParticipantId: item.participant.id,
       personId: item.participant.personId,
@@ -607,8 +670,12 @@ export async function computeWeeklyResults(db: Db, splitId: string, weekId: stri
       kpiResults: item.kpiResults,
       totalKpiPoints: item.totalKpiPointsDecimal.toNumber(),
       applicableMaxPoints: item.hasApplicableMax ? item.applicableMaxPointsDecimal.toNumber() : null,
-      weeklyRank: rank,
-      positionPoints: positionPoints ?? null,
+      attendanceStatus: item.attendanceStatus,
+      totalHours: item.totalHours,
+      productiveHours: item.productiveHours,
+      weeklyRank,
+      positionPoints,
+      positionPointsRuleRank,
       factionId: item.participant.factionId,
       profession:
         usesProfessions && item.participant.profession
@@ -635,7 +702,33 @@ export async function computeWeeklyResults(db: Db, splitId: string, weekId: stri
       })),
       creditsEarned: computeCreditsEarned(item.totalKpiPointsDecimal),
     };
+  }
+
+  const presentResults: ParticipantWeeklyResult[] = presentRanked.map(({ item, rank }) => {
+    const positionPoints = pointsByPosition.get(rank);
+    if (positionPoints === undefined) {
+      blockingIssues.push(`No existe una regla de puntos por posicion configurada para la posicion ${rank}. Configurala antes de publicar.`);
+    }
+    return buildResultRow(item, rank, rank, positionPoints ?? null);
   });
+
+  // Puntos por posicion de las ausencias (seccion E3/E5): todas reciben la regla de la ultima
+  // posicion efectiva. Sin ningun presente (seccion E4), no hay `lastEffectiveRank`: todas reciben `0`.
+  const absentResults: ParticipantWeeklyResult[] = absentWorking
+    .slice()
+    .sort(tiebreak)
+    .map((item) => {
+      if (lastEffectiveRank === null) return buildResultRow(item, null, null, 0);
+      const positionPoints = pointsByPosition.get(lastEffectiveRank);
+      if (positionPoints === undefined) {
+        blockingIssues.push(
+          `No existe una regla de puntos por posicion configurada para la posicion ${lastEffectiveRank} (ultima posicion efectiva, necesaria para las ausencias). Configurala antes de publicar.`,
+        );
+      }
+      return buildResultRow(item, null, lastEffectiveRank, positionPoints ?? null);
+    });
+
+  const resultParticipants: ParticipantWeeklyResult[] = [...presentResults, ...absentResults];
 
   const totalVacCount = Object.values(vacCountsByKpi).reduce((sum, count) => sum + (count ?? 0), 0);
 
@@ -654,6 +747,8 @@ export async function computeWeeklyResults(db: Db, splitId: string, weekId: stri
     ...base,
     participants: resultParticipants,
     totalParticipantCount: resultParticipants.length,
+    presentParticipantCount: presentResults.length,
+    absentParticipantCount: absentResults.length,
     vacCountsByKpi,
     totalVacCount,
     blockingIssues: Array.from(new Set([...blockingIssues, ...factionPreview.blockingIssues])),

@@ -1,6 +1,7 @@
 import sharp from "sharp";
 import { beforeEach, describe, expect, it } from "vitest";
 import { resetDatabase, testDb } from "./helpers/db";
+import { markAllPresent } from "./helpers/attendance";
 import { createPerson } from "@/server/services/person.service";
 import { createSplitWithWeeks, activateSplit, listSplitWeeks } from "@/server/services/split.service";
 import { addParticipant } from "@/server/services/participant.service";
@@ -160,6 +161,7 @@ describe("Fichas: eleccion de profesion por el participante", () => {
     await activateSplit(testDb, split.id);
     const week = (await listSplitWeeks(testDb, split.id))[0]!;
     await saveStabilityEntries(testDb, split.id, week.id, form({ [`resultValue__${participant.id}`]: "50" }));
+    await markAllPresent(testDb, split.id, week.id);
     await publishWeek(testDb, split.id, week.id, null);
 
     await expect(chooseOwnProfession(testDb, person.id, participant.id, null)).rejects.toBeInstanceOf(DomainError);

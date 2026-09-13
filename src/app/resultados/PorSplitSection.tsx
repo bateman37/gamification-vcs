@@ -20,6 +20,7 @@ import {
 import { SplitSelector } from "./SplitSelector";
 import { LimitedClassificationTable } from "./LimitedClassificationTable";
 import { LimitedFactionClassificationTable } from "./LimitedFactionClassificationTable";
+import { ABSENCE_LABEL } from "@/domain/attendance";
 
 export async function PorSplitSection({
   personId,
@@ -87,11 +88,21 @@ export async function PorSplitSection({
           </div>
           <div>
             <dt className="text-xs text-text-muted">Semanas publicadas</dt>
-            <dd className="font-semibold">{detail.weeks.length}</dd>
+            <dd className="font-semibold">
+              {detail.weeks.length}{" "}
+              <span className="text-xs font-normal text-text-muted">
+                ({detail.presentWeekCount} presente{detail.presentWeekCount === 1 ? "" : "s"}, {detail.absentWeekCount} ausente
+                {detail.absentWeekCount === 1 ? "" : "s"})
+              </span>
+            </dd>
           </div>
           <div>
             <dt className="text-xs text-text-muted">Créditos ganados oficiales</dt>
             <dd className="font-semibold">{detail.totalCreditsEarned}</dd>
+          </div>
+          <div>
+            <dt className="text-xs text-text-muted">Puntos KPI por hora</dt>
+            <dd className="font-semibold">{detail.pointsPerHour === null ? "No calculable" : formatPoints(detail.pointsPerHour)}</dd>
           </div>
           {detail.currentFaction && (
             <div>
@@ -114,6 +125,7 @@ export async function PorSplitSection({
             <thead className="border-b border-border bg-canvas text-text-muted">
               <tr>
                 <th className="px-3 py-2 font-medium">Semana</th>
+                <th className="px-3 py-2 font-medium">Asistencia</th>
                 {showProfessionColumn && <th className="px-3 py-2 font-medium">Profesión</th>}
                 {detail.weeks[0]?.kpiCells.map((cell) => (
                   <th key={cell.kpiCode} className="px-3 py-2 text-center font-medium">
@@ -122,6 +134,7 @@ export async function PorSplitSection({
                 ))}
                 <th className="px-3 py-2 text-center font-medium">Total KPI</th>
                 <th className="px-3 py-2 text-center font-medium">% del máximo</th>
+                <th className="px-3 py-2 text-center font-medium">Puntos por hora</th>
                 <th className="px-3 py-2 text-center font-medium">Posición semanal</th>
                 <th className="px-3 py-2 text-center font-medium">Puntos por posición</th>
                 <th className="px-3 py-2" />
@@ -129,10 +142,11 @@ export async function PorSplitSection({
             </thead>
             <tbody>
               {detail.weeks.map((week) => {
+                const isAbsent = week.attendanceStatus === "ABSENT";
                 const weekBonusTotal = week.professionBonusTotal + week.locationBonusTotal + week.equipmentBonusTotal;
                 const weekDisplayTotal = resolveGamificationDisplayTotal(gamificationMode, week.totalKpiPoints, weekBonusTotal);
                 const percentage =
-                  week.applicableMaxPoints && week.applicableMaxPoints > 0 ? (weekDisplayTotal / week.applicableMaxPoints) * 100 : null;
+                  !isAbsent && week.applicableMaxPoints && week.applicableMaxPoints > 0 ? (weekDisplayTotal / week.applicableMaxPoints) * 100 : null;
                 return (
                   <tr key={week.splitWeekId} className="border-b border-border">
                     <td className="px-3 py-2 font-medium">
@@ -142,6 +156,20 @@ export async function PorSplitSection({
                         <span className="block text-xs font-normal text-info-ink">
                           {week.location.name} (+{week.location.bonusPercent} %)
                         </span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2">
+                      {isAbsent ? (
+                        <span
+                          className="inline-block rounded-full bg-danger-soft px-2 py-0.5 text-xs font-medium text-danger-ink"
+                          title={ABSENCE_LABEL}
+                        >
+                          {ABSENCE_LABEL}
+                        </span>
+                      ) : week.totalHours !== null ? (
+                        <span className="text-text-muted">{formatPoints(week.totalHours)} h</span>
+                      ) : (
+                        <span className="text-text-muted">—</span>
                       )}
                     </td>
                     {showProfessionColumn && (
@@ -164,6 +192,17 @@ export async function PorSplitSection({
                         return (
                           <td key={cell.kpiCode} className={`px-3 py-2 text-center ${COLOR_BAND_CLASSES[NOT_APPLICABLE_COLOR_BAND.band]}`}>
                             No aplica
+                          </td>
+                        );
+                      }
+                      if (cell.status === "ABSENT") {
+                        return (
+                          <td
+                            key={cell.kpiCode}
+                            className={`px-3 py-2 text-center ${COLOR_BAND_CLASSES[NOT_APPLICABLE_COLOR_BAND.band]}`}
+                            title={ABSENCE_LABEL}
+                          >
+                            Ausencia
                           </td>
                         );
                       }
@@ -241,8 +280,9 @@ export async function PorSplitSection({
                       )}
                     </td>
                     <td className="px-3 py-2 text-center text-text-muted">{percentage === null ? "—" : `${formatPoints(percentage)} %`}</td>
+                    <td className="px-3 py-2 text-center text-text-muted">{week.pointsPerHour === null ? "—" : formatPoints(week.pointsPerHour)}</td>
                     <td className="px-3 py-2 text-center font-semibold">
-                      {week.weeklyRank} de {detail.splitParticipantCount}
+                      {week.weeklyRank === null ? "Ausencia" : `${week.weeklyRank} de ${week.rankedParticipantCount}`}
                     </td>
                     <td className="px-3 py-2 text-center font-semibold">{week.positionPoints}</td>
                     <td className="px-3 py-2">

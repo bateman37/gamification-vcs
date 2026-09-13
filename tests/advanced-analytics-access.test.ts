@@ -10,6 +10,7 @@ import { saveStabilityEntries } from "@/server/services/stability-entry.service"
 import { publishWeek } from "@/server/services/publish-week.service";
 import { loadParticipantWeekObservations } from "@/server/services/analytics.service";
 import { buildPersonDetailWeeks, resolveObservations } from "@/domain/analytics";
+import { markAllPresent } from "./helpers/attendance";
 
 function form(values: Record<string, string>): FormData {
   const formData = new FormData();
@@ -51,6 +52,7 @@ describe("El motor de lectura no expone datos ajenos al analisis (parte J2)", ()
     await activateSplit(testDb, split.id);
     const week = (await listSplitWeeks(testDb, split.id))[0]!;
     await saveStabilityEntries(testDb, split.id, week.id, form({ [`resultValue__${participant.id}`]: "1" }));
+    await markAllPresent(testDb, split.id, week.id);
     await publishWeek(testDb, split.id, week.id, null);
 
     const observations = await loadParticipantWeekObservations(testDb, { splitIds: [split.id], startDate: week.startDate, endDate: week.startDate });
@@ -75,15 +77,11 @@ describe("El motor de lectura no expone datos ajenos al analisis (parte J2)", ()
     await activateSplit(testDb, split.id);
     const week = (await listSplitWeeks(testDb, split.id))[0]!;
     await saveStabilityEntries(testDb, split.id, week.id, form({ [`resultValue__${participantB.id}`]: "1" }));
+    await markAllPresent(testDb, split.id, week.id);
     await publishWeek(testDb, split.id, week.id, null);
 
     const observations = await loadParticipantWeekObservations(testDb, { splitIds: [split.id], startDate: week.startDate, endDate: week.startDate });
-    const resolved = resolveObservations(observations, {
-      mode: "sin",
-      exclusionEnabled: true,
-      zeroThreshold: 2,
-      manualOverrides: new Map(),
-    });
+    const resolved = resolveObservations(observations, { mode: "sin" });
 
     const detailForA = buildPersonDetailWeeks(
       personA.id,

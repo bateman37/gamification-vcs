@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { resetDatabase, testDb } from "./helpers/db";
+import { markAllPresent } from "./helpers/attendance";
 import { createPerson } from "@/server/services/person.service";
 import { createSplitWithWeeks, activateSplit, listSplitWeeks } from "@/server/services/split.service";
 import { addParticipant } from "@/server/services/participant.service";
@@ -35,6 +36,7 @@ async function buildParticipantWithCredits(credits = 100) {
   await activateSplit(testDb, split.id);
   const week = (await listSplitWeeks(testDb, split.id))[0]!;
   await saveStabilityEntries(testDb, split.id, week.id, form({ [`resultValue__${participant.id}`]: "1" }));
+  await markAllPresent(testDb, split.id, week.id);
   await publishWeek(testDb, split.id, week.id, null);
 
   const slot = await createEquipmentSlot(testDb, split.id, { name: "Artefacto" });

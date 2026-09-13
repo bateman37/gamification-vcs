@@ -10,21 +10,20 @@ import {
   computeObservationTotals,
   computePeriodAverageReference,
   computeClosingBalance,
-  countApplicableZeroLikeKpis,
   detectStreaks,
   findPreviousWeekReference,
-  isExcludedByZeroPolicy,
   isSmallSample,
   periodKeyFor,
   ppDifference,
   relativeVariation,
   resolveCellBase,
   resolveCellValue,
-  resolveObservationExclusion,
+  resolveObservation,
   resolveSignal,
   sumCreditsIssued,
   sumCreditsSpent,
   type KpiCellObservation,
+  type ParticipantWeekObservation,
 } from "@/domain/analytics";
 
 function cell(overrides: Partial<KpiCellObservation> = {}): KpiCellObservation {
@@ -52,8 +51,8 @@ describe("K1 - base y bonus no encadenados", () => {
       locationBonusPoints: 21,
       equipmentBonusPoints: 35,
     });
-    const sin = resolveCellValue(c, "sin", false, true);
-    const con = resolveCellValue(c, "con", false, true);
+    const sin = resolveCellValue(c, "sin", false);
+    const con = resolveCellValue(c, "con", false);
     expect(sin.x).toBe(70);
     expect(sin.q).toBe(100);
     expect(con.x).toBe(140);
@@ -72,7 +71,7 @@ describe("K1 - base y bonus no encadenados", () => {
     const c = cell({ finalPoints: 84, basePointsBeforeProfession: null, professionBonusPoints: 14, baseMax: 70 });
     const resolved = resolveCellBase(c);
     expect(resolved.available).toBe(false);
-    const sinValue = resolveCellValue(c, "sin", false, true);
+    const sinValue = resolveCellValue(c, "sin", false);
     expect(sinValue.included).toBe(false);
     expect(sinValue.reason).toBe("base_unavailable");
   });
@@ -112,56 +111,67 @@ describe("K3 - dos splits el mismo lunes", () => {
   });
 });
 
-describe("K4 - politica de ceros y falso positivo revisable", () => {
-  it("umbral 2: [0,0,30] excluye toda la observacion, pero advierte del valor positivo", () => {
-    const cells = [
-      { status: "COMPUTED" as const, base: 0 },
-      { status: "COMPUTED" as const, base: 0 },
-      { status: "COMPUTED" as const, base: 30 },
-    ];
-    const zeroCount = countApplicableZeroLikeKpis(cells);
-    expect(zeroCount).toBe(2);
-    expect(isExcludedByZeroPolicy(zeroCount, 2)).toBe(true);
-    const hasPositiveValue = cells.some((c) => c.base !== null && c.base > 0);
-    expect(hasPositiveValue).toBe(true);
+function observation(overrides: Partial<ParticipantWeekObservation> = {}): ParticipantWeekObservation {
+  return {
+    personId: "p1",
+    personFullName: "Persona Uno",
+    splitId: "s1",
+    splitName: "Split 1",
+    splitParticipantId: "sp1",
+    participantWeeklyResultId: "r1",
+    publicationId: "pub1",
+    splitWeekId: "w1",
+    weekSequenceNumber: 1,
+    weekStartDate: new Date(Date.UTC(2026, 8, 7)),
+    publishedAt: new Date(),
+    levelSnapshot: "N1",
+    creditsEarned: 10,
+    attendanceStatus: "PRESENT",
+    totalHours: 40,
+    cells: [cell()],
+    ...overrides,
+  };
+}
+
+describe("K4 - asistencia real sustituye la politica de ceros (1.1.1)", () => {
+  it("una persona presente con todos sus KPI a cero permanece dentro del rendimiento", () => {
+    const resolved = resolveObservation(
+      observation({ cells: [cell({ finalPoints: 0, basePointsBeforeProfession: 0 }), cell({ kpiCode: "DATA_EXPLORER", finalPoints: 0, basePointsBeforeProfession: 0 })] }),
+      { mode: "sin" },
+    );
+    expect(resolved.excluded).toBe(false);
+    expect(resolved.totals.totalPointsValid).toBe(0);
   });
 
-  it("[0,20,30] con un solo cero no se excluye: NO_APLICA no cuenta, negativos tampoco", () => {
-    const cells = [
-      { status: "COMPUTED" as const, base: 0 },
-      { status: "COMPUTED" as const, base: 20 },
-      { status: "COMPUTED" as const, base: 30 },
-      { status: "NOT_APPLICABLE" as const, base: null },
-      { status: "COMPUTED" as const, base: -5 },
-    ];
-    expect(countApplicableZeroLikeKpis(cells)).toBe(1);
-    expect(isExcludedByZeroPolicy(1, 2)).toBe(false);
+  it("una ausencia confirmada queda siempre fuera de rendimiento, aunque tenga KPI positivos residuales", () => {
+    const resolved = resolveObservation(
+      observation({ attendanceStatus: "ABSENT", totalHours: 0, cells: [cell({ status: "ABSENT", finalPoints: null, basePointsBeforeProfession: null })] }),
+      { mode: "sin" },
+    );
+    expect(resolved.excluded).toBe(true);
+    expect(resolved.attendance).toBe("ABSENT");
+    expect(resolved.hours).toBeNull();
+    expect(resolved.totals.totalPointsValid).toBeNull();
   });
 
-  it("'Incluir en esta consulta' restaura la observacion pese al umbral automatico", () => {
-    const decision = resolveObservationExclusion(2, 2, "include");
-    expect(decision.excluded).toBe(false);
-    expect(decision.decision).toBe("included_manual");
+  it("una publicacion anterior a 1.1.1 (attendanceStatus null) queda excluida como cobertura legacy desconocida, no como ausencia", () => {
+    const resolved = resolveObservation(observation({ attendanceStatus: null, totalHours: null }), { mode: "sin" });
+    expect(resolved.excluded).toBe(true);
+    expect(resolved.attendance).toBe("UNKNOWN_LEGACY");
   });
 
-  it("'Excluir de esta consulta' fuerza la exclusion aunque no alcance el umbral", () => {
-    const decision = resolveObservationExclusion(0, 2, "exclude");
-    expect(decision.excluded).toBe(true);
-    expect(decision.decision).toBe("excluded_manual");
-  });
-
-  it("una celda VAC individual se excluye de su KPI si la observacion no alcanza el umbral", () => {
+  it("VAC de una persona presente sigue contando como cero real, nunca excluido", () => {
     const vacCell = cell({ status: "VAC", finalPoints: null, basePointsBeforeProfession: null });
-    const resolved = resolveCellValue(vacCell, "sin", false, true);
-    expect(resolved.included).toBe(false);
-    expect(resolved.reason).toBe("vac_uncounted");
-  });
-
-  it("con la politica desactivada, VAC cuenta como cero analitico", () => {
-    const vacCell = cell({ status: "VAC", finalPoints: null, basePointsBeforeProfession: null });
-    const resolved = resolveCellValue(vacCell, "sin", false, false);
+    const resolved = resolveCellValue(vacCell, "sin", false);
     expect(resolved.included).toBe(true);
     expect(resolved.x).toBe(0);
+  });
+
+  it("una celda ABSENT nunca aporta puntos, incluso si observationExcluded no se propagase", () => {
+    const absentCell = cell({ status: "ABSENT", finalPoints: null, basePointsBeforeProfession: null });
+    const resolved = resolveCellValue(absentCell, "sin", true);
+    expect(resolved.included).toBe(false);
+    expect(resolved.reason).toBe("observation_excluded");
   });
 });
 

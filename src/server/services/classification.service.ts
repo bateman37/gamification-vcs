@@ -1,6 +1,7 @@
 import { Prisma, type PrismaClient } from "@prisma/client";
 import { rankByComparator, compareDecimalDescending, compareNormalizedAlias } from "@/domain/ranking";
 import { KPI_CATALOG_LIST, type KpiCode } from "@/domain/kpis/catalog";
+import type { WeeklyAttendanceStatus } from "@/domain/attendance";
 
 /**
  * Clasificacion general de un split (seccion 9 de
@@ -21,9 +22,11 @@ export interface ClassificationEntry {
   alias: string;
   fullName: string;
   pointsByWeek: Map<string, number>;
-  /** Posicion semanal (dentro de esa semana, no la acumulada) por `splitWeekId`. */
-  weeklyRankByWeek: Map<string, number>;
+  /** Posicion semanal (dentro de esa semana, no la acumulada) por `splitWeekId`. `null` para una ausencia esa semana o cuando nadie estuvo presente. */
+  weeklyRankByWeek: Map<string, number | null>;
   totalKpiPointsByWeek: Map<string, number>;
+  /** Asistencia congelada por semana (`1.1.1`). `null` en publicaciones anteriores a esta version: legado, sin dato. */
+  attendanceStatusByWeek: Map<string, WeeklyAttendanceStatus | null>;
   totalPositionPoints: number;
   totalKpiPoints: number;
   publishedWeekCount: number;
@@ -41,8 +44,9 @@ interface WorkingEntry {
   alias: string;
   fullName: string;
   pointsByWeek: Map<string, number>;
-  weeklyRankByWeek: Map<string, number>;
+  weeklyRankByWeek: Map<string, number | null>;
   totalKpiPointsByWeek: Map<string, number>;
+  attendanceStatusByWeek: Map<string, WeeklyAttendanceStatus | null>;
   totalPositionPointsDecimal: Prisma.Decimal;
   totalKpiPointsDecimal: Prisma.Decimal;
   publishedWeekCount: number;
@@ -74,6 +78,7 @@ export async function computeSplitClassification(db: PrismaClient, splitId: stri
         pointsByWeek: new Map(),
         weeklyRankByWeek: new Map(),
         totalKpiPointsByWeek: new Map(),
+        attendanceStatusByWeek: new Map(),
         totalPositionPointsDecimal: new Prisma.Decimal(0),
         totalKpiPointsDecimal: new Prisma.Decimal(0),
         publishedWeekCount: 0,
@@ -91,6 +96,7 @@ export async function computeSplitClassification(db: PrismaClient, splitId: stri
     entry.pointsByWeek.set(week.id, row.positionPoints);
     entry.weeklyRankByWeek.set(week.id, row.weeklyRank);
     entry.totalKpiPointsByWeek.set(week.id, row.totalKpiPoints.toNumber());
+    entry.attendanceStatusByWeek.set(week.id, row.attendanceStatus);
     entry.totalPositionPointsDecimal = entry.totalPositionPointsDecimal.plus(row.positionPoints);
     entry.totalKpiPointsDecimal = entry.totalKpiPointsDecimal.plus(row.totalKpiPoints);
     entry.publishedWeekCount += 1;
@@ -118,6 +124,7 @@ export async function computeSplitClassification(db: PrismaClient, splitId: stri
     pointsByWeek: item.pointsByWeek,
     weeklyRankByWeek: item.weeklyRankByWeek,
     totalKpiPointsByWeek: item.totalKpiPointsByWeek,
+    attendanceStatusByWeek: item.attendanceStatusByWeek,
     totalPositionPoints: item.totalPositionPointsDecimal.toNumber(),
     totalKpiPoints: item.totalKpiPointsDecimal.toNumber(),
     publishedWeekCount: item.publishedWeekCount,

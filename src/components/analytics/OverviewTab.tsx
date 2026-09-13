@@ -1,16 +1,18 @@
 import Link from "next/link";
-import { Alert, Badge, SectionHeader, StatCard } from "@/components/ui";
-import type { AnalyticsSnapshot } from "@/domain/analytics";
+import { Badge, SectionHeader, StatCard } from "@/components/ui";
+import type { AnalyticsMeasure, AnalyticsSnapshot } from "@/domain/analytics";
 import { formatDateEs, formatPercentEs, formatPointsEs, formatPpEs } from "./format";
 import { TrendLineChart } from "./charts/TrendLineChart";
 import { ANALYTICS_COLORS } from "./colors";
-import { buildAnalyticsHref, type RawSearchParams } from "@/app/analitica/filters";
 
 /**
- * Bloque 1 - Vision general (parte H2 del encargo): entender la seleccion en
- * unos segundos. Nunca fuerza un "mejor"/"peor" cuando falta referencia.
+ * Bloque 1 - Vision general (parte H2 del encargo, actualizado en `1.1.1`):
+ * entender la seleccion en unos segundos. Nunca fuerza un "mejor"/"peor"
+ * cuando falta referencia. La antigua política de posibles ausencias (parte
+ * F de `1.1.0`) se sustituye por la asistencia real publicada: una ausencia
+ * confirmada queda siempre fuera de rendimiento, sin revisión manual.
  */
-export function OverviewTab({ snapshot, searchParams }: { snapshot: AnalyticsSnapshot; searchParams: RawSearchParams }) {
+export function OverviewTab({ snapshot, measure }: { snapshot: AnalyticsSnapshot; measure: AnalyticsMeasure }) {
   const { overview, coverage } = snapshot;
 
   return (
@@ -19,12 +21,12 @@ export function OverviewTab({ snapshot, searchParams }: { snapshot: AnalyticsSna
         <StatCard
           label="Personas analizables"
           value={`${coverage.personsAnalyzable} de ${coverage.personsWithResults}`}
-          helpText="Con al menos una observación no excluida en el periodo."
+          helpText="Presentes con al menos una semana en el periodo."
         />
         <StatCard
-          label="Semanas / publicaciones"
-          value={`${snapshot.periodWeekStartDates.length} sem.`}
-          helpText={`${coverage.observationsOriginal} publicaciones de split, ${coverage.observationsConsolidated} persona-semana`}
+          label="Semanas-persona"
+          value={`${coverage.observationsConsolidated}`}
+          helpText={`${coverage.observationsOriginal} observaciones originales · ${formatPointsEs(coverage.totalHoursAnalyzed)} horas analizadas`}
         />
         <StatCard label="Media semanal de puntos KPI" value={formatPointsEs(overview.averageWeeklyPoints)} tone="primary" helpText="Por persona, jerarquía E2/E3" />
         <StatCard
@@ -34,22 +36,15 @@ export function OverviewTab({ snapshot, searchParams }: { snapshot: AnalyticsSna
           helpText={overview.teamIndexMedian !== null ? `Mediana ${formatPercentEs(overview.teamIndexMedian)}` : undefined}
         />
         <StatCard
-          label="Observaciones excluidas"
-          value={coverage.excludedCount}
-          tone={coverage.excludedCount > 0 ? "reward" : "ink"}
-          helpText={
-            <Link href={buildAnalyticsHref(searchParams, { tab: "personas" })} className="underline">
-              Ver exclusiones en Análisis por persona
-            </Link>
-          }
+          label="Asistencia"
+          value={coverage.attendancePercentage === null ? "Sin datos" : `${formatPointsEs(coverage.attendancePercentage)} %`}
+          tone={coverage.absentCount > 0 ? "reward" : "ink"}
+          helpText={`${coverage.absentCount} ausencia(s)${coverage.unknownLegacyCount > 0 ? ` · ${coverage.unknownLegacyCount} semana(s) sin cobertura legacy` : ""}`}
         />
       </dl>
 
-      {coverage.excludedWithPositiveValue > 0 && (
-        <Alert tone="warning">
-          {coverage.excludedWithPositiveValue} observación(es) excluida(s) por la política de posibles ausencias contienen también algún valor
-          positivo: revísalas antes de sacar conclusiones (pestaña Análisis por persona).
-        </Alert>
+      {measure === "pph" && (
+        <StatCard label="Puntos KPI por hora del equipo" value={overview.teamPointsPerHour === null ? "No calculable" : formatPointsEs(overview.teamPointsPerHour)} tone="primary" />
       )}
 
       <div className="rounded-card border border-border bg-surface p-4">
@@ -142,44 +137,66 @@ export function OverviewTab({ snapshot, searchParams }: { snapshot: AnalyticsSna
         </div>
       </div>
 
-      <div className="rounded-card border border-border bg-surface p-4">
-        <SectionHeader title="Tendencia del equipo" description="Índice KPI medio normalizado (% del máximo base), agrupado según el filtro seleccionado." />
-        <TrendLineChart
-          data={snapshot.trend.map((p) => ({ label: p.periodLabel, indice: p.teamIndex }))}
-          series={[{ key: "indice", name: "Índice del equipo (%)", color: ANALYTICS_COLORS.primary }]}
-        />
-        <details className="mt-2">
-          <summary className="cursor-pointer text-xs text-text-muted">Ver datos</summary>
-          <table className="mt-2 w-full text-left text-xs">
-            <thead>
-              <tr className="text-text-muted">
-                <th className="py-1">Periodo</th>
-                <th className="py-1">Índice</th>
-                <th className="py-1">Personas</th>
-              </tr>
-            </thead>
-            <tbody>
-              {snapshot.trend.map((p) => (
-                <tr key={p.periodKey}>
-                  <td className="py-0.5">{p.periodLabel}</td>
-                  <td className="py-0.5">{formatPercentEs(p.teamIndex)}</td>
-                  <td className="py-0.5">{p.analyzablePersonCount}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </details>
-      </div>
+      {(() => {
+        const trendPoints = measure === "pph" ? snapshot.pphTrend : snapshot.trend;
+        const trendFormatter = measure === "pph" ? formatPointsEs : formatPercentEs;
+        const trendLabel = measure === "pph" ? "Puntos por hora del equipo" : "Índice del equipo (%)";
+        return (
+          <div className="rounded-card border border-border bg-surface p-4">
+            <SectionHeader
+              title="Tendencia del equipo"
+              description={
+                measure === "pph"
+                  ? "Puntos KPI por hora (razón de sumas), agrupado según el filtro seleccionado."
+                  : "Índice KPI medio normalizado (% del máximo base), agrupado según el filtro seleccionado."
+              }
+            />
+            <TrendLineChart
+              data={trendPoints.map((p) => ({ label: p.periodLabel, valor: p.teamIndex }))}
+              series={[{ key: "valor", name: trendLabel, color: ANALYTICS_COLORS.primary }]}
+            />
+            <details className="mt-2">
+              <summary className="cursor-pointer text-xs text-text-muted">Ver datos</summary>
+              <table className="mt-2 w-full text-left text-xs">
+                <thead>
+                  <tr className="text-text-muted">
+                    <th className="py-1">Periodo</th>
+                    <th className="py-1">{trendLabel}</th>
+                    <th className="py-1">Personas</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {trendPoints.map((p) => (
+                    <tr key={p.periodKey}>
+                      <td className="py-0.5">{p.periodLabel}</td>
+                      <td className="py-0.5">{p.teamIndex === null ? "—" : trendFormatter(p.teamIndex)}</td>
+                      <td className="py-0.5">{p.analyzablePersonCount}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </details>
+          </div>
+        );
+      })()}
 
       <div className="rounded-card border border-border bg-surface p-4">
-        <SectionHeader title="Resumen por KPI" description="Media del equipo en % del máximo base configurado." />
+        <SectionHeader
+          title="Resumen por KPI"
+          description={measure === "pph" ? "Puntos KPI por hora del equipo (razón de sumas)." : measure === "points" ? "Media semanal del equipo, en puntos." : "Media del equipo en % del máximo base configurado."}
+        />
         <ul className="mt-2 divide-y divide-border text-sm">
-          {snapshot.kpiPerformance.map((row) => (
-            <li key={row.kpiCode} className="flex items-center justify-between gap-4 py-1.5">
-              <span>{row.kpiName}</span>
-              <span className="tabular font-medium">{formatPercentEs(row.teamAveragePercentage)}</span>
-            </li>
-          ))}
+          {snapshot.kpiPerformance.map((row) => {
+            const value =
+              measure === "pph" ? row.teamPointsPerHour : measure === "points" ? row.teamAveragePoints : row.teamAveragePercentage;
+            const formatter = measure === "percentage" ? formatPercentEs : formatPointsEs;
+            return (
+              <li key={row.kpiCode} className="flex items-center justify-between gap-4 py-1.5">
+                <span>{row.kpiName}</span>
+                <span className="tabular font-medium">{value === null ? "Sin datos suficientes" : formatter(value)}</span>
+              </li>
+            );
+          })}
         </ul>
       </div>
     </div>

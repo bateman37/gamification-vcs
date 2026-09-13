@@ -1605,3 +1605,79 @@ credito exigiria inventar un nivel para esa fecha que no existe en el
 modelo; aplicar la exclusion de rendimiento a un ingreso o gasto ya
 persistido violaria la regla general del proyecto de que ningun analisis
 nuevo puede alterar el libro de movimientos ya existente.
+
+## Denominador de "x de n" en vistas semanales pasa a ser los presentes (`1.1.1`, supersede `1.0.1`)
+
+**Decision:** para las vistas **de una semana concreta** (previsualizacion,
+publicacion, resultados semanales, clasificacion por KPI de esa semana),
+el denominador de "x de n" pasa a ser el numero de participantes
+**presentes** esa semana (`presentParticipantCount`), no el total de
+participantes aplicables. Una ausencia nunca ocupa ni consume un ordinal
+semanal. Este cambio **no** afecta a las vistas generales/acumuladas
+(clasificacion general del split, clasificacion de facciones, historico
+por persona): su denominador sigue siendo el total de participantes del
+split, exactamente como decidieron entregas anteriores.
+
+**Motivo:** el encargo `1.1.1` exige que la asistencia tenga prioridad
+absoluta y que un ausente nunca aparezca como si hubiera competido esa
+semana; mantener el denominador anterior (total de aplicables) en las
+vistas semanales habria mostrado, por ejemplo, "3 de 5" en una semana con
+2 ausencias, implicando que compitieron 5 personas cuando solo lo
+hicieron 3. Esta decision se limita explicitamente al ambito semanal:
+las vistas generales siguen necesitando el total de participantes del
+split para que la suma acumulada de posiciones/creditos sea comparable
+semana a semana, con independencia de cuantas ausencias hubiera cada
+semana.
+
+## `UNKNOWN_LEGACY` como tercer estado de cobertura de asistencia, solo en memoria (`1.1.1`)
+
+**Decision:** las publicaciones anteriores a `1.1.1` quedan con
+`attendanceStatus: null` en `PublishedParticipantWeeklyResult` (columna
+nueva, nullable, sin backfill). En el dominio de Analitica avanzada este
+`null` se modela como un tercer estado explicito, `"UNKNOWN_LEGACY"`,
+distinto de `"PRESENT"` y de `"ABSENT"`: nunca se persiste en base de
+datos (es un concepto puramente de calculo/presentacion) y nunca se trata
+como si fuera una ausencia real ni como una presencia asumida.
+
+**Motivo:** confundir "sin dato de asistencia" con "ausente" excluiria
+indebidamente del PPH y de las estadisticas de rendimiento a personas que
+en realidad trabajaron esa semana, solo que se publico antes de que este
+dato existiera; confundirlo con "presente" les asignaria horas y PPH que
+nunca se registraron. Un tercer estado explicito, solo en memoria, evita
+ambos errores sin inventar un dato retroactivo.
+
+## Relajacion de la restriccion `rankedParticipantCount >= 1` a `>= 0` (`1.1.1`)
+
+**Decision:** la migracion `20260913085103_add_weekly_attendance_and_points_per_hour`
+sustituye el `CHECK` de Postgres `rankedParticipantCount >= 1` (asumia
+siempre al menos un participante rankeado) por `rankedParticipantCount >=
+0`, y anade tres restricciones nuevas: `positionPointsRuleRank IS NULL OR
+>= 1`, `totalHoursSnapshot IS NULL OR >= 0` y `productiveHoursSnapshot IS
+NULL OR >= 0`.
+
+**Motivo:** el encargo `1.1.1` exige soportar de forma valida una semana
+en la que todos los participantes aplicables esten ausentes (seccion E4):
+esa semana tiene legitimamente `0` presentes, `0` posiciones semanales
+ocupadas y por tanto `rankedParticipantCount = 0`. La restriccion anterior
+lo habria rechazado a nivel de base de datos aunque el dominio y el
+servicio ya lo permitieran, dejando la segunda capa de proteccion (el
+`CHECK`, patron ya establecido en el proyecto) desincronizada con la
+regla de negocio real.
+
+## Eliminacion completa de la politica de exclusion de posibles ausencias de `1.1.0`
+
+**Decision:** `1.1.1` elimina por completo la maquinaria de exclusion de
+posibles ausencias introducida en `1.1.0` (constante
+`DEFAULT_ZERO_THRESHOLD`, campo `excludeZeroObservations`, `zeroThreshold`,
+`manualOverrides`, el componente `ExclusionsPanel.tsx` y los parametros de
+URL `exclusion`/`umbral`/`ov_*`), en vez de mantenerla en paralelo a la
+nueva regla de asistencia objetiva.
+
+**Motivo:** la propia entrega de `1.1.0` (ver la decision anterior en este
+documento) registraba esa heuristica como una aproximacion deliberada "sin
+inventar una certeza estadistica que el encargo no daba", pendiente de
+sustituirse por un dato real. `1.1.1` aporta exactamente ese dato real
+(horas totales de la semana), asi que mantener ambos criterios a la vez
+habria dejado dos respuestas distintas y potencialmente contradictorias a
+la misma pregunta ("¿quien no trabajo esta semana?") dentro del mismo
+modulo.

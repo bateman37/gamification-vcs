@@ -147,16 +147,22 @@ export function purchaseCompletedNewsTemplate(input: {
 export function weekPublishedNewsTemplate(input: {
   weekStartDate: Date;
   totalKpiPoints: number;
-  rank: number;
+  /** `null` para una persona ausente esa semana (`1.1.1`): nunca afirma una posicion ficticia. */
+  rank: number | null;
   totalParticipants: number;
   positionPoints: number;
   creditsEarned: number;
   faction: { name: string; rank: number } | null;
   professionJustLocked: boolean;
 }): NewsText {
-  const parts: string[] = [
-    `Posición semanal: ${input.rank} de ${input.totalParticipants} · ${formatPoints(input.totalKpiPoints)} puntos KPI · ${input.positionPoints} puntos por posición · ${input.creditsEarned} créditos.`,
-  ];
+  const parts: string[] =
+    input.rank === null
+      ? [
+          `Ausencia · Sin datos semanales · 0 créditos${input.positionPoints > 0 ? ` · ${input.positionPoints} puntos por posición` : ""}.`,
+        ]
+      : [
+          `Posición semanal: ${input.rank} de ${input.totalParticipants} · ${formatPoints(input.totalKpiPoints)} puntos KPI · ${input.positionPoints} puntos por posición · ${input.creditsEarned} créditos.`,
+        ];
   if (input.faction) {
     parts.push(`Tu facción, ${input.faction.name}, ha quedado ${input.faction.rank}.`);
   }
@@ -167,6 +173,14 @@ export function weekPublishedNewsTemplate(input: {
   return {
     title: `Resultados publicados · ${formatCalendarDateEs(input.weekStartDate)}`,
     body: parts.join(" "),
+  };
+}
+
+/** Noticia administrativa cuando toda la plantilla aplicable estuvo ausente esa semana (`1.1.1`, seccion E4/F6). */
+export function adminWeekAllAbsentNewsTemplate(input: { splitName: string; weekStartDate: Date }): NewsText {
+  return {
+    title: `Semana publicada sin presentes · ${input.splitName}`,
+    body: `La semana del ${formatCalendarDateEs(input.weekStartDate)} se publicó sin ningún participante presente: no hay ranking semanal, y todos recibieron 0 puntos KPI y 0 créditos.`,
   };
 }
 

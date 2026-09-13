@@ -135,9 +135,13 @@ erDiagram
         enum levelSnapshot "N0, N1, N2"
         decimal totalKpiPoints "puede ser negativo"
         decimal applicableMaxPoints "opcional"
-        int weeklyRank "mayor o igual que 1"
+        int weeklyRank "opcional desde 1.1.1; null si estuvo ausente o nadie estuvo presente"
         int positionPoints "no negativo"
-        int rankedParticipantCount "mayor o igual que 1"
+        int rankedParticipantCount "mayor o igual que 0 desde 1.1.1 (0 si todos ausentes)"
+        enum attendanceStatus "PRESENT, ABSENT; opcional, null en publicaciones anteriores a 1.1.1 (1.1.1)"
+        decimal totalHoursSnapshot "opcional, no negativo; congelado al publicar (1.1.1)"
+        decimal productiveHoursSnapshot "opcional, no negativo; null si no se capturo (1.1.1)"
+        int positionPointsRuleRank "opcional, mayor o igual que 1; posicion usada para conceder positionPoints (1.1.1)"
         string factionId FK "opcional; null si el split no usa facciones o es anterior a 0.7.0"
         string factionNameSnapshot "opcional, congelado al publicar"
         string factionColorSnapshot "opcional, congelado al publicar"
@@ -156,7 +160,7 @@ erDiagram
         string participantWeeklyResultId FK
         enum kpiCode "catalogo cerrado"
         string kpiNameSnapshot
-        enum outcomeStatus "COMPUTED, VAC, NOT_APPLICABLE"
+        enum outcomeStatus "COMPUTED, VAC, NOT_APPLICABLE, ABSENT (1.1.1)"
         decimal rawPoints "opcional"
         decimal finalPoints "opcional, puede ser negativo; incluye el bonus desde 0.8.0"
         decimal baseMax "opcional, mayor que cero"
@@ -378,8 +382,8 @@ erDiagram
         string id PK
         string splitWeekId FK
         string splitParticipantId FK "onDelete Restrict"
-        decimal productiveHours "no negativo"
-        decimal totalHours "no negativo; 0 = VAC"
+        decimal productiveHours "opcional desde 1.1.1; no negativo; null = no aplica (KPI inactivo o nivel no aplicable)"
+        decimal totalHours "no negativo; 0 = VAC del KPI y ausencia semanal (1.1.1); obligatorio para todo participante aplicable"
         datetime createdAt
         datetime updatedAt
     }
@@ -787,10 +791,14 @@ consultar.
 
 - **`StabilityWeeklyEntry`**: `resultValue` (`Decimal(12,4)`, no negativo).
   Alimenta Guardian de la Estabilidad (`STABILITY_GUARDIAN`).
-- **`ChronomancyWeeklyEntry`**: `productiveHours` y `totalHours`
-  (`Decimal(12,4)`, no negativos). Alimenta Cronomagia laboral
-  (`WORK_CHRONOMANCY`). No tiene columna `occupancy`: se calcula al
-  consultar.
+- **`ChronomancyWeeklyEntry`**: `totalHours` (`Decimal(12,4)`, no negativo,
+  obligatorio) y `productiveHours` (`Decimal(12,4)`, no negativo, nullable
+  desde `1.1.1`: solo se captura si `WORK_CHRONOMANCY` esta activo y
+  aplica al nivel). Alimenta Cronomagia laboral y, desde `1.1.1`, es
+  tambien el unico dato de asistencia semanal
+  (`docs/WEEKLY_ATTENDANCE_AND_HOURS.md`): el bloque se guarda para todo
+  participante aplicable de toda semana, independientemente de si el KPI
+  esta activo. No tiene columna `occupancy`: se calcula al consultar.
 - **`WriterWeeklyEntry`**: `deliveredArticles`, `undeliveredArticles`,
   `proposedArticles` (`Int`, no negativos). Alimenta Redactor estrella
   (`STAR_WRITER`).
@@ -917,7 +925,22 @@ nunca modifica estas filas.
   y `kpiRank` tienen restricciones de no negatividad/minimo `1` donde
   corresponde (`add_publication_check_constraints`).
 - `PublishedKpiResult.outcomeStatus`: enum `PublishedKpiOutcomeStatus`
-  (`COMPUTED`, `VAC`, `NOT_APPLICABLE`).
+  (`COMPUTED`, `VAC`, `NOT_APPLICABLE`, `ABSENT` desde `1.1.1`).
+- `attendanceStatus`, `totalHoursSnapshot`, `productiveHoursSnapshot` y
+  `positionPointsRuleRank` (`1.1.1`, ver
+  `docs/WEEKLY_ATTENDANCE_AND_HOURS.md`): asistencia semanal congelada,
+  determinada exclusivamente por `totalHours` de
+  `ChronomancyWeeklyEntry`. Los cuatro son opcionales: `null` en
+  publicaciones anteriores a esta version (cobertura desconocida, nunca
+  reinterpretada como presente ni como ausente). `weeklyRank` pasa a
+  opcional en esta misma migracion (`null` para una ausencia, o cuando
+  nadie estuvo presente esa semana); `rankedParticipantCount` relaja su
+  minimo de `1` a `0` (una semana con todos ausentes tiene legitimamente
+  `0` presentes). `positionPointsRuleRank` es la posicion realmente usada
+  para conceder `positionPoints`: coincide con `weeklyRank` para un
+  presente, y con la ultima posicion efectivamente ocupada por una
+  persona presente para un ausente (`null` sin ningun presente esa
+  semana).
 - Indices unicos: un solo resultado por participante y publicacion
   (`@@unique([publicationId, splitParticipantId])`) y un solo resultado por
   KPI y participante publicado (`@@unique([participantWeeklyResultId,

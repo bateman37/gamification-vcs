@@ -98,6 +98,8 @@ export async function loadParticipantWeekObservations(db: Db, scope: AnalyticsSc
       publicationId: true,
       levelSnapshot: true,
       creditsEarned: true,
+      attendanceStatus: true,
+      totalHoursSnapshot: true,
       split: { select: { name: true } },
       publication: { select: { publishedAt: true, splitWeek: { select: { id: true, sequenceNumber: true, startDate: true } } } },
       kpiResults: {
@@ -130,6 +132,8 @@ export async function loadParticipantWeekObservations(db: Db, scope: AnalyticsSc
     publishedAt: row.publication.publishedAt,
     levelSnapshot: row.levelSnapshot as AnalyticsLevel,
     creditsEarned: row.creditsEarned,
+    attendanceStatus: row.attendanceStatus,
+    totalHours: row.attendanceStatus === "PRESENT" ? row.totalHoursSnapshot?.toNumber() ?? null : null,
     cells: row.kpiResults.map((kpi) => ({
       kpiCode: kpi.kpiCode,
       kpiName: kpi.kpiNameSnapshot,
