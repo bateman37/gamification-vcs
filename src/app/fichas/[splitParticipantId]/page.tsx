@@ -12,10 +12,12 @@ import { ProfileAvatar } from "@/app/fichas/ProfileAvatar";
 import { ProfileAliasForm } from "@/app/fichas/ProfileAliasForm";
 import { ProfileAvatarForm } from "@/app/fichas/ProfileAvatarForm";
 import { ProfileProfessionForm } from "@/app/fichas/ProfileProfessionForm";
-import { EquipmentPanel } from "./EquipmentPanel";
-import { InventoryPanel } from "./InventoryPanel";
+import { EquipmentEditor } from "./EquipmentEditor";
 import { MarketPanel } from "./MarketPanel";
 import { HistoryPanel } from "./HistoryPanel";
+import { formatCalendarDateEs } from "@/lib/dates";
+import type { EditorItemView, EditorSlotView } from "./equipment-view";
+import type { LoadoutAssignment } from "@/domain/equipment-loadout";
 
 const STATUS_TONE: Record<string, "slate" | "green" | "gray"> = {
   DRAFT: "slate",
@@ -45,6 +47,36 @@ export default async function CharacterConfigPage({ params }: { params: { splitP
     if (error instanceof DomainError) notFound();
     throw error;
   }
+
+  // DTO minima para el editor de equipo (Client Component): ids opacos, nombre visible,
+  // posicion, estado y `imageVersion`. Nunca bytes de imagen ni datos de otros participantes.
+  const editorSlots: EditorSlotView[] = character.equipment.map((slot) => ({
+    equipmentSlotId: slot.equipmentSlotId,
+    name: slot.equipmentSlotName,
+    visualPosition: slot.visualPosition,
+    isActive: slot.isActive,
+    displayOrder: slot.displayOrder,
+  }));
+  const editorInventory: EditorItemView[] = character.inventory.map((item) => ({
+    ownedItemId: item.ownedItemId,
+    storeItemId: item.storeItemId,
+    name: item.name,
+    equipmentSlotId: item.equipmentSlotId,
+    equipmentSlotName: item.equipmentSlotName,
+    visualPosition: item.equipmentSlotVisualPosition,
+    slotIsActive: item.equipmentSlotIsActive,
+    slotDisplayOrder: item.equipmentSlotDisplayOrder,
+    kpiCode: item.kpiCode,
+    kpiName: item.kpiName,
+    bonusPercent: item.bonusPercent,
+    priceCredits: item.priceCredits,
+    acquiredAtLabel: formatCalendarDateEs(item.acquiredAt),
+    imageVersion: item.imageVersion,
+  }));
+  const confirmedAssignments: LoadoutAssignment[] = character.equipment
+    .filter((slot) => slot.equippedItem !== null)
+    .map((slot) => ({ equipmentSlotId: slot.equipmentSlotId, ownedItemId: slot.equippedItem!.ownedItemId }));
+  const equipmentReadOnly = character.splitStatus !== "ACTIVE";
 
   return (
     <div className="space-y-8">
@@ -150,24 +182,44 @@ export default async function CharacterConfigPage({ params }: { params: { splitP
       </section>
 
       <section id="equipo" className="space-y-3 border-t border-border pt-6">
-        <h2 className="text-lg font-semibold">Equipo</h2>
-        <EquipmentPanel
+        <h2 className="text-lg font-semibold">Equipo e inventario</h2>
+        <EquipmentEditor
           splitParticipantId={character.splitParticipantId}
-          slots={character.equipment}
-          inventory={character.inventory}
-          editable={character.splitStatus === "ACTIVE"}
+          splitId={character.splitId}
+          slots={editorSlots}
+          inventory={editorInventory}
+          confirmedAssignments={confirmedAssignments}
+          confirmedRevision={character.equipmentRevision}
+          profession={
+            character.profession
+              ? { name: character.profession.name, kpiCodeA: character.profession.kpiCodeA, kpiCodeB: character.profession.kpiCodeB }
+              : null
+          }
+          location={
+            character.activeLocation
+              ? {
+                  name: character.activeLocation.name,
+                  kpiCode: character.activeLocation.kpiCode,
+                  bonusPercent: character.activeLocation.bonusPercent,
+                }
+              : null
+          }
+          readOnly={equipmentReadOnly}
+          readOnlyReason={
+            equipmentReadOnly
+              ? character.splitStatus === "CLOSED"
+                ? "El split está cerrado: tu equipo es de solo lectura."
+                : "El split todavía no está activo: aún no puedes cambiar tu equipo."
+              : null
+          }
         />
-      </section>
-
-      <section id="inventario" className="space-y-3 border-t border-border pt-6">
-        <h2 className="text-lg font-semibold">Inventario</h2>
-        <InventoryPanel items={character.inventory} />
       </section>
 
       <section id="mercado" className="space-y-3 border-t border-border pt-6">
         <h2 className="text-lg font-semibold">Mercado</h2>
         <MarketPanel
           splitParticipantId={character.splitParticipantId}
+          splitId={character.splitId}
           marketStatus={character.marketStatus}
           balance={character.balance}
           catalog={character.storeCatalog}

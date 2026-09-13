@@ -1,5 +1,9 @@
 import { FieldError } from "@/components/ui";
 import { EQUIPMENT_BONUS_PERCENTS } from "@/domain/equipment-bonus";
+import {
+  STORE_ITEM_IMAGE_ACCEPT_ATTRIBUTE,
+  STORE_ITEM_IMAGE_FIELD,
+} from "@/domain/store-item-image-constraints";
 import type { KpiCode } from "@/domain/kpis/catalog";
 
 export interface StoreItemFormDefaults {
@@ -18,12 +22,15 @@ export function StoreItemFormFields({
   fieldErrors,
   activeKpis,
   slots,
+  withImageField = false,
 }: {
   idPrefix: string;
   defaults?: StoreItemFormDefaults;
   fieldErrors?: Record<string, string>;
   activeKpis: { code: KpiCode; name: string }[];
   slots: { id: string; name: string }[];
+  /** Solo en el alta: el objeto y su imagen se persisten de forma atomica (`1.2.0`). */
+  withImageField?: boolean;
 }) {
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -134,6 +141,26 @@ export function StoreItemFormFields({
         </select>
         <FieldError message={fieldErrors?.bonusPercent} />
       </div>
+
+      {withImageField && (
+        <div className="sm:col-span-2">
+          <label htmlFor={`${idPrefix}-image`} className="block text-sm font-medium text-ink">
+            Imagen del objeto (opcional)
+          </label>
+          <input
+            id={`${idPrefix}-image`}
+            type="file"
+            name={STORE_ITEM_IMAGE_FIELD}
+            accept={STORE_ITEM_IMAGE_ACCEPT_ATTRIBUTE}
+            className="mt-1 block w-full text-sm"
+          />
+          <p className="mt-1 text-xs text-text-muted">
+            JPEG, PNG o WebP, hasta 5 MB. Se procesa en el servidor a WebP (máximo 512 px). Sin imagen se muestra un
+            icono neutro de su posición.
+          </p>
+          <FieldError message={fieldErrors?.[STORE_ITEM_IMAGE_FIELD]} />
+        </div>
+      )}
     </div>
   );
 }
