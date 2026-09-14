@@ -769,3 +769,40 @@ fila `PublishedEquippedItem` por objeto equipado; la posicion visual es
 presentacion y **no** se congela, y su ausencia en publicaciones antiguas no
 rompe ninguna vista. Esta entrega no recalcula ni republica ningun dato
 historico.
+
+## 23. Resumen ampliado de "Economía y mercado" (`1.2.2`)
+
+El bloque compacto del detalle del split (`EconomySummarySection.tsx`,
+`#economia`) deja de mostrar solo el estado del mercado y dos contadores
+crudos: ahora sustituye el enlace subrayado por un boton-enlace visual
+(`LinkButton` + icono `Store`) y añade una cuadricula de metricas sencillas,
+sin convertirse en un segundo panel de analitica.
+
+- **Estado del mercado**: `SplitEconomySettings.marketStatus`, sin cambios.
+- **Ranuras activas**: ranuras `isActive && visualPosition !== null` frente
+  a las diez posiciones visuales del catalogo cerrado
+  (`MAX_PLACED_EQUIPMENT_SLOTS_PER_SPLIT`).
+- **Objetos activos**: `SplitStoreItem.isForSale` frente al total del
+  catalogo del split.
+- **Créditos gastados**: suma de `totalSpent` (`listEconomySummaryForSplit`,
+  ya usado por `/splits/[id]/economia`) de todos los participantes — el
+  valor inmutable realmente registrado en cada `CreditLedgerEntry` de tipo
+  `PURCHASE`, nunca el precio actual del catalogo.
+- **Créditos disponibles**: suma de `balance` de todos los participantes
+  (la misma fuente de `listEconomySummaryForSplit`).
+- **Objetos comprados**: numero total de `ItemPurchase` confirmadas del
+  split (no numero de objetos distintos del catalogo).
+- **Participantes compradores**: participantes con `purchaseCount > 0`
+  frente al total de participantes del split.
+- **Objetos equipados**: numero de filas `SplitParticipantEquippedItem` del
+  split (siempre equipo confirmado: no existe una tabla de borrador
+  separada, ver `docs/DECISIONS.md` sobre el borrador de equipo de
+  `1.2.0`).
+
+`getEconomyDashboardSummary` (`src/server/services/economy.service.ts`)
+agrega todo esto con un numero acotado de consultas en paralelo (nunca una
+consulta por participante u objeto), reutilizando `listEconomySummaryForSplit`
+en vez de duplicar la logica de saldo/gasto. Tolera un split sin mercado
+configurado, sin ranuras, sin objetos, sin compras o sin participantes
+(todas las agregaciones devuelven `0` en ese caso, nunca un error). Los
+creditos se formatean siempre como enteros.

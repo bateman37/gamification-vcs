@@ -1844,3 +1844,60 @@ toca.
 identidad tecnica ni los datos historicos; renombrar el enum habria forzado
 una migracion mucho mas amplia (tipo, indices, y todo el codigo que
 distingue por clave) para un cambio que es puramente de texto.
+
+## Finalizacion de split: `finalizeSplit` calcula el resumen final fuera de la transaccion de escritura (`1.2.2`)
+
+**Decision:** `computeSplitClassification`, `computeFactionClassification` y
+`computeSplitKpiClassification` (`src/server/services/classification.service.ts`,
+`faction-classification.service.ts`) reciben `db: PrismaClient`, no la
+union `PrismaClient | Prisma.TransactionClient` que usan otros servicios.
+`finalizeSplit` (`src/server/services/finalize-split.service.ts`) llama a
+estas tres funciones, sin modificarlas, **antes** de abrir la transaccion
+que cambia el estado del split, cierra el mercado y crea la noticia final;
+la transaccion solo revalida los contadores de semanas publicadas (una
+consulta barata) y persiste los efectos.
+
+**Motivo:** una vez que todas las semanas de un split estan publicadas, no
+existe en el dominio ninguna operacion capaz de alterar esas publicaciones
+(no hay despublicar/reabrir una semana), y una alta de participante deja de
+ser posible (cualquier semana inicial disponible ya estaria publicada). El
+resumen calculado es por tanto estable entre el momento de leerlo y el de
+persistir el cierre. Ampliar el tipo de estas tres funciones de
+clasificacion a la union `Db` para poder invocarlas dentro de una
+transaccion habria sido un cambio de superficie minima pero indeseado en
+servicios muy usados y ya probados (`/resultados`, `/splits/[id]/clasificacion`,
+`/splits/[id]/clasificacion-facciones`, "Presentar resultados"); se prefiere
+no tocarlos. La unica carrera real (dos clics simultaneos en "Finalizar
+split") se resuelve con la revalidacion dentro de la transaccion
+serializable y con el catch que comprueba si el split ya quedo `CLOSED`
+(mismo patron que `publishWeek`).
+
+## Imagen de faccion: sin uso en clasificaciones ni en fichas de jugador en esta entrega (`1.2.2`)
+
+**Decision:** el emblema de faccion (`SplitFactionImage`) se muestra en las
+tarjetas administrativas de facciones (`FactionCard.tsx`). No se anade a
+`FactionClassificationSummarySection.tsx`, a la clasificacion detallada de
+facciones, a `/resultados` ni a las fichas de jugador (`ProfileSplitCard.tsx`)
+en esta entrega.
+
+**Motivo:** el encargo lo permite explicitamente ("si existe espacio sin
+rediseñar la pantalla"), y esas superficies ya combinan datos congelados
+(`factionNameSnapshot`/`factionColorSnapshot`) con lecturas en vivo de
+formas distintas segun la pantalla; anadir la imagen (siempre en vivo,
+nunca un snapshot) exigiria auditar caso por caso que ninguna vista
+historica la presente como si fuese parte de la instantanea publicada. Se
+prefiere una entrega pequeña y sin ambigüedad sobre el corte
+historico/vivo, dejando esa ampliacion para cuando se pida explicitamente.
+
+## Etiqueta "Finalizado" sustituye a "Cerrado" para `SplitStatus.CLOSED` (`1.2.2`)
+
+**Decision:** `SPLIT_STATUS_LABELS.CLOSED` (`src/lib/labels.ts`) cambia de
+`"Cerrado"` a `"Finalizado"`. No se añade un segundo estado ni una columna
+nueva: se reutiliza integramente el enum `SplitStatus` existente
+(`DRAFT`/`ACTIVE`/`CLOSED`), solo cambia el texto visible, en todas las
+pantallas que ya usan esa constante compartida.
+
+**Motivo:** el encargo pide expresamente reutilizar el estado terminal
+existente y solo renombrar su etiqueta visible; no se detecto ningun otro
+lugar del codigo con el texto "Cerrado" codificado aparte de esta
+constante, asi que el cambio es seguro y unico.

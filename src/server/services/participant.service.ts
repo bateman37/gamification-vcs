@@ -14,6 +14,7 @@ import { createNewsWithDeliveries } from "@/server/services/news.service";
 import { buildNewsActionPath } from "@/domain/news-links";
 import { participantAddedNewsTemplate, factionReassignedNewsTemplate, professionAssignedNewsTemplate } from "@/domain/news-templates";
 import { KPI_CATALOG } from "@/domain/kpis/catalog";
+import { ensurePositionPointRuleCoverage, resolveRequiredPositionCountForSplit } from "@/server/services/position-points.service";
 
 type Db = PrismaClient | Prisma.TransactionClient;
 
@@ -106,6 +107,12 @@ export async function addParticipant(
           professionId,
         },
       });
+
+      // Ampliacion automatica de cobertura de puntos por posicion (`1.2.2`, seccion 6.2 del encargo):
+      // mantenimiento de integridad, no una edicion manual, asi que se aplica aunque la configuracion
+      // ya este bloqueada por la primera publicacion. Solo crea con `0` las posiciones que faltan.
+      const requiredPositionCount = await resolveRequiredPositionCountForSplit(tx, splitId);
+      await ensurePositionPointRuleCoverage(tx, splitId, requiredPositionCount);
 
       // Alta de participante (seccion 30 del encargo): siempre exactamente una noticia para la
       // persona anadida, tenga ya cuenta o no (se entrega a `Person`, ver docs/NEWS_CENTER.md).

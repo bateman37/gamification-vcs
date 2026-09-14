@@ -16,6 +16,20 @@ export interface PositionPointDefault {
   points: number;
 }
 
+/**
+ * Rango dinamico de posiciones desde `1.2.2` (ver
+ * docs/POSITION_POINTS_CONFIGURATION.md, seccion "Posiciones superiores a
+ * 15"): cada split debe tener reglas individuales `1..N`, donde `N` cubre
+ * como minimo las quince posiciones historicas, el numero actual de
+ * participantes del split y la mayor posicion ya persistida (para no
+ * recortar nunca una regla guardada previamente). Funcion pura: no consulta
+ * la base de datos, solo combina los tres numeros ya obtenidos por quien la
+ * llama.
+ */
+export function resolveRequiredPositionCount(participantCount: number, maxPersistedPosition: number): number {
+  return Math.max(TOTAL_POSITION_COUNT, participantCount, maxPersistedPosition);
+}
+
 export const DEFAULT_POSITION_POINTS: readonly PositionPointDefault[] = [
   { position: 1, points: 15 },
   { position: 2, points: 11 },

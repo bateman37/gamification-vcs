@@ -4,7 +4,7 @@ import { getSplitById, listSplitWeeks } from "@/server/services/split.service";
 import { listParticipantsForSplit } from "@/server/services/participant.service";
 import { listAllPersons } from "@/server/services/person.service";
 import { listKpiConfigsForSplit } from "@/server/services/kpi.service";
-import { listPositionPointRules } from "@/server/services/position-points.service";
+import { ensureAndListPositionPointRules } from "@/server/services/position-points.service";
 import { getWeeklyKpiLoadSummary } from "@/server/services/kpi-load-summary.service";
 import { computeSplitClassification } from "@/server/services/classification.service";
 import { listFactionsForSplit } from "@/server/services/faction.service";
@@ -13,9 +13,7 @@ import { toProfessionView } from "@/domain/profession-display";
 import { computeFactionClassification } from "@/server/services/faction-classification.service";
 import { listWeekLocationsForSplit } from "@/server/services/location.service";
 import { resolveWeekLocationWindow, findNextWeek } from "@/domain/location-window";
-import { getEconomySettings } from "@/server/services/economy.service";
-import { listEquipmentSlotsForSplit } from "@/server/services/equipment-slot.service";
-import { listStoreItemsForSplit } from "@/server/services/store-item.service";
+import { getEconomyDashboardSummary } from "@/server/services/economy.service";
 import { requireAdminSession } from "@/lib/session";
 import { TOTAL_KPI_COUNT } from "@/domain/kpis/catalog";
 import { formatCalendarDate, currentCalendarDate } from "@/lib/dates";
@@ -23,6 +21,7 @@ import { Badge, EmptyState } from "@/components/ui";
 import { SPLIT_STATUS_LABELS } from "@/lib/labels";
 import { EditSplitDraftForm } from "./EditSplitDraftForm";
 import { ActivateSplitButton } from "./ActivateSplitButton";
+import { FinalizeSplitButton } from "./FinalizeSplitButton";
 import { AddParticipantForm } from "./AddParticipantForm";
 import { ParticipantEditRow } from "./ParticipantEditRow";
 import { KpiConfigSection } from "./KpiConfigSection";
@@ -54,19 +53,17 @@ export default async function SplitDetailPage({ params }: { params: { id: string
     notFound();
   }
 
-  const [weeks, participants, people, kpiConfigs, positionPointRules, factions, professions, weekLocations, economySettings, equipmentSlots, storeItems] =
+  const [weeks, participants, people, kpiConfigs, positionPointRules, factions, professions, weekLocations, economySummary] =
     await Promise.all([
       listSplitWeeks(prisma, split.id),
       listParticipantsForSplit(prisma, split.id),
       listAllPersons(prisma),
       listKpiConfigsForSplit(prisma, split.id),
-      listPositionPointRules(prisma, split.id),
+      ensureAndListPositionPointRules(prisma, split.id),
       listFactionsForSplit(prisma, split.id),
       listProfessionsForSplit(prisma, split.id),
       listWeekLocationsForSplit(prisma, split.id),
-      getEconomySettings(prisma, split.id),
-      listEquipmentSlotsForSplit(prisma, split.id),
-      listStoreItemsForSplit(prisma, split.id),
+      getEconomyDashboardSummary(prisma, split.id),
     ]);
   const [kpiLoadSummaries, publications, classification, factionClassification] = await Promise.all([
     getWeeklyKpiLoadSummary(prisma, split.id, weeks),
@@ -76,6 +73,12 @@ export default async function SplitDetailPage({ params }: { params: { id: string
   ]);
   const publishedAtByWeekId = new Map(publications.map((publication) => [publication.splitWeekId, publication.publishedAt]));
   const hasAnyPublication = publications.length > 0;
+  // "Semanas publicadas: X de Y" (`1.2.2`, seccion 7.2 del encargo): la publicacion existente de cada
+  // semana es la unica prueba de cierre, nunca `numberOfWeeks` sin contrastar (cada `SplitWeek` tiene
+  // como mucho una `WeekPublication`, asi que `publications.length` ya es el numero de publicadas).
+  const publishedWeekCount = publications.length;
+  const allWeeksPublished = weeks.length > 0 && publishedWeekCount === weeks.length;
+  const canFinalize = split.status === "ACTIVE" && allWeeksPublished;
 
   const now = currentCalendarDate();
   const locationByWeekId = new Map(weekLocations.map((location) => [location.splitWeekId, location]));
@@ -136,6 +139,23 @@ export default async function SplitDetailPage({ params }: { params: { id: string
             <p className="mt-1 text-sm text-reward-ink">
               Este split no tiene ningun KPI activo. Configura al menos uno en la seccion &quot;KPI del
               split&quot;.
+            </p>
+          )}
+
+          {weeks.length > 0 && split.status !== "DRAFT" && (
+            <p className="mt-2 text-sm text-text-muted">
+              Semanas publicadas: {publishedWeekCount} de {weeks.length}.
+            </p>
+          )}
+
+          {canFinalize && (
+            <div className="mt-4">
+              <FinalizeSplitButton splitId={split.id} />
+            </div>
+          )}
+          {split.status === "ACTIVE" && !allWeeksPublished && weeks.length > 0 && (
+            <p className="mt-2 text-sm text-text-muted">
+              Publica todas las semanas del split para poder finalizarlo.
             </p>
           )}
 
@@ -224,12 +244,7 @@ export default async function SplitDetailPage({ params }: { params: { id: string
           hasAnyPublication={hasAnyPublication}
         />
 
-        <EconomySummarySection
-          splitId={split.id}
-          marketStatus={economySettings.marketStatus}
-          slotCount={equipmentSlots.length}
-          itemCount={storeItems.length}
-        />
+        <EconomySummarySection splitId={split.id} summary={economySummary} />
 
         <section id="participantes" className="scroll-mt-20 space-y-3">
           <h2 className="text-lg font-semibold">Participantes</h2>

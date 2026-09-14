@@ -2,6 +2,7 @@ import { Prisma, type PrismaClient } from "@prisma/client";
 import { DomainError } from "@/lib/errors";
 import { getSplitById, getSplitWeek, listSplitWeeks } from "@/server/services/split.service";
 import { computeWeeklyResults } from "@/server/services/weekly-results.service";
+import { ensurePositionPointRuleCoverage, resolveRequiredPositionCountForSplit } from "@/server/services/position-points.service";
 import { computeCreditsEarned } from "@/domain/credits";
 import { createNewsWithDeliveries, resolveActiveAdminUserIds } from "@/server/services/news.service";
 import { buildNewsActionPath } from "@/domain/news-links";
@@ -59,6 +60,12 @@ export async function publishWeek(
   try {
     const publication = await db.$transaction(
       async (tx) => {
+        // Defensa final de cobertura de puntos por posicion (`1.2.2`, seccion 6.2 del encargo): antes
+        // de calcular resultados, garantiza que exista una regla para cada posicion 1..N que la
+        // publicacion pueda necesitar, incluso ante datos legacy incompletos.
+        const requiredPositionCount = await resolveRequiredPositionCountForSplit(tx, splitId);
+        await ensurePositionPointRuleCoverage(tx, splitId, requiredPositionCount);
+
         // Recalculado dentro de la transaccion: incluye la relectura del equipo vivo de cada
         // participante en este instante exacto (seccion 22 del encargo).
         const results = await computeWeeklyResults(tx, splitId, week.id);

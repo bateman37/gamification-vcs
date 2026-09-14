@@ -237,3 +237,40 @@ general de facciones: no reimplementa la regla del top-3 ni el desempate.
 Un split sin facciones, o sin ninguna publicacion con snapshot de faccion
 (`hasFactionData: false`), omite limpiamente esas dos fases de la
 presentacion, sin inventar datos ni mostrar un error.
+
+## 16. Imagen opcional de faccion (`1.2.2`)
+
+- `SplitFactionImage` (migracion `add_faction_image_and_dynamic_position_points`):
+  entidad uno-a-uno separada, clave primaria `splitFactionId`, `onDelete:
+  Cascade` desde `SplitFaction`. Mismo patron exacto que
+  `SplitParticipantAvatar`/`SplitStoreItemImage`: los bytes nunca se
+  seleccionan en un listado (`listFactionsForSplit` solo expone
+  `imageVersion`, el `sha256` de la imagen).
+- Procesado en servidor (`src/server/services/faction-image.service.ts`,
+  `processFactionImage`), reutilizando exactamente los mismos limites que
+  el avatar y la imagen de objeto (`src/domain/faction-image-constraints.ts`):
+  JPEG/PNG/WebP comprobados sobre el contenido real con `sharp`, maximo
+  5 MB de entrada, correccion de orientacion EXIF, metadatos eliminados,
+  maximo 512 px por lado sin ampliar, salida WebP.
+- Solo exige que el split no este `CLOSED` (a diferencia de la imagen de
+  objeto, no depende del estado del mercado): el administrador puede
+  subir, reemplazar o eliminar el emblema mientras el split siga activo o
+  en borrador, incluso despues de la primera publicacion (igual que el
+  nombre y el color de la faccion).
+- Servida por `/api/splits/[splitId]/facciones/[factionId]/imagen`
+  (`readFactionImageForViewer`): autenticacion obligatoria, `ADMIN` puede
+  leer cualquier emblema, un participante solo el de un split en el que
+  participa; una faccion inexistente o un acceso cruzado devuelven ambos
+  `404`. Respuesta con `ETag` de `sha256`, `Cache-Control: private,
+  max-age=0, must-revalidate` y `X-Content-Type-Options: nosniff`.
+- Interfaz: `FactionCard.tsx` (administracion) añade un bloque
+  "Emblema de la facción (opcional)" con subir/cambiar/eliminar, y
+  `FactionImage.tsx` (mismo patron que `StoreItemImage.tsx`) muestra el
+  emblema o un glifo de reserva neutro, sin ilustracion tematica.
+- Recurso cosmetico actual, nunca un dato de calculo: no se congela en
+  `PublishedParticipantWeeklyResult` ni en ningun snapshot, no altera
+  `factionNameSnapshot`/`factionColorSnapshot` ya existentes, no cambia
+  ninguna clasificacion ni noticia historica, y un cambio de emblema no
+  reescribe ninguna semana publicada. Fuera de alcance de esta entrega:
+  imagen historica congelada por publicacion, y su uso en clasificaciones
+  detalladas o en fichas de jugador (ver `docs/DECISIONS.md`).

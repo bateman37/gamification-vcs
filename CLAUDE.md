@@ -34,7 +34,9 @@ cualquier componente de `src/components/ui.tsx`, y
 `docs/UX_AND_RESULTS_PRESENTATION_1_0_1.md` si vas a trabajar en la barra
 lateral, el orden de navegacion, el submenu del detalle del split, el
 historico general, las fichas, el guardado (individual o conjunto) de KPI,
-el formulario de alta de participante o la presentacion de resultados.
+el formulario de alta de participante o la presentacion de resultados, y
+`docs/SPLIT_FINALIZATION.md` si vas a trabajar en la finalizacion de un
+split, su estado terminal o el resumen final de podio/facciones/KPI.
 
 ## Estado real de las cargas semanales (no romper sin justificarlo)
 
@@ -437,6 +439,62 @@ motivo en `docs/DECISIONS.md` (detalle completo en
   `email` ni `imageData`). `buildRevealGroups`
   (`src/domain/results-presentation-reveal.ts`) sigue siendo la única
   función que decide el orden de revelación.
+
+## Identidad de sesión, imagen de facción, puntos por posición dinámicos y finalización de split (`1.2.2`, no romper sin justificarlo)
+
+Reglas asentadas que una sesión futura no debe deshacer sin registrar el
+motivo en `docs/DECISIONS.md` (detalle completo en `docs/FACTIONS.md`,
+`docs/POSITION_POINTS_CONFIGURATION.md`,
+`docs/ECONOMY_INVENTORY_AND_EQUIPMENT.md` sección 23 y
+`docs/SPLIT_FINALIZATION.md`):
+
+- Junto a la campana, `AppShell.tsx` muestra siempre el nombre completo
+  real de `Person` para un participante o el texto fijo `Administrador`
+  para un administrador (prevalece aunque exista además una relación con
+  una persona). Nunca alias, correo, id técnico ni una presencia en línea
+  real; sin `Person.fullName` resuelto usa el fallback neutro `Usuario`.
+- `SplitFactionImage` sigue el mismo patrón exacto que
+  `SplitParticipantAvatar`/`SplitStoreItemImage`: entidad uno-a-uno
+  separada, procesada siempre con `sharp` a WebP, servida por una ruta
+  autenticada con `ETag`, nunca en `public/`, en disco ni en base64. Es un
+  recurso cosmético actual: no se congela en ningún snapshot, no altera
+  `factionNameSnapshot`/`factionColorSnapshot` ya existentes y no cambia
+  ninguna clasificación ni noticia histórica. Solo exige que el split no
+  esté `CLOSED` (a diferencia de la imagen de objeto, no depende del
+  mercado). No la extiendas a clasificaciones ni a fichas de jugador sin
+  registrar el motivo (ver `docs/DECISIONS.md`).
+- `SplitPositionPointRule.position` ya no tiene tope superior fijo: el
+  rango real de un split es
+  `N = máximo(15, participantes del split, mayor posición ya persistida)`
+  (`resolveRequiredPositionCount`, `src/domain/position-points.ts`). No
+  reintroduzcas un límite `<= 15` en la base de datos ni en la validación;
+  el único helper que crea filas ausentes con `0` es
+  `ensurePositionPointRuleCoverage`
+  (`src/server/services/position-points.service.ts`), idempotente y
+  llamado desde la creación de split, el alta de participante (aunque la
+  configuración ya esté bloqueada por la primera publicación: es
+  mantenimiento de integridad, no una edición manual), la lectura de
+  pantalla y la publicación de semana como defensa final. Nunca recortes
+  ni sobrescribas una regla ya guardada.
+- `finalizeSplit` (`src/server/services/finalize-split.service.ts`) es la
+  única operación que pone `Split.status` en `CLOSED`; no añadas un
+  segundo estado terminal ni una acción "Reabrir split" en esta versión.
+  Exige split `ACTIVE` con todas sus `SplitWeek` publicadas
+  (`WeekPublication` es la única prueba de cierre), revalidado dentro de
+  la propia transacción, y reutiliza siempre
+  `computeSplitClassification`/`computeFactionClassification`/
+  `computeSplitKpiClassification` para el podio, la facción ganadora y los
+  ganadores por KPI: nunca reimplementes ninguno de esos rankings ni los
+  recalcules con datos editables. La noticia final usa la clave
+  idempotente `split-finalized:{splitId}` y es una única entrega para
+  todos los participantes (no una por participante, a diferencia de la
+  noticia de publicación semanal).
+- El resumen "Economía y mercado" del detalle del split
+  (`EconomySummarySection.tsx`) reutiliza `listEconomySummaryForSplit`
+  (`src/server/services/ledger.service.ts`) para créditos gastados/
+  disponibles y compradores distintos: no dupliques esa agregación en una
+  consulta paralela nueva. Sigue siendo un resumen deliberadamente
+  sencillo, no un segundo panel de analítica.
 
 ## Reglas de trabajo
 

@@ -11,6 +11,7 @@
 
 import { formatCalendarDateEs } from "@/lib/dates";
 import { formatPoints } from "@/lib/format";
+import type { SplitFinalizationSummary } from "@/domain/split-finalization";
 
 export interface NewsText {
   title: string;
@@ -252,5 +253,73 @@ export function adminMarketClosedNewsTemplate(input: { splitName: string }): New
   return {
     title: `Mercado cerrado · ${input.splitName}`,
     body: "Ya no se pueden realizar nuevas compras en este split.",
+  };
+}
+
+// --- Finalizacion de split (`1.2.2`) ------------------------------------
+
+const PODIUM_RANK_LABELS: Record<1 | 2 | 3, { singular: string; plural: string }> = {
+  1: { singular: "Ganador", plural: "Ganadores" },
+  2: { singular: "Subcampeón", plural: "Subcampeones" },
+  3: { singular: "Tercero", plural: "Terceros" },
+};
+
+/** Une una lista de nombres al estilo castellano ("A", "A y B", "A, B y C"). */
+function formatNameList(names: readonly string[]): string {
+  if (names.length === 0) return "";
+  if (names.length === 1) return names[0]!;
+  if (names.length === 2) return `${names[0]} y ${names[1]}`;
+  return `${names.slice(0, -1).join(", ")} y ${names[names.length - 1]}`;
+}
+
+/**
+ * Cuerpo compartido de la noticia de finalizacion (jugador y administracion
+ * usan exactamente el mismo texto de resumen, seccion 9.2 del encargo).
+ * Puestos sin entrada y facción sin datos se omiten en vez de inventar un
+ * resultado.
+ */
+function buildFinalizationSummaryLines(summary: SplitFinalizationSummary): string[] {
+  const lines: string[] = [];
+
+  for (const entry of summary.podium) {
+    const label = entry.names.length > 1 ? PODIUM_RANK_LABELS[entry.rank].plural : PODIUM_RANK_LABELS[entry.rank].singular;
+    lines.push(`${label}: ${formatNameList(entry.names)}.`);
+  }
+
+  if (summary.factionWinner.hasFactionData && summary.factionWinner.names.length > 0) {
+    const label = summary.factionWinner.names.length > 1 ? "Facciones ganadoras" : "Facción ganadora";
+    lines.push(`${label}: ${formatNameList(summary.factionWinner.names)}.`);
+  }
+
+  if (summary.kpiWinners.length > 0) {
+    lines.push("Ganadores por KPI:");
+    for (const kpiWinner of summary.kpiWinners) {
+      if (!kpiWinner.hasApplicableData) {
+        lines.push(`${kpiWinner.kpiName}: Sin datos aplicables.`);
+      } else {
+        lines.push(`${kpiWinner.kpiName}: ${formatNameList(kpiWinner.winners)} (${formatPoints(kpiWinner.sum)} puntos).`);
+      }
+    }
+  }
+
+  return lines;
+}
+
+export function splitFinalizedNewsTemplateForParticipant(input: { splitName: string; summary: SplitFinalizationSummary }): NewsText {
+  return {
+    title: `Split finalizado · ${input.splitName}`,
+    body: buildFinalizationSummaryLines(input.summary).join("\n"),
+  };
+}
+
+export function adminSplitFinalizedNewsTemplate(input: {
+  splitName: string;
+  participantCount: number;
+  summary: SplitFinalizationSummary;
+}): NewsText {
+  const intro = `Split finalizado con ${input.participantCount} ${input.participantCount === 1 ? "participante" : "participantes"}.`;
+  return {
+    title: `Split finalizado · ${input.splitName}`,
+    body: [intro, ...buildFinalizationSummaryLines(input.summary)].join("\n"),
   };
 }
