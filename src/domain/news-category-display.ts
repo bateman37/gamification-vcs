@@ -16,6 +16,7 @@ export const NEWS_CATEGORY_DISPLAY: Record<NewsCategory, { label: string; icon: 
   PURCHASE: { label: "Compra", icon: "ShoppingBag" },
   ANNOUNCEMENT: { label: "Anuncio", icon: "Megaphone" },
   ADMIN: { label: "Administración", icon: "ShieldCheck" },
+  BADGE: { label: "Badges", icon: "Award" },
 };
 
 export const NEWS_CATEGORY_OPTIONS: { value: NewsCategory; label: string }[] = (

@@ -305,6 +305,20 @@ function buildFinalizationSummaryLines(summary: SplitFinalizationSummary): strin
   return lines;
 }
 
+/**
+ * Noticia personal agregada de badges conseguidos al finalizar un split
+ * (`1.2.3`, seccion 7.8 del encargo, ver docs/BADGES.md): una unica noticia
+ * por persona premiada que agrupa todos sus badges de ese split, nunca una
+ * por badge (evita spam). `badgeNames` ya viene en el orden del catalogo.
+ */
+export function badgesEarnedNewsTemplate(input: { splitName: string; badgeNames: string[] }): NewsText {
+  const count = input.badgeNames.length;
+  return {
+    title: `Nuevos badges · ${input.splitName}`,
+    body: `Has conseguido ${count} ${count === 1 ? "badge" : "badges"} en ${input.splitName}: ${formatNameList(input.badgeNames)}.`,
+  };
+}
+
 export function splitFinalizedNewsTemplateForParticipant(input: { splitName: string; summary: SplitFinalizationSummary }): NewsText {
   return {
     title: `Split finalizado · ${input.splitName}`,

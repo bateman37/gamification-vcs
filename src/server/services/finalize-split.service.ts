@@ -1,13 +1,23 @@
 import { Prisma, type PrismaClient } from "@prisma/client";
 import { DomainError } from "@/lib/errors";
-import { computeSplitClassification, computeSplitKpiClassification } from "@/server/services/classification.service";
-import { computeFactionClassification } from "@/server/services/faction-classification.service";
+import {
+  computeSplitClassification,
+  computeSplitKpiClassification,
+  type SplitClassification,
+  type KpiClassificationEntry,
+} from "@/server/services/classification.service";
+import { computeFactionClassification, type FactionClassification } from "@/server/services/faction-classification.service";
 import { listKpiConfigsForSplit } from "@/server/services/kpi.service";
 import { closeMarketWithinTransaction } from "@/server/services/economy.service";
 import { createNewsWithDeliveries, resolveActiveAdminUserIds, resolveAllParticipantsForSplit } from "@/server/services/news.service";
+import { buildBadgeGrantPlan, grantSplitFinalizationBadges } from "@/server/services/badge-award.service";
 import { buildNewsActionPath } from "@/domain/news-links";
-import { adminSplitFinalizedNewsTemplate, splitFinalizedNewsTemplateForParticipant } from "@/domain/news-templates";
-import { KPI_CATALOG } from "@/domain/kpis/catalog";
+import {
+  adminSplitFinalizedNewsTemplate,
+  badgesEarnedNewsTemplate,
+  splitFinalizedNewsTemplateForParticipant,
+} from "@/domain/news-templates";
+import { KPI_CATALOG, type KpiCode } from "@/domain/kpis/catalog";
 import {
   buildFinalizationFactionWinner,
   buildFinalizationKpiWinner,
@@ -36,18 +46,30 @@ export async function getSplitFinalizationCounts(db: PrismaClient, splitId: stri
   return { totalWeeks, publishedWeeks };
 }
 
+interface FinalizationData {
+  summary: SplitFinalizationSummary;
+  classification: SplitClassification;
+  factionClassification: FactionClassification;
+  kpiClassifications: { kpiCode: KpiCode; entries: KpiClassificationEntry[] }[];
+}
+
 /**
- * Calcula el resumen final (podio, faccion ganadora, ganadores por KPI)
- * exclusivamente a partir de publicaciones ya existentes, reutilizando los
- * servicios oficiales de clasificacion (nunca reimplementa ningun
- * ranking). Es una lectura pura sobre datos inmutables: se ejecuta antes de
- * abrir la transaccion de cierre porque, una vez que todas las semanas de
- * un split ya estan publicadas, no existe ninguna operacion capaz de
- * alterar esos datos (no hay despublicar/reabrir una semana), y un alta de
- * participante deja de ser posible (cualquier semana inicial disponible ya
- * estaria publicada).
+ * Calcula el resumen final (podio, faccion ganadora, ganadores por KPI) y
+ * conserva ademas las clasificaciones brutas (`classification`,
+ * `factionClassification`, `kpiClassifications`) para que
+ * `buildBadgeGrantPlan` pueda derivar los ganadores de cada badge sin volver
+ * a calcular ningun ranking. Lee exclusivamente publicaciones ya existentes,
+ * reutilizando los servicios oficiales de clasificacion. Es una lectura pura
+ * sobre datos inmutables: se ejecuta antes de abrir la transaccion de cierre
+ * porque, una vez que todas las semanas de un split ya estan publicadas, no
+ * existe ninguna operacion capaz de alterar esos datos (no hay
+ * despublicar/reabrir una semana), y un alta de participante deja de ser
+ * posible (cualquier semana inicial disponible ya estaria publicada). La
+ * unica pieza que si puede cambiar hasta el ultimo instante es la
+ * pertenencia viva a una faccion, por eso `buildBadgeGrantPlan` se llama
+ * dentro de la transaccion de cierre, nunca aqui.
  */
-async function buildFinalizationSummary(db: PrismaClient, splitId: string): Promise<SplitFinalizationSummary> {
+async function buildFinalizationData(db: PrismaClient, splitId: string): Promise<FinalizationData> {
   const [classification, factionClassification, kpiConfigs] = await Promise.all([
     computeSplitClassification(db, splitId),
     computeFactionClassification(db, splitId),
@@ -61,18 +83,21 @@ async function buildFinalizationSummary(db: PrismaClient, splitId: string): Prom
   );
 
   const activeKpiConfigs = kpiConfigs.filter((config) => config.isActive);
-  const kpiWinners = await Promise.all(
-    activeKpiConfigs.map(async (config) => {
-      const entries = await computeSplitKpiClassification(db, splitId, config.kpiCode, null);
-      return buildFinalizationKpiWinner(
-        config.kpiCode,
-        KPI_CATALOG[config.kpiCode].name,
-        entries.map((entry) => ({ rank: entry.rank, name: entry.alias, sum: entry.sum })),
-      );
-    }),
+  const kpiClassifications = await Promise.all(
+    activeKpiConfigs.map(async (config) => ({
+      kpiCode: config.kpiCode,
+      entries: await computeSplitKpiClassification(db, splitId, config.kpiCode, null),
+    })),
+  );
+  const kpiWinners = kpiClassifications.map(({ kpiCode, entries }) =>
+    buildFinalizationKpiWinner(
+      kpiCode,
+      KPI_CATALOG[kpiCode].name,
+      entries.map((entry) => ({ rank: entry.rank, name: entry.alias, sum: entry.sum })),
+    ),
   );
 
-  return { podium, factionWinner, kpiWinners };
+  return { summary: { podium, factionWinner, kpiWinners }, classification, factionClassification, kpiClassifications };
 }
 
 export interface FinalizeSplitResult {
@@ -114,7 +139,8 @@ export async function finalizeSplit(db: PrismaClient, splitId: string): Promise<
     );
   }
 
-  const summary = await buildFinalizationSummary(db, splitId);
+  const finalizationData = await buildFinalizationData(db, splitId);
+  const { summary } = finalizationData;
   const participants = await resolveAllParticipantsForSplit(db, splitId);
   const adminUserIds = await resolveActiveAdminUserIds(db);
 
@@ -178,6 +204,32 @@ export async function finalizeSplit(db: PrismaClient, splitId: string): Promise<
               eventKey: `admin-split-finalized:${splitId}`,
             },
             adminUserIds.map((userId) => ({ userId, actionPath: buildNewsActionPath({ kind: "SPLIT_ADMIN", splitId, anchor: "resumen" }, "USER") })),
+          );
+        }
+
+        // Badges (`1.2.3`, seccion 7 del encargo): la faccion ganadora se resuelve con la
+        // pertenencia viva dentro de la propia transaccion (nunca fuera de ella), igual que el
+        // resto de escrituras de esta operacion.
+        const plan = await buildBadgeGrantPlan(tx, splitId, finalizationData.classification, finalizationData.factionClassification, finalizationData.kpiClassifications);
+        const finalizedAt = new Date();
+        const earnedBadgesByPerson = await grantSplitFinalizationBadges(tx, { splitId, splitName: current.name, finalizedAt, plan });
+
+        for (const earned of earnedBadgesByPerson) {
+          if (earned.badgeNames.length === 0) continue;
+          const { title, body } = badgesEarnedNewsTemplate({ splitName: current.name, badgeNames: earned.badgeNames });
+          await createNewsWithDeliveries(
+            tx,
+            {
+              splitId,
+              splitNameSnapshot: current.name,
+              origin: "AUTOMATIC",
+              category: "BADGE",
+              priority: "IMPORTANT",
+              title,
+              body,
+              eventKey: `badges-earned:${splitId}:${earned.personId}`,
+            },
+            [{ personId: earned.personId, actionPath: buildNewsActionPath({ kind: "BADGES_SHOWCASE" }, "PERSON") }],
           );
         }
       },
