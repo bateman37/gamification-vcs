@@ -22,11 +22,16 @@ export default withAuth(
       return NextResponse.redirect(new URL("/cuenta/cambiar-contrasena", req.url));
     }
 
-    // `/noticias/administrar` (envio manual, seccion 40 del encargo) y `/analitica` (Analitica
-    // avanzada, `1.1.0`) son exclusivos de administrador, igual que `Personas` y `Splits`; el
-    // resto de `/noticias` es para cualquier usuario autenticado.
+    // `/noticias/administrar` (envio manual, seccion 40 del encargo), `/analitica` (Analitica
+    // avanzada, `1.1.0`) y `/badges/administracion` (administracion historica de Badges, `1.2.3`)
+    // son exclusivos de administrador, igual que `Personas` y `Splits`; el resto de `/noticias` y
+    // de `/badges` es para cualquier usuario autenticado.
     const isAdminOnlyPath =
-      path.startsWith("/personas") || path.startsWith("/splits") || path.startsWith("/analitica") || path.startsWith("/noticias/administrar");
+      path.startsWith("/personas") ||
+      path.startsWith("/splits") ||
+      path.startsWith("/analitica") ||
+      path.startsWith("/noticias/administrar") ||
+      path.startsWith("/badges/administracion");
     if (isAdminOnlyPath && token?.role !== "ADMIN") {
       return NextResponse.redirect(new URL("/noticias", req.url));
     }
@@ -50,5 +55,6 @@ export const config = {
     "/cuenta/:path*",
     "/noticias/:path*",
     "/analitica/:path*",
+    "/badges/:path*",
   ],
 };

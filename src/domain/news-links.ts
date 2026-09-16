@@ -20,6 +20,8 @@ export type NewsLinkTarget =
   | { kind: "RESULTS"; splitId: string }
   | { kind: "PROFILE"; splitParticipantId: string }
   | { kind: "MARKET"; splitParticipantId: string }
+  /** "Mi vitrina" del modulo Badges (`1.2.3`). Sin parametros: siempre la vitrina del propio destinatario. */
+  | { kind: "BADGES_SHOWCASE" }
   /** Detalle administrativo del split, opcionalmente anclado a una seccion (`#participantes`...). Exclusivo de destinatarios `USER`. */
   | { kind: "SPLIT_ADMIN"; splitId: string; anchor?: string }
   /** Resultados administrativos de una semana concreta. Exclusivo de destinatarios `USER`. */
@@ -47,6 +49,8 @@ export function buildNewsActionPath(target: NewsLinkTarget, recipientKind: NewsR
       return `/fichas/${encodeURIComponent(target.splitParticipantId)}`;
     case "MARKET":
       return `/fichas/${encodeURIComponent(target.splitParticipantId)}#mercado`;
+    case "BADGES_SHOWCASE":
+      return `/badges?vista=vitrina`;
     case "SPLIT_ADMIN":
       assertAdminRecipient(recipientKind);
       return `/splits/${encodeURIComponent(target.splitId)}${target.anchor ? `#${target.anchor}` : ""}`;

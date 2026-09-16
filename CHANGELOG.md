@@ -5,6 +5,60 @@ La primera version publicada es `0.1.0`; `1.0.0` cierra la primera version
 estable del producto (nucleo funcional y las cuatro capas de juego, mas
 comunicacion y renovacion visual).
 
+## [1.2.3] - Badges y vitrina histórica
+
+Nuevo módulo **Badges**: medallas permanentes por ganar un split (MVP),
+pertenecer a la facción ganadora (MVP Team) o ganar una categoría KPI, más
+la restauración permanente e idempotente del histórico real de los 9
+Splits anteriores (`legacy-badges-v1`: 18 personas, 127 concesiones). Ver
+`docs/BADGES.md`.
+
+### Añadido
+
+- **Catálogo cerrado de 14 badges** (`src/domain/badges/badge-catalog.ts`):
+  los diez KPI del catálogo activo, dos categorías históricas sin KPI
+  activo (Travesía del Padawan, Guardián del conocimiento), MVP y MVP
+  Team. Sin CRUD de administración: las categorías derivadas de un
+  `KpiCode` reutilizan ese mismo código, para que un KPI futuro derive su
+  badge sin migración de código dedicada.
+- **Concesión automática al finalizar un split** (`finalizeSplit`,
+  ampliado dentro de su misma transacción serializable): MVP para el rango
+  1 de la clasificación general, MVP Team para todos los miembros actuales
+  de la facción ganadora, y un badge por cada KPI activo para quien tenga
+  el mayor total acumulado — todo reutilizando
+  `computeSplitClassification`/`computeFactionClassification`/
+  `computeSplitKpiClassification`, con el mismo criterio de empate que ya
+  usa el podio de la noticia final. Idempotente (`upsert` por
+  `idempotencyKey`); un split sin facciones no concede ningún MVP Team.
+  Genera además una única noticia personal agregada por persona premiada
+  (categoría `BADGE`, enlace a "Mi vitrina").
+- **Histórico `legacy-badges-v1`** (`src/domain/badges/legacy-badges-v1.ts`):
+  127 concesiones individuales versionadas en el repositorio, con
+  controles de integridad recalculados en cada importación (18/127/9/30/88
+  y el total exacto de cada categoría). Importación transaccional e
+  idempotente (`npm run db:import-legacy-badges`, o desde
+  `/badges/administracion`), con "destinatarios históricos"
+  (`BadgeHistoricalRecipient`) como capa de indirección para no depender
+  de los UUID de `Person` generados en el pasado, y vinculación automática
+  por nombre normalizado (solo con coincidencia única e inequívoca).
+- **`/badges`**: clasificación general (ordenable por MVP, MVP Team, total
+  o cualquier categoría KPI, con desglose accesible por fila) y "Mi
+  vitrina"/"Badges de la persona" (MVP en ámbar, MVP Team en violeta,
+  colección de badges KPI con contador y categorías no conseguidas
+  visibles pero atenuadas). `/badges/administracion` (solo `ADMIN`):
+  importar/reintentar el histórico y resolver manualmente la vinculación
+  de sus destinatarios. Enlace `Badges` en la navegación, entre
+  `Resultados` y `Fichas` (jugador) o entre `Resultados` y `Analítica
+  avanzada` (administrador).
+
+### Migración
+
+- `add_badges`: crea `Badge`, `BadgeHistoricalRecipient`, `BadgeAward` y el
+  enum `BadgeType`/`BadgeAwardOrigin`, añade el valor `BADGE` a
+  `NewsCategory`, y la restricción `BadgeAward_owner_exclusive_check`
+  (exactamente uno de `personId`/`recipientId`). Aditiva: no modifica
+  ninguna tabla existente.
+
 ## [1.2.2] - Cierre de split, imágenes de facción y mejoras operativas
 
 Entrega de correccion y mejora sobre la `1.2.1`: identidad de sesion junto a

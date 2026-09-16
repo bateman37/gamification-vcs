@@ -25,9 +25,10 @@ objetos en la tabla administrativa y submenu de "Presentar resultados"** y
 **`1.1.0` — Analitica avanzada del equipo, exclusiva de administracion**,
 **`1.1.1` — Asistencia semanal por horas y puntos por hora** y
 **`1.2.0` — Equipo visual, inventario RPG e imagenes de objetos**,
-**`1.2.1` — Hotfix de cuadricula de ranuras y renombre a Anillo** y
-**`1.2.2` — Cierre de split, imagenes de faccion y mejoras operativas**
-(ver `docs/ROADMAP.md`). Version actual: `1.2.2`.
+**`1.2.1` — Hotfix de cuadricula de ranuras y renombre a Anillo**,
+**`1.2.2` — Cierre de split, imagenes de faccion y mejoras operativas** y
+**`1.2.3` — Badges y vitrina historica**
+(ver `docs/ROADMAP.md`). Version actual: `1.2.3`.
 
 Estas entregas implementan:
 
@@ -298,6 +299,7 @@ La aplicacion queda disponible en <http://localhost:3000>. Inicia sesion en
 | `npm run db:generate` | Regenera el cliente de Prisma. |
 | `npm run db:studio` | Abre Prisma Studio para inspeccionar los datos. |
 | `npm run db:create-admin` | Crea el primer administrador a partir de `ADMIN_EMAIL`/`ADMIN_PASSWORD` (`0.6.0` / MVP-1C). |
+| `npm run db:import-legacy-badges` | Importa o repara de forma segura el historico `legacy-badges-v1` de Badges (`1.2.3`). |
 
 ## Ejecutar las pruebas
 
@@ -1048,6 +1050,75 @@ y [`docs/ECONOMY_INVENTORY_AND_EQUIPMENT.md`](docs/ECONOMY_INVENTORY_AND_EQUIPME
 6. Revisa el nuevo resumen de "Economia y mercado" en un split sin
    actividad y en uno con compras/equipo.
 
+## Badges y vitrina historica (`1.2.3`)
+
+Medallas permanentes de una persona por ganar un split (MVP), pertenecer a
+la faccion ganadora (MVP Team) o ganar una categoria KPI, mas la
+restauracion permanente e idempotente del historico real de los 9 Splits
+anteriores. Detalle funcional completo en
+[`docs/BADGES.md`](docs/BADGES.md).
+
+- **Catalogo cerrado de 14 badges**, sin CRUD de administracion: los diez
+  KPI del catalogo activo, dos categorias historicas (Travesia del
+  Padawan, Guardian del conocimiento), MVP y MVP Team.
+- **Concesion automatica al finalizar un split**: MVP, MVP Team (todos los
+  miembros actuales de la faccion ganadora) y un badge por cada KPI
+  activo, reutilizando siempre las clasificaciones oficiales ya existentes
+  y el mismo criterio de empate que el podio de la noticia final. Genera
+  ademas una unica noticia personal agregada por persona premiada.
+- **Historico `legacy-badges-v1`**: 127 concesiones de 18 personas en 9
+  splits, versionadas en el repositorio. Importacion transaccional e
+  idempotente (`npm run db:import-legacy-badges`, o desde `Badges >
+  Administracion historica`), con controles de integridad
+  (18/127/9/30/88) y vinculacion automatica por nombre normalizado.
+- **`/badges`**: clasificacion general ordenable (MVP, MVP Team, total o
+  cualquier categoria KPI) y "Mi vitrina"/"Badges de la persona" (MVP en
+  ambar, MVP Team en violeta, categorias no conseguidas visibles pero
+  atenuadas). `/badges/administracion` (solo `ADMIN`) resuelve la
+  vinculacion de los destinatarios historicos.
+
+### Restaurar el historico despues de vaciar la base de datos
+
+Con las migraciones ya aplicadas (`npm run db:migrate:deploy`):
+
+```powershell
+npm run db:import-legacy-badges
+```
+
+Es seguro repetirlo las veces que haga falta: nunca duplica destinatarios
+ni concesiones, y nunca borra ni reescribe una concesion ya existente.
+Despues, crea o importa las personas reales si todavia no existen y
+resuelve manualmente los destinatarios pendientes desde `Badges >
+Administracion historica`.
+
+### Comprobar manualmente
+
+1. Ejecuta `npm run db:import-legacy-badges` y comprueba en consola
+   `18` destinatarios, `127` concesiones.
+2. Entra como administrador en `Badges > Administracion historica`:
+   revisa el resumen (destinatarios, enlazados, pendientes, concesiones
+   importadas) y la tabla de los 18 destinatarios, todos "Pendiente de
+   vincular".
+3. Crea una persona con el mismo nombre (tildes/mayusculas distintas) que
+   uno de los destinatarios y pulsa "Reejecutar vinculacion": comprueba
+   que se enlaza automaticamente.
+4. Vincula, corrige y desvincula manualmente un destinatario desde su
+   selector; comprueba que ninguna concesion desaparece.
+5. Revisa `/badges` (clasificacion general): la persona recien vinculada
+   aparece con sus MVP/MVP Team/badges KPI; cambia el criterio de orden y
+   comprueba que la tabla se reordena.
+6. Revisa "Mi vitrina" como esa persona (o "Badges de la persona" como
+   administrador, seleccionandola): MVP y MVP Team destacados, categorias
+   KPI conseguidas con contador y categorias sin conseguir atenuadas.
+7. Publica todas las semanas de un split de prueba y finalizalo: revisa
+   que se conceden MVP, MVP Team (si el split usa facciones) y los badges
+   KPI correctos, y que llega una unica noticia agregada por persona
+   premiada enlazando a "Mi vitrina".
+8. Finaliza el mismo split dos veces (reintento): comprueba que no se
+   duplica ningun badge ni la noticia.
+9. Entra como participante y comprueba que solo ves tu propia vitrina, sin
+   poder elegir otra persona ni acceder a `/badges/administracion`.
+
 ## Reinicio opcional y destructivo del entorno local
 
 **Solo para una base de datos local ficticia.** Este comando **borra
@@ -1126,6 +1197,9 @@ estan excluidos en `.gitignore`).
 - [`docs/SPLIT_FINALIZATION.md`](docs/SPLIT_FINALIZATION.md) —
   finalizacion formal de un split, condicion exacta, resumen final de
   podio/faccion/KPI y noticia idempotente (`1.2.2`).
+- [`docs/BADGES.md`](docs/BADGES.md) — catalogo cerrado de badges,
+  concesion automatica al finalizar un split, importacion idempotente del
+  historico `legacy-badges-v1` y clasificacion/vitrina (`1.2.3`).
 - [`docs/DECISIONS.md`](docs/DECISIONS.md) — decisiones tecnicas y de
   producto registradas.
 - [`CHANGELOG.md`](CHANGELOG.md) — historial de cambios.

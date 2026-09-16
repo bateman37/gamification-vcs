@@ -519,6 +519,54 @@ porcentaje, credito, clasificacion ni semana publicada.
 - Detalle completo en `docs/ECONOMY_INVENTORY_AND_EQUIPMENT.md`
   (seccion 22) y `docs/DESIGN_SYSTEM.md` (seccion 12).
 
+## `1.2.3` — Badges y vitrina historica
+
+**Estado: completado.**
+
+Sobre `1.2.2` (cierre de split, imagenes de faccion y mejoras operativas):
+nuevo modulo **Badges**, medallas permanentes de una `Person` por ganar un
+split (MVP), pertenecer a la faccion ganadora (MVP Team) o ganar una
+categoria KPI, mas la restauracion permanente e idempotente del historico
+real de los 9 Splits anteriores.
+
+- Catalogo cerrado de 14 badges (`src/domain/badges/badge-catalog.ts`),
+  sin CRUD de administracion: los diez KPI del catalogo activo (mismo
+  `code` que su `KpiCode`, para derivar automaticamente un badge nuevo sin
+  migracion de codigo dedicada), dos categorias historicas sin KPI activo
+  (Travesia del Padawan, Guardian del conocimiento), MVP y MVP Team.
+- Concesion automatica dentro de la propia transaccion de `finalizeSplit`:
+  MVP para el rango 1 de la clasificacion general, MVP Team para todos los
+  miembros actuales de la faccion ganadora, y un badge por cada KPI activo
+  para quien tenga el mayor total acumulado, reutilizando siempre
+  `computeSplitClassification`/`computeFactionClassification`/
+  `computeSplitKpiClassification` y el mismo criterio de empate que el
+  podio de la noticia final. Idempotente; un split sin facciones no
+  concede ningun MVP Team. Genera ademas una unica noticia personal
+  agregada por persona premiada (categoria `BADGE`).
+- Historico `legacy-badges-v1` (`src/domain/badges/legacy-badges-v1.ts`):
+  127 concesiones individuales de 18 personas en 9 splits, versionadas en
+  el repositorio (nunca el Excel como dependencia de produccion), con
+  controles de integridad recalculados en cada importacion. Importacion
+  transaccional e idempotente (`npm run db:import-legacy-badges`, o desde
+  `/badges/administracion`), "destinatarios historicos"
+  (`BadgeHistoricalRecipient`) como capa de indireccion para no depender de
+  los UUID de `Person` generados en el pasado, y vinculacion automatica por
+  nombre normalizado, solo con coincidencia unica e inequivoca.
+- `/badges`: clasificacion general ordenable (MVP, MVP Team, total o
+  cualquier categoria KPI) y "Mi vitrina"/"Badges de la persona".
+  `/badges/administracion` (solo `ADMIN`) resuelve la vinculacion de los
+  destinatarios historicos. Enlace `Badges` en la navegacion, entre
+  `Resultados` y `Fichas` (jugador) o entre `Resultados` y `Analitica
+  avanzada` (administrador).
+- Sin avatar real en Badges (ni en la clasificacion ni en la vitrina): la
+  ruta de avatar de ficha esta pensada para que un participante vea solo
+  el suyo, y Badges es publico entre todos los usuarios autenticados; usa
+  siempre un avatar decorativo por iniciales.
+- Detalle completo en `docs/BADGES.md`.
+- Fuera de alcance: CRUD de categorias de badge, recalculo de badges de un
+  split ya finalizado, badges por semana, imagen o icono propio por badge,
+  y cualquier sistema generico de logros configurables.
+
 ## Capas posteriores (fuera de alcance por ahora)
 
 **Estado: pendiente**, documentadas unicamente para no perder contexto:

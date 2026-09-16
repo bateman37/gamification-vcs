@@ -48,10 +48,12 @@ model Person {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  participations   SplitParticipant[]
-  user             User?
-  publishedResults PublishedParticipantWeeklyResult[]
-  newsDeliveries   NewsDelivery[]
+  participations         SplitParticipant[]
+  user                   User?
+  publishedResults       PublishedParticipantWeeklyResult[]
+  newsDeliveries         NewsDelivery[]
+  badgeAwards            BadgeAward[]
+  badgeHistoricalLinkedAs BadgeHistoricalRecipient?
 }
 
 enum UserRole {
@@ -108,6 +110,7 @@ model Split {
   equipmentSlots     SplitEquipmentSlot[]
   storeItems         SplitStoreItem[]
   newsItems          NewsItem[]
+  badgeAwards        BadgeAward[]
 }
 
 /// Semana de un split. La identidad funcional es splitId + sequenceNumber,
@@ -1152,6 +1155,8 @@ enum NewsCategory {
   PURCHASE
   ANNOUNCEMENT
   ADMIN
+  /// Noticia agregada de badges conseguidos al finalizar un split (`1.2.3`, ver docs/BADGES.md).
+  BADGE
 }
 
 enum NewsPriority {
@@ -1219,4 +1224,139 @@ model NewsDelivery {
   @@unique([newsItemId, recipientUserId])
   @@index([recipientPersonId, archivedAt, readAt, createdAt])
   @@index([recipientUserId, archivedAt, readAt, createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Badges (`1.2.3`, ver docs/BADGES.md). Medallas permanentes de una `Person`
+// (nunca de un alias, participante, nivel o faccion): ganar un split, la
+// faccion ganadora, o ganar una categoria KPI. El catalogo es cerrado y fijo
+// en codigo (igual que el catalogo de KPI); las concesiones son datos, con
+// una capa explicita de "destinatario historico" para poder restaurar el
+// historico real de los 9 splits anteriores en una base de datos vacia, sin
+// depender de los UUID de `Person` generados en el pasado.
+// ---------------------------------------------------------------------------
+
+enum BadgeType {
+  MVP
+  TEAM_MVP
+  KPI
+}
+
+enum BadgeAwardOrigin {
+  LEGACY_IMPORT
+  SPLIT_FINALIZATION
+}
+
+/// Definicion de una categoria de badge (seccion 2/3.1 del encargo). Catalogo
+/// cerrado: no existe CRUD de administracion que permita crear o borrar
+/// categorias. `code` es el identificador interno estable (independiente del
+/// nombre visible); para una categoria KPI que corresponde a un `KpiCode`
+/// activo del catalogo actual, `code` reutiliza exactamente ese mismo valor,
+/// lo que permite derivar automaticamente su badge (`ensureBadgeCatalogSeeded`)
+/// sin anadir una fila a mano cada vez que se activa un KPI nuevo. Las dos
+/// categorias historicas sin KPI activo actual (Travesia del Padawan,
+/// Guardian del conocimiento) usan un `code` propio con `kpiCode = null`, y
+/// siguen existiendo aunque nunca se deriven de la configuracion viva.
+model Badge {
+  id             String    @id @default(uuid())
+  /// Identificador interno estable, independiente del nombre visible.
+  code           String    @unique
+  /// Nombre canonico visible (por ejemplo "MVP Team", nunca "Team MVP").
+  name           String
+  /// Version normalizada de `name` (sin mayusculas, espacios exteriores ni
+  /// tildes) para impedir duplicados por variaciones de escritura.
+  nameNormalized String    @unique
+  type           BadgeType
+  /// KPI activo del catalogo que deriva este badge. `null` para MVP, MVP
+  /// Team y las categorias historicas sin KPI activo actual.
+  kpiCode        KpiCode?
+  /// Orden de presentacion en el catalogo y en la clasificacion general.
+  sortOrder      Int
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  awards BadgeAward[]
+}
+
+/// Destinatario historico del dataset `legacy-badges-v1` (seccion 3.3 del
+/// encargo): guarda el nombre original y su version normalizada para poder
+/// enlazarlo (automatica o manualmente) con una `Person` real, sin depender
+/// de los UUID generados en el pasado. El enlace se puede corregir sin
+/// alterar ni borrar ninguna concesion historica: las 127 filas de
+/// `BadgeAward` siguen apuntando siempre al mismo `BadgeHistoricalRecipient`.
+model BadgeHistoricalRecipient {
+  id             String    @id @default(uuid())
+  /// Version del dataset historico (por ejemplo "legacy-badges-v1").
+  datasetVersion String
+  /// Nombre tal como aparecia en el historico, conservado para auditoria.
+  originalName   String
+  /// Version normalizada (sin mayusculas, espacios exteriores ni tildes),
+  /// usada para la asociacion automatica con `Person.fullName`.
+  normalizedName String
+  /// Persona real vinculada. `null` = "Pendiente de vincular". Unica: una
+  /// persona no puede quedar vinculada a dos destinatarios historicos a la
+  /// vez (una relinculacion debe desvincular primero al anterior).
+  personId       String?   @unique
+  linkedAt       DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  // SetNull: la fila del destinatario (y sus concesiones) sobreviven a un desenlace o a un cambio de vinculo.
+  person Person?      @relation(fields: [personId], references: [id], onDelete: SetNull)
+  awards BadgeAward[]
+
+  // Un destinatario por nombre normalizado dentro de la misma version del dataset.
+  @@unique([datasetVersion, normalizedName])
+}
+
+/// Concesion individual de un badge (seccion 3.2 del encargo): exactamente
+/// una por persona/destinatario, categoria y split (real o historico). Nunca
+/// se edita ni se borra desde la interfaz. Pertenece, de forma excluyente, a
+/// una `Person` ya identificada (concesion automatica de un split real) o a
+/// un `BadgeHistoricalRecipient` todavia por resolver (importacion
+/// historica): la restriccion `BadgeAward_owner_exclusive_check` exige
+/// exactamente uno de los dos. El propietario efectivo de una concesion
+/// historica se resuelve siempre a traves de `recipient.personId`, nunca
+/// duplicado en esta fila: enlazar un destinatario no reescribe ninguna
+/// concesion ya existente.
+model BadgeAward {
+  id     String @id @default(uuid())
+  badgeId String
+
+  /// Concesion automatica de un split real, con la persona ya identificada.
+  personId String?
+  /// Concesion importada del historico, todavia sin resolver (o resuelta via `recipient.personId`).
+  recipientId String?
+
+  /// Split real (concesion automatica). `null` en toda concesion historica.
+  splitId String?
+  /// Etiqueta del split congelada ("Split 8", o el nombre real del split),
+  /// para no depender de que el split siga existiendo con ese nombre.
+  splitLabelSnapshot String
+  /// Nombre del badge en el momento de la concesion (una futura renombrada
+  /// del catalogo no debe alterar el texto de una concesion ya emitida).
+  badgeNameSnapshot String
+  origin  BadgeAwardOrigin
+  /// Momento real de la concesion. `null` en toda concesion historica: el
+  /// encargo prohibe expresamente inventar una fecha para el historico.
+  grantedAt DateTime?
+  /// Motivo legible y auditable (por ejemplo "Ganador de la clasificacion
+  /// general del Split 10." o "Importado de legacy-badges-v1: Split 3.").
+  reason String
+  /// Clave de idempotencia: nunca se duplica una concesion por reintento,
+  /// doble clic o reejecucion de la importacion.
+  idempotencyKey String @unique
+  createdAt DateTime @default(now())
+
+  badge     Badge                     @relation(fields: [badgeId], references: [id], onDelete: Restrict)
+  // Restrict: una concesion ya emitida no debe quedar huerfana por borrar la persona o el destinatario.
+  person    Person?                   @relation(fields: [personId], references: [id], onDelete: Restrict)
+  recipient BadgeHistoricalRecipient? @relation(fields: [recipientId], references: [id], onDelete: Restrict)
+  // SetNull defensivo: el split real no se borra en la practica, pero la concesion nunca debe depender de que siga existiendo.
+  split     Split?                    @relation(fields: [splitId], references: [id], onDelete: SetNull)
+
+  @@index([personId])
+  @@index([recipientId])
+  @@index([badgeId])
+  @@index([splitId])
 }
