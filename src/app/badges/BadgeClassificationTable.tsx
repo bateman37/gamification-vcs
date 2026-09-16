@@ -1,4 +1,8 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { ChevronDown } from "lucide-react";
 import { TableContainer, TABLE_HEAD_ROW_CLASSES, TABLE_ROW_HOVER_CLASSES, Badge } from "@/components/ui";
 import { InitialsAvatar } from "@/components/InitialsAvatar";
 import { BADGE_SORT_MVP, BADGE_SORT_TEAM_MVP, BADGE_SORT_TOTAL } from "@/domain/badges/badge-classification";
@@ -8,7 +12,9 @@ import type { BadgeClassificationResult } from "@/server/services/badge.service"
  * Clasificacion general de badges (seccion 6.2 del encargo): selector de
  * criterio compacto (nunca catorce columnas fijas) mas una tabla con las
  * columnas esenciales y un desglose accesible por categoria KPI dentro de
- * cada fila (`<details>`, sin JavaScript de cliente).
+ * cada fila (`<details>`, sin JavaScript de cliente). El menu de categorias
+ * KPI es un popover controlado (mismo patron que `NewsBell`): boton +
+ * panel posicionado, cierre por seleccion, clic fuera o `Escape`.
  */
 
 function sortHref(key: string): string {
@@ -39,7 +45,85 @@ function SortPill({ href, active, children }: { href: string; active: boolean; c
   );
 }
 
+function KpiCategoryMenu({
+  kpiCategories,
+  sortKey,
+}: {
+  kpiCategories: readonly { code: string; name: string }[];
+  sortKey: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const isActive = kpiCategories.some((category) => category.code === sortKey);
+
+  useEffect(() => {
+    // Un cambio de criterio (incluida la propia seleccion) siempre cierra el menu,
+    // aunque la navegacion suave conserve esta instancia de componente montada.
+    setOpen(false);
+  }, [sortKey]);
+
+  useEffect(() => {
+    if (!open) return;
+    function handleClick(event: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+    function handleKey(event: KeyboardEvent) {
+      if (event.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("mousedown", handleClick);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+      document.removeEventListener("keydown", handleKey);
+    };
+  }, [open]);
+
+  return (
+    <div ref={containerRef} className="relative">
+      <button
+        type="button"
+        aria-haspopup="true"
+        aria-expanded={open}
+        onClick={() => setOpen((value) => !value)}
+        className={`flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+          isActive ? "bg-ink text-white" : "bg-surface-muted text-text-muted hover:text-ink"
+        }`}
+      >
+        Categoría KPI
+        <ChevronDown aria-hidden="true" className={`h-3.5 w-3.5 transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+
+      {open && (
+        <div
+          role="menu"
+          aria-label="Categorías KPI"
+          className="absolute z-10 mt-1 flex max-h-64 w-60 flex-col gap-1 overflow-y-auto rounded-card border border-border bg-surface p-2 shadow-soft"
+        >
+          {kpiCategories.map((category) => (
+            <Link
+              key={category.code}
+              role="menuitem"
+              href={sortHref(category.code)}
+              aria-current={sortKey === category.code ? "true" : undefined}
+              onClick={() => setOpen(false)}
+              className={`rounded-control px-2 py-1 text-xs ${
+                sortKey === category.code ? "bg-ink text-white" : "text-ink hover:bg-surface-muted"
+              }`}
+            >
+              {category.name}
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function BadgeClassificationTable({ data, sortKey }: { data: BadgeClassificationResult; sortKey: string }) {
+  const activeKpiCategory = data.kpiCategories.find((category) => category.code === sortKey) ?? null;
+
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Ordenar clasificación de badges por">
@@ -52,25 +136,7 @@ export function BadgeClassificationTable({ data, sortKey }: { data: BadgeClassif
         <SortPill href={sortHref(BADGE_SORT_TOTAL)} active={sortKey === BADGE_SORT_TOTAL}>
           Total de badges
         </SortPill>
-        <details className="relative">
-          <summary className="cursor-pointer list-none rounded-full bg-surface-muted px-3 py-1 text-xs font-medium text-text-muted hover:text-ink">
-            Categoría KPI…
-          </summary>
-          <div className="absolute z-10 mt-1 flex max-h-64 w-60 flex-col gap-1 overflow-y-auto rounded-card border border-border bg-surface p-2 shadow-soft">
-            {data.kpiCategories.map((category) => (
-              <Link
-                key={category.code}
-                href={sortHref(category.code)}
-                aria-current={sortKey === category.code ? "true" : undefined}
-                className={`rounded-control px-2 py-1 text-xs ${
-                  sortKey === category.code ? "bg-ink text-white" : "text-ink hover:bg-surface-muted"
-                }`}
-              >
-                {category.name}
-              </Link>
-            ))}
-          </div>
-        </details>
+        <KpiCategoryMenu kpiCategories={data.kpiCategories} sortKey={sortKey} />
       </div>
       <p className="text-xs text-text-muted">
         Ordenado por: <span className="font-medium text-ink">{sortLabelFor(sortKey, data.kpiCategories)}</span> (descendente).
@@ -86,6 +152,11 @@ export function BadgeClassificationTable({ data, sortKey }: { data: BadgeClassif
               <th scope="col" className="px-3 py-2">
                 Persona
               </th>
+              {activeKpiCategory && (
+                <th scope="col" className="max-w-[10rem] whitespace-normal break-words px-3 py-2 text-right">
+                  {activeKpiCategory.name}
+                </th>
+              )}
               <th scope="col" className="px-3 py-2 text-right">
                 MVP
               </th>
@@ -118,6 +189,11 @@ export function BadgeClassificationTable({ data, sortKey }: { data: BadgeClassif
                       <span className="font-medium text-ink">{entry.fullName}</span>
                     </div>
                   </td>
+                  {activeKpiCategory && (
+                    <td className="tabular px-3 py-2 text-right">
+                      {entry.countByBadgeCode.get(activeKpiCategory.code) ?? 0}
+                    </td>
+                  )}
                   <td className="tabular px-3 py-2 text-right">
                     {entry.mvpCount > 0 ? <Badge tone="reward">{entry.mvpCount}</Badge> : "0"}
                   </td>
