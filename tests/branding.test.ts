@@ -10,9 +10,9 @@ import { isManualNewsDestination } from "@/domain/news-links";
  * esta entrega).
  */
 describe("Navegacion por rol", () => {
-  it("un administrador ve Noticias primero, despues Personas, Splits y Resultados, y Fichas solo si esta vinculado (`1.0.1`)", () => {
+  it("un administrador ve Noticias primero, despues Personas, Splits, Resultados y Badges, y Fichas solo si esta vinculado (`1.0.1`/`1.2.3`)", () => {
     const withoutPerson = buildNavItems({ isAuthenticated: true, isAdmin: true, hasPersonId: false });
-    expect(withoutPerson.map((item) => item.href)).toEqual(["/noticias", "/personas", "/splits", "/resultados", "/analitica"]);
+    expect(withoutPerson.map((item) => item.href)).toEqual(["/noticias", "/personas", "/splits", "/resultados", "/badges", "/analitica"]);
 
     const withPerson = buildNavItems({ isAuthenticated: true, isAdmin: true, hasPersonId: true });
     expect(withPerson.map((item) => item.href)).toEqual([
@@ -20,6 +20,7 @@ describe("Navegacion por rol", () => {
       "/personas",
       "/splits",
       "/resultados",
+      "/badges",
       "/analitica",
       "/fichas",
     ]);
@@ -32,9 +33,9 @@ describe("Navegacion por rol", () => {
     expect(items[0]?.href).toBe("/noticias");
   });
 
-  it("un participante ve Noticias, Resultados y Fichas, nunca Personas ni Splits", () => {
+  it("un participante ve Noticias, Resultados, Badges y Fichas, nunca Personas ni Splits", () => {
     const items = buildNavItems({ isAuthenticated: true, isAdmin: false, hasPersonId: true });
-    expect(items.map((item) => item.href)).toEqual(["/noticias", "/resultados", "/fichas"]);
+    expect(items.map((item) => item.href)).toEqual(["/noticias", "/resultados", "/badges", "/fichas"]);
     expect(items.some((item) => item.href === "/personas" || item.href === "/splits")).toBe(false);
   });
 

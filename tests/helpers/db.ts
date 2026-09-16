@@ -53,5 +53,10 @@ export async function resetDatabase(): Promise<void> {
   await testDb.splitEquipmentSlot.deleteMany();
   await testDb.splitWeek.deleteMany();
   await testDb.split.deleteMany();
+  // Badges (`1.2.3`): BadgeAward restringe el borrado de Person, Badge y BadgeHistoricalRecipient
+  // (relacion excluyente personId/recipientId, ver docs/BADGES.md), asi que se borra primero.
+  await testDb.badgeAward.deleteMany();
+  await testDb.badgeHistoricalRecipient.deleteMany();
+  await testDb.badge.deleteMany();
   await testDb.person.deleteMany();
 }

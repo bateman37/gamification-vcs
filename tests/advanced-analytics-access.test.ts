@@ -19,10 +19,11 @@ function form(values: Record<string, string>): FormData {
 }
 
 describe("Acceso al modulo de Analitica avanzada (parte J2 del encargo)", () => {
-  it("el administrador ve 'Analítica avanzada' justo debajo de 'Resultados'", () => {
+  it("el administrador ve 'Analítica avanzada' justo debajo de 'Badges', que a su vez esta justo debajo de 'Resultados' (`1.2.3`)", () => {
     const items = buildNavItems({ isAuthenticated: true, isAdmin: true, hasPersonId: false });
     const resultadosIndex = items.findIndex((item) => item.href === "/resultados");
-    expect(items[resultadosIndex + 1]).toEqual({ href: "/analitica", label: "Analítica avanzada", icon: "BarChart3" });
+    expect(items[resultadosIndex + 1]).toEqual({ href: "/badges", label: "Badges", icon: "Award" });
+    expect(items[resultadosIndex + 2]).toEqual({ href: "/analitica", label: "Analítica avanzada", icon: "BarChart3" });
   });
 
   it("un participante nunca ve el enlace de Analítica avanzada, aunque este vinculado a una persona", () => {
