@@ -1901,3 +1901,98 @@ pantallas que ya usan esa constante compartida.
 existente y solo renombrar su etiqueta visible; no se detecto ningun otro
 lugar del codigo con el texto "Cerrado" codificado aparte de esta
 constante, asi que el cambio es seguro y unico.
+
+## `Badge.code` reutiliza `KpiCode` para las categorias derivadas del catalogo activo (`1.2.3`)
+
+**Decision:** las diez categorias de badge que corresponden a un KPI del
+catalogo actual usan exactamente ese `KpiCode` como `Badge.code`
+(`src/domain/badges/badge-catalog.ts`). Las dos categorias historicas sin
+KPI activo ("Travesia del Padawan", "Guardian del conocimiento") usan un
+`code` propio, fijo, con `kpiCode: null`.
+
+**Motivo:** el encargo pide explicitamente que un badge KPI futuro se
+pueda derivar de un `KpiCode` nuevo sin una migracion de codigo dedicada al
+catalogo de badges. Reutilizar el mismo identificador hace que
+`ensureBadgeCatalogSeeded` (un simple `upsert` por `code`) cree
+automaticamente la fila de `Badge` correspondiente en cuanto ese `KpiCode`
+exista, sin mantener una tabla de correspondencia aparte. Ver
+`docs/BADGES.md`, seccion 1.
+
+## Empates de badges MVP/MVP Team/KPI: mismo criterio que el podio de la noticia final (`1.2.3`)
+
+**Decision:** `selectMvpBadgeWinners`/`selectTeamMvpBadgeWinners`/
+`selectKpiBadgeWinners` (`src/domain/badges/badge-winners.ts`) conceden el
+badge a **todas** las personas en el rango 1, sin inventar ningun criterio
+de desempate adicional.
+
+**Motivo:** es exactamente el mismo criterio que ya usa
+`buildFinalizationPodium`/`buildFinalizationFactionWinner`/
+`buildFinalizationKpiWinner` (`src/domain/split-finalization.ts`, `1.2.2`)
+para la noticia final de un split: un empate real en el primer puesto ya
+se trata como varios "Ganadores" en esa noticia. Los badges deben ser
+coherentes con lo que la noticia final ya anuncia; introducir un desempate
+adicional solo para las medallas produciria una contradiccion visible
+entre "quien anuncia la noticia como ganador" y "quien recibe realmente el
+badge".
+
+## Importacion de `legacy-badges-v1`: comando explicito, no backfill dentro de la migracion (`1.2.3`)
+
+**Decision:** a diferencia de otros backfills del proyecto (por ejemplo
+`SplitPositionPointRule` en la migracion `add_position_points`, generado
+con un `INSERT ... SELECT` sobre los splits ya existentes), la importacion
+del histórico de badges **no** vive dentro de `migration.sql`. Es un
+comando explicito (`npm run db:import-legacy-badges`,
+`scripts/import-legacy-badges.ts`) y una accion administrativa
+reejecutable desde `/badges/administracion`, ambos llamando al mismo
+servicio idempotente (`importLegacyBadgesV1`).
+
+**Motivo:** el encargo pide explicitamente un "comando exacto documentado"
+para restaurar el historico despues de vaciar la base de datos, y una
+accion administrativa para "ejecutarse o reintentarse de forma segura".
+Ademas, a diferencia de los backfills existentes (que generan N filas en
+funcion del numero de `Split` ya existentes en esa base de datos concreta),
+el dataset de badges es un conjunto **fijo** de 127 filas, independiente
+de cuantos splits reales existan: no encaja en el patron "una fila nueva
+por cada entidad ya existente" que sí siguen esos otros backfills. CLAUDE.md
+prohibe ademas explicitamente escribir datos de forma automatica en cada
+arranque de la aplicacion, que es justo lo que evita mantenerlo como un
+paso explicito y no como parte silenciosa de `prisma migrate deploy`.
+
+## Badges sin avatar real: siempre iniciales decorativas (`1.2.3`)
+
+**Decision:** ni la clasificacion general de badges ni la vitrina de una
+persona reutilizan la ruta de avatar de ficha
+(`/api/fichas/[splitParticipantId]/avatar`). Usan siempre un avatar
+decorativo por iniciales (`src/components/InitialsAvatar.tsx`), calculado
+en cliente a partir del nombre, sin ningun byte de imagen real.
+
+**Motivo:** `readAvatarForViewer` (`src/server/services/participant-profile.service.ts`)
+esta disenado deliberadamente para que un `PARTICIPANT` solo pueda ver su
+**propio** avatar (`participation.personId !== viewer.personId` devuelve
+`null`/404 para cualquier otra persona); solo un `ADMIN` puede ver
+cualquiera. La clasificacion general de Badges es publica entre **todos**
+los usuarios autenticados (seccion 5.3 del encargo), asi que un participante
+necesitaria poder ver el avatar de cualquier otra persona del listado. Ampliar
+esa autorizacion afectaria a la unica ruta de avatar de toda la aplicacion,
+no solo a Badges, y es exactamente el tipo de cambio de superficie de
+seguridad que conviene evitar sin que el encargo lo pida explicitamente. Un
+avatar decorativo por iniciales resuelve la columna "Avatar" pedida sin
+tocar esa autorizacion.
+
+## Ganador(es) de MVP Team resuelto dentro de la transaccion de `finalizeSplit`, nunca antes (`1.2.3`)
+
+**Decision:** `buildBadgeGrantPlan` se invoca **dentro** de la transaccion
+serializable de `finalizeSplit`, pasandole `tx` (no `db`), y solo para
+resolver la pertenencia viva a faccion (`SplitParticipant.factionId`) de
+cada miembro. La clasificacion individual, la de facciones y las de cada
+KPI (que sí dependen exclusivamente de publicaciones inmutables) se siguen
+calculando **antes** de abrir la transaccion, igual que en `1.2.2`.
+
+**Motivo:** a diferencia de las publicaciones (que ya no pueden cambiar una
+vez que todas las semanas estan publicadas, ver la decision "Finalizacion
+de split..." mas arriba), la asignacion de un participante a una faccion
+no tiene ese mismo bloqueo documentado hasta la finalizacion del split
+completo. Para no depender de esa suposicion adicional, la unica lectura
+que decide "quien pertenece a la faccion ganadora ahora mismo" se hace
+dentro de la misma transaccion que va a escribir los badges, con el mismo
+nivel de aislamiento `Serializable` que protege el resto del cierre.

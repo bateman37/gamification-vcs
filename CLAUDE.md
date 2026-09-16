@@ -36,7 +36,10 @@ lateral, el orden de navegacion, el submenu del detalle del split, el
 historico general, las fichas, el guardado (individual o conjunto) de KPI,
 el formulario de alta de participante o la presentacion de resultados, y
 `docs/SPLIT_FINALIZATION.md` si vas a trabajar en la finalizacion de un
-split, su estado terminal o el resumen final de podio/facciones/KPI.
+split, su estado terminal o el resumen final de podio/facciones/KPI, y
+`docs/BADGES.md` si vas a trabajar en badges, su calculo, la importacion
+del historico `legacy-badges-v1` o su aparicion en fichas, resultados o
+noticias.
 
 ## Estado real de las cargas semanales (no romper sin justificarlo)
 
@@ -495,6 +498,59 @@ motivo en `docs/DECISIONS.md` (detalle completo en `docs/FACTIONS.md`,
   disponibles y compradores distintos: no dupliques esa agregación en una
   consulta paralela nueva. Sigue siendo un resumen deliberadamente
   sencillo, no un segundo panel de analítica.
+
+## Badges y vitrina histórica (`1.2.3`, no romper sin justificarlo)
+
+Reglas asentadas que una sesión futura no debe deshacer sin registrar el
+motivo en `docs/DECISIONS.md` (detalle completo en `docs/BADGES.md`):
+
+- Los badges pertenecen siempre a la **persona global** (`Person`), nunca
+  al alias, al participante de un split, al nivel ni a la facción.
+- El catálogo es **cerrado y fijo en código**
+  (`src/domain/badges/badge-catalog.ts`, `BADGE_CATALOG`, 14 categorías):
+  no existe ningún CRUD de administración que permita crear o borrar
+  categorías. Las diez categorías derivadas de un KPI activo reutilizan
+  exactamente ese `KpiCode` como `Badge.code`, para que un KPI nuevo derive
+  su badge sin una migración de código dedicada; las dos categorías
+  históricas sin KPI activo ("Travesía del Padawan", "Guardián del
+  conocimiento") conservan su badge aunque no exista ya ningún `KpiCode`
+  correspondiente.
+- Las tres reglas de concesión (MVP: rango 1 de la clasificación general;
+  MVP Team: pertenencia viva a la facción en rango 1 de la clasificación
+  acumulada de facciones; badge KPI: rango 1 de la clasificación acumulada
+  de ese KPI activo) **reutilizan siempre** `computeSplitClassification`/
+  `computeFactionClassification`/`computeSplitKpiClassification`: nunca
+  reimplementes ningún ranking ni ningún criterio de empate en el módulo
+  de badges. Un empate real concede el badge a **todos** los empatados en
+  el rango 1, el mismo criterio que ya usa la noticia final de
+  `finalizeSplit` para el podio/la facción/los KPI.
+- Los badges se conceden **únicamente** al finalizar el split completo
+  (`finalizeSplit`, dentro de su misma transacción serializable), nunca al
+  publicar una semana. La concesión es idempotente por `idempotencyKey`
+  (`upsert`); una concesión confirmada no se edita ni se borra desde la
+  interfaz, y ningún badge de un split ya finalizado se recalcula.
+- El histórico `legacy-badges-v1` (`src/domain/badges/legacy-badges-v1.ts`,
+  127 concesiones de 18 personas en 9 splits) es la única fuente del
+  histórico real: nunca lo conviertas en una dependencia de Excel en
+  tiempo de ejecución, nunca inventes una fecha para una concesión
+  histórica que no la tiene, y nunca reescribas una de esas 127 filas
+  manualmente. Se importa con un comando explícito
+  (`npm run db:import-legacy-badges`) o desde
+  `/badges/administracion`, nunca como backfill silencioso dentro de una
+  migración ni en cada arranque de la aplicación.
+- Los 18 "destinatarios históricos" (`BadgeHistoricalRecipient`) son una
+  capa de indirección explícita para no depender de los UUID de `Person`
+  generados en el pasado: la vinculación automática solo enlaza con una
+  coincidencia inequívoca por nombre normalizado, nunca elige entre varias,
+  y una persona no puede quedar vinculada a dos destinatarios a la vez
+  (restricción única en base de datos). Enlazar o corregir un destinatario
+  nunca reescribe ni borra ninguna concesión ya asociada.
+- La clasificación general de badges es pública entre **todos** los
+  usuarios autenticados; no reutiliza la ruta de avatar de ficha
+  (`/api/fichas/[splitParticipantId]/avatar`, pensada para que un
+  participante vea solo su propio avatar): usa siempre un avatar
+  decorativo por iniciales (`src/components/InitialsAvatar.tsx`). No
+  amplíes esa autorización de avatares sin registrar el motivo.
 
 ## Reglas de trabajo
 

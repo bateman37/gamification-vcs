@@ -24,7 +24,9 @@ Fuente de verdad: `prisma/schema.prisma` y las migraciones
 `prisma/migrations/20260912115557_add_economy_inventory_equipment/migration.sql`
 (`0.9.0` / MVP-2D) y
 `prisma/migrations/20260913150000_add_faction_image_and_dynamic_position_points/migration.sql`
-(`1.2.2`, imagen de faccion y rango dinamico de puntos por posicion). Este
+(`1.2.2`, imagen de faccion y rango dinamico de puntos por posicion) y
+`prisma/migrations/20260916084749_add_badges/migration.sql` (`1.2.3`,
+badges y vitrina historica, ver `docs/BADGES.md`). Este
 documento describe y explica ese esquema; en caso de discrepancia, el
 esquema real manda. (Las migraciones intermedias entre `0.9.0` y `1.2.2`
 —noticias, analitica, asistencia, equipo visual— se documentan en sus
@@ -1098,6 +1100,46 @@ completo. Resumen del esquema:
   (`basePointsBeforeProfession` sigue siendo la unica base persistida
   para los tres).
 
+### Badges y vitrina historica (`1.2.3`)
+
+Ver `docs/BADGES.md` para el detalle funcional completo. Resumen del
+esquema (migracion `add_badges`):
+
+- **`Badge`**: catalogo cerrado y fijo en codigo (14 filas, creadas por
+  `ensureBadgeCatalogSeeded`, nunca por CRUD de interfaz). `code` unico
+  (identificador interno estable; para las categorias derivadas de un KPI
+  activo, coincide exactamente con `KpiCode`) y `nameNormalized` unico
+  (evita duplicados por mayusculas/tildes/espacios). `type`
+  (`MVP`/`TEAM_MVP`/`KPI`) y `kpiCode` opcional (solo para las categorias
+  con `KpiCode` activo).
+- **`BadgeHistoricalRecipient`**: destinatario del dataset historico
+  `legacy-badges-v1`, capa de indireccion para no depender de los UUID de
+  `Person` generados en el pasado. `@@unique([datasetVersion,
+  normalizedName])`: un destinatario por nombre normalizado dentro de la
+  misma version del dataset. `personId` opcional y **unico**
+  (`onDelete: SetNull`): una persona no puede estar vinculada a dos
+  destinatarios a la vez.
+- **`BadgeAward`**: concesion individual e inmutable. Exactamente uno de
+  `personId`/`recipientId` (restriccion
+  `BadgeAward_owner_exclusive_check`, mismo patron que
+  `NewsDelivery_recipient_exclusive_check`): una concesion automatica de un
+  split real usa `personId`; una concesion historica usa `recipientId`, y
+  su propietario efectivo se resuelve siempre via `recipient.personId` al
+  consultar, nunca duplicado en esta fila. `splitId` opcional
+  (`onDelete: SetNull`) + `splitLabelSnapshot` obligatorio: `null` +
+  `"Split N"` para el historico, sin fecha inventada (`grantedAt` tambien
+  `null`). `idempotencyKey` unico impide duplicados por reintento o
+  reejecucion de la importacion.
+- `NewsCategory` gana el valor `BADGE` (icono `Award`) para la noticia
+  personal agregada de badges conseguidos al finalizar un split.
+
+Ninguna tabla existente cambia: los badges se conceden leyendo
+`PublishedParticipantWeeklyResult`/`PublishedKpiResult` ya publicados (via
+`computeSplitClassification`/`computeFactionClassification`/
+`computeSplitKpiClassification`, sin tablas propias de ranking) y la
+pertenencia viva a faccion (`SplitParticipant.factionId`) en el instante de
+finalizar el split.
+
 ## Decisiones sobre fechas
 
 - Todas las fechas de negocio (`Split.startDate`, `SplitWeek.startDate`,
@@ -1222,3 +1264,8 @@ nombre libre). Ninguna otra tabla cambia: la posicion visual es presentacion
 y **no** se congela en `PublishedEquippedItem`, cuyos snapshots de nombre,
 ranura, KPI y porcentaje siguen siendo la verdad historica. Ver
 `docs/ECONOMY_INVENTORY_AND_EQUIPMENT.md`, seccion 22.
+
+Con `1.2.3` se anaden `Badge`, `BadgeHistoricalRecipient`, `BadgeAward` y
+el valor `BADGE` de `NewsCategory`. Ninguna tabla existente cambia: los
+badges se calculan leyendo publicaciones y snapshots ya existentes, nunca
+un ranking propio. Ver `docs/BADGES.md`.
